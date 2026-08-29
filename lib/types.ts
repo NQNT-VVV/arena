@@ -113,6 +113,31 @@ export interface BattleState {
   isScreen?: boolean;
 }
 
+export type SubmissionStatus = 'pending' | 'transcoding' | 'ready' | 'failed';
+
+/**
+ * Le rendu d'un participant, tel que lui seul le voit.
+ *
+ * Cette forme ne circule que sur le canal personnel. Ce qui sera diffuse a
+ * tout le monde pendant la phase de vote est une autre forme, sans auteur ni
+ * nom de fichier.
+ */
+export interface OwnSubmission {
+  id: string;
+  filename: string | null;
+  bytes: number;
+  kind: AssetKind;
+  inline: boolean;
+  textBody: string | null;
+  uploadedAt: number;
+  /** Depose apres la fenetre de grace : le sort depend de la politique reglee. */
+  late: boolean;
+  status: SubmissionStatus;
+  replacedCount: number;
+  /** Lien signe, valable pour ce rendu et pour son auteur. Null pour un texte. */
+  url: string | null;
+}
+
 /** Canal personnel : ce que le serveur ne dit qu'a un participant. */
 export interface You {
   id: string;
@@ -121,7 +146,7 @@ export interface You {
   isHost: boolean;
   disqualified: boolean;
   joinedAt: number;
-  submission: unknown | null;
+  submission: OwnSubmission | null;
   votes: Record<string, number>;
 }
 

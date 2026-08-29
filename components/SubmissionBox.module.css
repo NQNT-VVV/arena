@@ -1,0 +1,36 @@
+.box {
+  display: flex; flex-direction: column; gap: 12px; width: 100%;
+  padding: 16px; border-radius: var(--r-md);
+  background: rgba(255, 255, 255, .03); border: 1px solid var(--stroke);
+}
+.head { display: flex; align-items: center; gap: 10px; }
+.head h3 { font-size: 15px; flex: 1; }
+
+.zone {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 24px 16px; border-radius: var(--r-md);
+  border: 1px dashed var(--stroke-strong);
+  transition: border-color .2s, background .2s;
+}
+.zone.over { border-color: var(--accent); background: rgba(139, 92, 246, .1); }
+.big { font-size: 30px; line-height: 1; }
+
+.done { display: flex; flex-direction: column; gap: 11px; }
+.icon {
+  width: 30px; height: 30px; flex: none; border-radius: 50%;
+  display: grid; place-items: center; font-weight: 700;
+  background: rgba(52, 211, 153, .18); color: #86efc7;
+  border: 1px solid rgba(52, 211, 153, .4);
+}
+.name { display: block; font-weight: 600; font-size: 14px; overflow-wrap: anywhere; }
+.meta { display: block; font-size: 11.5px; color: var(--faint); font-variant-numeric: tabular-nums; }
+
+.player { width: 100%; max-height: 240px; border-radius: var(--r-sm); background: #000; }
+.image { width: 100%; max-height: 240px; object-fit: contain; border-radius: var(--r-sm); background: rgba(0,0,0,.3); }
+
+.bar { width: 100%; height: 6px; border-radius: 99px; background: rgba(255,255,255,.1); overflow: hidden; }
+.bar > i {
+  display: block; height: 100%; border-radius: 99px;
+  background: linear-gradient(90deg, var(--violet), var(--cyan));
+  transform-origin: left center; transition: transform .2s linear;
+}

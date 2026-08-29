@@ -370,6 +370,93 @@ class BattleServer {
     return s;
   }
 
+  /* ---------------------------- rendus --------------------------- */
+
+  /**
+   * Phases ou un participant peut deposer.
+   *
+   * `creation` en fait partie, et c'est voulu : on ne force personne a attendre
+   * la fin pour televerser. Quelqu'un qui a fini en vingt minutes depose et
+   * s'en va, quitte a remplacer son fichier plus tard s'il se ravise.
+   */
+  static SUBMIT_PHASES = new Set(['creation', 'upload']);
+
+  /** Participant authentifie par son jeton. */
+  requireParticipant(code, participantId, token) {
+    const session = this.require(code);
+    const participant = session.participants.get(String(participantId || ''));
+    if (!participant || !tokenMatches(token, participant.tokenHash)) {
+      throw new BattleError('Identifiez-vous pour deposer votre rendu.', 403);
+    }
+    return { session, participant };
+  }
+
+  /**
+   * Autorise un depot, et dit sous quelles conditions.
+   *
+   * Le retard est constate par l'horloge du serveur, jamais annonce par le
+   * client. C'est la seule facon d'avoir la meme regle pour tout le monde.
+   */
+  openSubmissionSlot(code, participantId, token) {
+    const { session, participant } = this.requireParticipant(code, participantId, token);
+
+    if (!BattleServer.SUBMIT_PHASES.has(session.phase)) {
+      throw new BattleError(
+        session.phase === 'lobby' || session.phase === 'config'
+          ? 'La creation n’a pas encore commence.'
+          : 'Les depots sont clos pour cette session.',
+      );
+    }
+    if (participant.disqualified) {
+      throw new BattleError('Vous avez ete mis hors classement par l’animateur.', 403);
+    }
+
+    const late = !!(session.graceEndAt && Date.now() > session.graceEndAt);
+    if (late && session.config.latePolicy === 'reject') {
+      throw new BattleError('Le temps est ecoule : les depots hors delai sont refuses.');
+    }
+
+    return {
+      session,
+      participant,
+      late,
+      maxBytes: session.config.maxFileBytes,
+      allowedExt: session.config.allowedExt,
+      existing: repo.submissionOf(session.id, participant.id),
+    };
+  }
+
+  /** Enregistre ou remplace le rendu d'un participant. */
+  saveSubmission(session, participant, data, existing) {
+    const now = Date.now();
+    const payload = {
+      id: existing?.id ?? uuid(),
+      sessionId: session.id,
+      participantId: participant.id,
+      renditionId: uuid(),
+      uploadedAt: now,
+      ...data,
+    };
+    const saved = existing ? repo.replaceSubmission(payload) : repo.addSubmission(payload);
+    repo.logEvent(session.id, existing ? 'submission:replaced' : 'submission:received', {
+      participantId: participant.id, bytes: saved.originalBytes, late: saved.late,
+    });
+    return saved;
+  }
+
+  /** Retrait par son auteur, tant que les depots sont ouverts. */
+  withdrawSubmission(code, participantId, token) {
+    const { session, participant } = this.requireParticipant(code, participantId, token);
+    if (!BattleServer.SUBMIT_PHASES.has(session.phase)) {
+      throw new BattleError('Trop tard pour retirer un rendu.');
+    }
+    const existing = repo.submissionOf(session.id, participant.id);
+    if (!existing) throw new BattleError('Vous n’avez rien depose.', 404);
+    repo.removeSubmission(existing.id);
+    repo.logEvent(session.id, 'submission:withdrawn', { participantId: participant.id });
+    return { session, participant, removed: existing };
+  }
+
   /* ---------------------------- assets --------------------------- */
 
   /**

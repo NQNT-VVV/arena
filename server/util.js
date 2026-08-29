@@ -48,6 +48,29 @@ function tokenMatches(token, hash) {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
+/**
+ * Signature d'un lien de media.
+ *
+ * Un rendu doit rester consultable par son auteur avant la diffusion — « mon
+ * fichier est-il bien monte ? » est la premiere question que tout le monde se
+ * pose. Mais une balise `<audio src>` ne sait pas envoyer d'entete
+ * d'autorisation : il faut que le droit tienne dans l'URL.
+ *
+ * D'ou cette signature courte, calculee sur l'identifiant du rendu et remise a
+ * son seul auteur. Elle ne fuit pas par le journal du serveur plus que
+ * l'identifiant lui-meme, et ne donne acces qu'a ce rendu-la.
+ */
+function signMedia(secret, renditionId) {
+  return crypto.createHmac('sha256', secret).update(`media:${renditionId}`).digest('base64url').slice(0, 24);
+}
+
+function verifyMedia(secret, renditionId, given) {
+  if (!given) return false;
+  const expected = Buffer.from(signMedia(secret, renditionId));
+  const got = Buffer.from(String(given));
+  return expected.length === got.length && crypto.timingSafeEqual(expected, got);
+}
+
 const AVATARS = [
   '\u{1F3A7}', '\u{1F3A8}', '\u{1F3AC}', '\u{270D}\u{FE0F}', '\u{1F3B9}',
   '\u{1F58C}\u{FE0F}', '\u{1F4F8}', '\u{1F3A4}', '\u{1F579}\u{FE0F}', '\u{1F9E9}',
@@ -127,6 +150,6 @@ const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
 
 module.exports = {
   CODE_ALPHABET, CODE_LENGTH,
-  randomCode, uniqueCode, uuid, newToken, hashToken, tokenMatches,
+  randomCode, uniqueCode, uuid, newToken, hashToken, tokenMatches, signMedia, verifyMedia,
   AVATARS, pickAvatar, cleanPseudo, cleanText, safeFilename, shuffle, clamp,
 };

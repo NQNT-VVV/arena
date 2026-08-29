@@ -21,8 +21,8 @@ Le projet avance par increments. Ce qui suit est **fait et teste** :
 |---|---|---|
 | 0 | Socle : Next + Express + Socket.IO, base SQLite, stockage abstrait, metriques | ✅ |
 | 1 | **Le coeur** : sessions, machine a etats, chrono serveur, lobby, temps reel, trois surfaces | ✅ |
-| 2 | Assets imposes : televersement animateur, pack ZIP | ⏳ |
-| 3 | Rendus : depot participant, remplacement, progression | ⏳ |
+| 2 | **Elements imposes** : depot animateur, consultation dans la page, pack ZIP | ✅ |
+| 3 | **Rendus** : depot participant, relecture, remplacement, retrait, hors delai | ✅ |
 | 4 | Transcodage ffmpeg/sharp, forme d'onde, troncature 45 s, nettoyage des metadonnees | ⏳ |
 | 5 | Diffusion et vote : ordre aleatoire, anonymat, blocage de l'auto-vote | ⏳ |
 | 6 | Resultats, revelation, export JSON/CSV, duplication de session | ⏳ |
@@ -160,16 +160,25 @@ fuiter tout le monde d'un coup.
 fait quoi. C'est la correspondance rendu → auteur qui est protegee ; masquer la
 liste des presents priverait le lobby de son interet sans rien proteger.
 
-Trois autres defenses, prevues aux increments suivants :
+**Le nom du fichier est cache.** « beat-alexis-v3.wav » annulerait tout le
+reste du dispositif. Pendant la diffusion, un rendu se telecharge sous le nom
+`rendu.wav` ; le nom d'origine ne revient qu'aux resultats — et a son auteur,
+qui le connait deja.
 
-1. **Re-encodage systematique**, jamais de copie directe. C'est ce qui garantit
-   que les tags ID3, EXIF et XMP disparaissent — pas un nettoyeur de tags qu'on
-   oublierait de mettre a jour au prochain format.
-2. **Identifiant de rendu opaque.** L'URL ne porte ni le nom d'origine, ni
-   l'identifiant du participant, et deux rendus du meme auteur ne se
-   correlent pas.
-3. **Pas de dossier statique.** Les fichiers sortent par une route qui verifie
-   la phase avant de servir le moindre octet.
+**Identifiant de rendu opaque.** L'URL ne porte ni le nom d'origine ni
+l'identifiant du participant, et un remplacement en tire un nouveau : deux
+versions du meme rendu ne se correlent pas. Un rendu n'est servi que si la
+phase l'autorise, ou si l'appelant presente la signature remise a son auteur
+— faute de quoi la reponse est 404, jamais 403 : confirmer l'existence d'un
+rendu a qui n'y a pas droit est deja une information de trop.
+
+**Pas de dossier statique.** Les fichiers sortent par une route qui verifie la
+phase avant de servir le moindre octet, et qui decide seule des entetes.
+
+Une defense reste a construire, avec l'increment transcodage :
+**le re-encodage systematique**, jamais de copie directe. C'est ce qui fera
+disparaitre les tags ID3, EXIF et XMP — plutot qu'un nettoyeur de tags qu'on
+oublierait de mettre a jour au prochain format.
 
 ---
 
@@ -228,6 +237,10 @@ server/
   battle.js     sessions, machine a etats, chrono            ← le coeur
   views.js      serialisation par audience                   ← l'anonymat
   util.js       codes, jetons, nettoyage des saisies
+  api.js        routes HTTP : fichiers, pack, sante, QR
+  upload.js     reception en flux, plafonds appliques pendant le transfert
+  files.js      service des fichiers : entetes, requetes partielles
+  mime.js       reconnaissance par les octets, et refus d'affichage
   storage/      interface de stockage, driver local
   metrics.js    Prometheus, sur un port distinct
   index.js      Express + Next + Socket.IO
@@ -262,9 +275,13 @@ fait en reecrivant ce seul fichier.
 ## Tests
 
 ```bash
-npm run typecheck    # types partages front/serveur
-npm run test:state   # machine a etats et chrono, en memoire  (13 verifications)
-npm test             # bout en bout sur un vrai serveur       (15 verifications)
+npm run typecheck          # types partages front/serveur
+npm run test:state         # machine a etats et chrono, en memoire   (13)
+npm run test:mime          # reconnaissance de type et refus d'affichage (22)
+npm run build              # necessaire aux suites qui suivent
+npm run test:assets        # elements imposes, par le reseau         (13)
+npm run test:submissions   # depot des rendus, par le reseau         (16)
+npm test                   # parcours complet, vraies sockets        (15)
 ```
 
 `test/state.mjs` attaque les objets directement : transitions interdites,
@@ -275,6 +292,14 @@ apres redemarrage. Une seconde d'execution, rejouable a chaque modification.
 d'evenements, contenu des salons, refus d'une socket de participant qui tente
 une action de regie, coupure de connexion rattrapee, absence de fuite d'auteur
 dans la charge utile de diffusion et dans les metriques.
+
+`test/mime.mjs` verifie qu'aucun fichier depose par un tiers ne peut etre servi
+avec un type que le navigateur accepte d'interpreter. `test/assets.mjs` et
+`test/submissions.mjs` font passer de vrais fichiers par le reseau : plafonds
+appliques pendant le flux, fragments nettoyes apres un refus, requetes
+partielles, et les deux verifications d'anonymat qui comptent — un rendu est
+introuvable pour qui n'en est pas l'auteur avant la diffusion, et son nom de
+fichier ne reapparait qu'a la revelation.
 
 ---
 

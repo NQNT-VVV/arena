@@ -257,6 +257,120 @@ Object.assign(repo, {
 });
 
 /* ------------------------------------------------------------------ */
+/* Rendus                                                              */
+/* ------------------------------------------------------------------ */
+
+function toSubmission(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    sessionId: row.session_id,
+    participantId: row.participant_id,
+    renditionId: row.rendition_id,
+    originalKey: row.original_key,
+    originalBytes: row.original_bytes,
+    originalMime: row.original_mime,
+    filename: row.filename,
+    kind: row.kind,
+    inline: !!row.inline,
+    textBody: row.text_body,
+    uploadedAt: row.uploaded_at,
+    late: !!row.late,
+    replacedCount: row.replaced_count,
+    status: row.status,
+    renditions: json(row.renditions, null),
+    error: row.error,
+  };
+}
+
+const insertSubmission = db.prepare(`
+  INSERT INTO submission (id, session_id, participant_id, rendition_id, original_key, original_bytes,
+                          original_mime, filename, kind, inline, text_body, uploaded_at, late,
+                          replaced_count, status)
+  VALUES (@id, @sessionId, @participantId, @renditionId, @originalKey, @originalBytes,
+          @originalMime, @filename, @kind, @inline, @textBody, @uploadedAt, @late,
+          0, @status)
+`);
+
+const updateSubmissionStmt = db.prepare(`
+  UPDATE submission
+     SET rendition_id = @renditionId, original_key = @originalKey, original_bytes = @originalBytes,
+         original_mime = @originalMime, filename = @filename, kind = @kind, inline = @inline,
+         text_body = @textBody, uploaded_at = @uploadedAt, late = @late,
+         replaced_count = replaced_count + 1, status = @status, renditions = NULL, error = NULL
+   WHERE id = @id
+`);
+
+const selectSubmission = db.prepare('SELECT * FROM submission WHERE id = ?');
+const selectSubmissionByRendition = db.prepare('SELECT * FROM submission WHERE rendition_id = ?');
+const selectSubmissionByParticipant = db.prepare(
+  'SELECT * FROM submission WHERE session_id = ? AND participant_id = ?',
+);
+const selectSubmissions = db.prepare('SELECT * FROM submission WHERE session_id = ? ORDER BY uploaded_at');
+const deleteSubmissionStmt = db.prepare('DELETE FROM submission WHERE id = ?');
+const setSubmissionStatusStmt = db.prepare('UPDATE submission SET status = ?, renditions = ?, error = ? WHERE id = ?');
+const submittedIdsStmt = db.prepare('SELECT participant_id FROM submission WHERE session_id = ?');
+
+Object.assign(repo, {
+  addSubmission(sub) {
+    insertSubmission.run({
+      id: sub.id,
+      sessionId: sub.sessionId,
+      participantId: sub.participantId,
+      renditionId: sub.renditionId,
+      originalKey: sub.originalKey ?? null,
+      originalBytes: sub.originalBytes ?? 0,
+      originalMime: sub.originalMime ?? null,
+      filename: sub.filename ?? null,
+      kind: sub.kind ?? 'other',
+      inline: sub.inline ? 1 : 0,
+      textBody: sub.textBody ?? null,
+      uploadedAt: sub.uploadedAt,
+      late: sub.late ? 1 : 0,
+      status: sub.status ?? 'ready',
+    });
+    return toSubmission(selectSubmission.get(sub.id));
+  },
+
+  /** Remplacement : meme ligne, nouvel identifiant public, compteur incremente. */
+  replaceSubmission(sub) {
+    updateSubmissionStmt.run({
+      id: sub.id,
+      renditionId: sub.renditionId,
+      originalKey: sub.originalKey ?? null,
+      originalBytes: sub.originalBytes ?? 0,
+      originalMime: sub.originalMime ?? null,
+      filename: sub.filename ?? null,
+      kind: sub.kind ?? 'other',
+      inline: sub.inline ? 1 : 0,
+      textBody: sub.textBody ?? null,
+      uploadedAt: sub.uploadedAt,
+      late: sub.late ? 1 : 0,
+      status: sub.status ?? 'ready',
+    });
+    return toSubmission(selectSubmission.get(sub.id));
+  },
+
+  submission: (id) => toSubmission(selectSubmission.get(id)),
+  submissionByRendition: (renditionId) => toSubmission(selectSubmissionByRendition.get(renditionId)),
+  submissionOf: (sessionId, participantId) => toSubmission(selectSubmissionByParticipant.get(sessionId, participantId)),
+  submissions: (sessionId) => selectSubmissions.all(sessionId).map(toSubmission),
+  removeSubmission: (id) => deleteSubmissionStmt.run(id).changes,
+  setSubmissionStatus: (id, status, renditions = null, error = null) =>
+    setSubmissionStatusStmt.run(status, renditions ? JSON.stringify(renditions) : null, error, id),
+
+  /**
+   * Qui a rendu quelque chose.
+   *
+   * Une seule requete, appelee a chaque diffusion d'etat : la liste complete
+   * des rendus n'a pas a etre chargee pour afficher « 7 / 12 » et cocher des
+   * noms dans le trombinoscope.
+   */
+  submittedParticipantIds: (sessionId) =>
+    submittedIdsStmt.all(sessionId).map((r) => r.participant_id),
+});
+
+/* ------------------------------------------------------------------ */
 /* Journal                                                             */
 /* ------------------------------------------------------------------ */
 

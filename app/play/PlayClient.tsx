@@ -9,12 +9,13 @@ import { Brand } from '@/components/Brand';
 import { Chrono } from '@/components/Chrono';
 import { JoinForm } from '@/components/JoinForm';
 import { PhaseRail } from '@/components/PhaseRail';
+import { SubmissionBox } from '@/components/SubmissionBox';
 import { identity } from '@/lib/identity';
 import { humanDuration, humanThreshold, PHASE_LABELS } from '@/lib/format';
 import { sfx } from '@/lib/sfx';
 import { call } from '@/lib/socket';
 import { toast } from '@/lib/toast';
-import { MEDIA_LABELS, type SessionCard } from '@/lib/types';
+import { MEDIA_LABELS, type SavedIdentity, type SessionCard } from '@/lib/types';
 import { useBattleSocket } from '@/lib/useBattleSocket';
 import { usePhaseClock } from '@/lib/usePhaseClock';
 import styles from './play.module.css';
@@ -26,6 +27,8 @@ export function PlayClient() {
   const [card, setCard] = useState<SessionCard | null>(null);
   const [pseudo, setPseudo] = useState('');
   const [joined, setJoined] = useState(false);
+  /** Identite courante, pour signer les depots. */
+  const [me, setMe] = useState<SavedIdentity | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,7 +61,9 @@ export function PlayClient() {
       return;
     }
 
-    identity.save(code, { participantId: res.participantId, token: res.token, pseudo: name });
+    const saved2: SavedIdentity = { participantId: res.participantId, token: res.token, pseudo: name };
+    identity.save(code, saved2);
+    setMe(saved2);
     setError(null);
     setJoined(true);
   }, [code]);
@@ -107,6 +112,7 @@ export function PlayClient() {
     if (socket) void call(socket, 'play:leave');
     if (code) identity.clear(code);
     setJoined(false);
+    setMe(null);
     setError(null);
   };
 
@@ -246,6 +252,28 @@ export function PlayClient() {
     </>
   );
 
+  /**
+   * Zone de depot.
+   *
+   * Rendue par `you` et non par l'etat commun : le rendu d'un participant ne
+   * transite que par son canal personnel, et cette regle vaut aussi cote
+   * interface — un composant qui irait le chercher dans l'etat partage
+   * trouverait un jour celui de quelqu'un d'autre.
+   */
+  function renderSubmission() {
+    if (!me || you?.disqualified) return null;
+    return (
+      <SubmissionBox
+        code={state!.code}
+        identity={me}
+        mediaType={state!.mediaType}
+        config={state!.config}
+        submission={you?.submission ?? null}
+        closingAt={state!.clock.graceEndAt ?? state!.clock.createEndAt}
+      />
+    );
+  }
+
   function renderStage() {
     switch (phase) {
       case 'config':
@@ -260,6 +288,11 @@ export function PlayClient() {
             <p className="faint" style={{ fontSize: 12.5 }}>
               Tu auras {humanDuration(state!.config.durationMs)} pour creer.
             </p>
+            {state!.assets.length > 0 && (
+              <a className="btn sm" href={state!.assetsZipUrl}>
+                ⬇ Recuperer les {state!.assets.length} elements
+              </a>
+            )}
           </div>
         );
       case 'creation':
@@ -271,6 +304,7 @@ export function PlayClient() {
                 ? 'L’animateur a mis le chrono en pause.'
                 : 'Tu peux deposer ton rendu des qu’il est pret, sans attendre la fin.'}
             </p>
+            {renderSubmission()}
           </>
         );
       case 'upload':
@@ -280,6 +314,7 @@ export function PlayClient() {
             <p className="muted" style={{ textAlign: 'center' }}>
               Le temps de creation est ecoule. Il reste la fenetre de grace pour finaliser ton depot.
             </p>
+            {renderSubmission()}
           </>
         );
       case 'diffusion':
@@ -287,7 +322,12 @@ export function PlayClient() {
           <div className={styles.waiting}>
             <span className={styles.bigIcon} aria-hidden="true">🕶️</span>
             <h2>Diffusion en cours</h2>
-            <p className="muted">Les rendus defilent en aveugle. La notation arrive avec la suite du chantier.</p>
+            <p className="muted">
+              {you?.submission
+                ? 'Ton rendu est dans la course. Les rendus defilent en aveugle.'
+                : 'Tu n’as rien depose : tu peux suivre la diffusion sans concourir.'}
+            </p>
+            <p className="faint" style={{ fontSize: 12.5 }}>La notation arrive avec la suite du chantier.</p>
           </div>
         );
       case 'results':

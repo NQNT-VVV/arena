@@ -18,7 +18,7 @@ const repo = require('./repo');
 const storage = require('./storage');
 const views = require('./views');
 const { receiveFiles, UploadError } = require('./upload');
-const { uuid, safeFilename } = require('./util');
+const { uuid, safeFilename, cleanText, verifyMedia } = require('./util');
 const { BattleServer } = require('./battle');
 
 /**
@@ -28,6 +28,7 @@ const { BattleServer } = require('./battle');
  * du serveur, dans l'historique du navigateur et dans l'entete `Referer`.
  */
 const tokenOf = (req) => String(req.get('X-Arena-Token') || '').trim();
+const participantOf = (req) => String(req.get('X-Arena-Participant') || '').trim();
 
 /** Enveloppe : une erreur attendue devient un refus lisible, le reste un 500 muet. */
 const guard = (handler) => async (req, res) => {
@@ -228,6 +229,137 @@ function mount(app, battle) {
       zip.append(storage.createReadStream(asset.storageKey), { name });
     }
     await zip.finalize();
+  }));
+
+  /* ---------------------------------------------------------------- */
+  /* Rendus des participants                                           */
+  /* ---------------------------------------------------------------- */
+
+  /**
+   * Depot d'un rendu.
+   *
+   * Un fichier, ou du texte saisi directement pour les battles d'ecriture. Le
+   * meme point d'entree sert pendant la creation et pendant la fenetre de
+   * grace : c'est l'horloge du serveur, et elle seule, qui decide du retard.
+   */
+  app.post('/api/session/:code/submission', guard(async (req, res) => {
+    const slot = battle.openSubmissionSlot(req.params.code, participantOf(req), tokenOf(req));
+    const { session, participant, late, maxBytes, allowedExt, existing } = slot;
+
+    let written = null;
+    let fields = {};
+
+    if (String(req.get('content-type') || '').startsWith('multipart/')) {
+      const received = await receiveFiles(req, {
+        maxFiles: 1,
+        maxBytes,
+        onFile: async ({ stream, filename }) => {
+          const name = safeFilename(filename);
+          const ext = mime.safeExtension(name);
+          // La liste blanche est verifiee avant d'ecrire : refuser apres coup
+          // aurait deja consomme le disque et la bande passante.
+          if (allowedExt.length && !allowedExt.includes(ext.replace('.', ''))) {
+            stream.resume();
+            throw new UploadError(`Format refuse. Attendus : ${allowedExt.join(', ')}.`);
+          }
+          const key = `sessions/${session.id}/submissions/${participant.id}/${uuid()}${ext}`;
+          const { bytes } = await storage.put(key, stream);
+          return { key, bytes, filename: name };
+        },
+        cleanup: (records) => Promise.all(records.map((r) => storage.remove(r.key).catch(() => {}))),
+      });
+      written = received.files[0] ?? null;
+      fields = received.fields;
+    } else {
+      fields = req.body ?? {};
+    }
+
+    const textBody = cleanText(fields.body, config.limits.maxTextBodyChars);
+    if (!written && !textBody) {
+      return res.status(400).json({ error: 'Aucun fichier ni texte dans la requete.' });
+    }
+
+    const identity = written
+      ? mime.identify(await files.readHead(written.key), written.filename)
+      : { mime: 'text/plain', kind: 'text', source: 'bytes' };
+
+    const saved = battle.saveSubmission(session, participant, {
+      originalKey: written?.key ?? null,
+      originalBytes: written?.bytes ?? Buffer.byteLength(textBody, 'utf8'),
+      originalMime: identity.mime,
+      filename: written?.filename ?? null,
+      kind: written ? identity.kind : 'text',
+      inline: written ? mime.canDisplayInline(identity) : true,
+      textBody: textBody || null,
+      late,
+      status: 'ready',
+    }, existing);
+
+    // L'ancien fichier part apres l'ecriture du nouveau : dans l'autre sens, un
+    // echec en cours de route laisserait le participant sans rien.
+    if (existing?.originalKey && existing.originalKey !== saved.originalKey) {
+      await storage.remove(existing.originalKey).catch(() => {});
+    }
+
+    battle.publish(session);
+    battle.publishYou(session, participant);
+    res.json({ ok: true, submission: views.ownSubmissionView(saved), late });
+  }));
+
+  app.delete('/api/session/:code/submission', guard(async (req, res) => {
+    const { session, participant, removed } = battle.withdrawSubmission(
+      req.params.code, participantOf(req), tokenOf(req),
+    );
+    if (removed.originalKey) await storage.remove(removed.originalKey).catch(() => {});
+    battle.publish(session);
+    battle.publishYou(session, participant);
+    res.json({ ok: true });
+  }));
+
+  /**
+   * Lecture d'un rendu.
+   *
+   * Deux portes, et une seule suffit :
+   *
+   *   - une signature valide, remise a l'auteur pour qu'il puisse verifier ce
+   *     qu'il vient de deposer ;
+   *   - la phase de diffusion ou d'apres, ou les rendus sont faits pour etre
+   *     vus — l'identifiant opaque tient alors lieu de droit d'acces, et il
+   *     n'est publie qu'a l'ecran en cours.
+   *
+   * Hors de ces cas : 404, et non 403. Confirmer l'existence d'un rendu a
+   * quelqu'un qui n'y a pas droit est deja une information de trop.
+   */
+  const REVEALED_PHASES = new Set(['diffusion', 'results', 'archived']);
+
+  app.get('/api/media/:renditionId', guard(async (req, res) => {
+    const sub = repo.submissionByRendition(req.params.renditionId);
+    if (!sub || !sub.originalKey) return res.status(404).json({ error: 'Rendu introuvable.' });
+
+    const session = repo.sessionById(sub.sessionId);
+    const signed = verifyMedia(config.secret, sub.renditionId, req.query.k);
+    if (!signed && !(session && REVEALED_PHASES.has(session.phase))) {
+      return res.status(404).json({ error: 'Rendu introuvable.' });
+    }
+
+    /**
+     * Le nom du fichier est cache avant la revelation.
+     *
+     * « beat-alexis-v3.wav » annule tout le reste du dispositif. Le nom
+     * d'origine n'est rendu qu'aux resultats — et a l'auteur, qui le connait
+     * deja.
+     */
+    const revealed = signed || (session && (session.phase === 'results' || session.phase === 'archived'));
+    const ext = sub.filename ? mime.safeExtension(sub.filename) : '';
+    const shown = revealed && sub.filename ? sub.filename : `rendu${ext}`;
+
+    await files.sendStored(req, res, {
+      key: sub.originalKey,
+      filename: shown,
+      identity: { mime: sub.originalMime, source: sub.inline ? 'bytes' : 'extension' },
+      forceDownload: req.query.dl === '1',
+      cacheSeconds: 0,
+    });
   }));
 }
 

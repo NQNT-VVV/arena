@@ -27,7 +27,9 @@
  */
 const AUTHORS_VISIBLE = new Set(['results', 'archived']);
 
+const config = require('./config');
 const repo = require('./repo');
+const { signMedia } = require('./util');
 
 function authorsVisible(session) {
   return AUTHORS_VISIBLE.has(session.phase);
@@ -139,14 +141,41 @@ function assetsView(session) {
   }));
 }
 
-function countsView(session) {
+function countsView(session, submitted = repo.submittedParticipantIds(session.id)) {
   const roster = [...session.participants.values()].filter((p) => !p.isHost);
   return {
     participants: roster.length,
     connected: roster.filter((p) => session.isOnline(p.id)).length,
-    // Renseignes par les increments televersement et vote.
-    submitted: session.submissions ? session.submissions.size : 0,
+    submitted: submitted.length,
+    // Renseigne par l'increment vote.
     voted: 0,
+  };
+}
+
+/**
+ * Le rendu d'un participant, tel qu'il le voit lui.
+ *
+ * Le lien porte une signature : une balise `<audio src>` ne sait pas envoyer
+ * d'entete d'autorisation, et l'auteur doit pouvoir reecouter ce qu'il vient
+ * de deposer sans attendre la diffusion. La signature ne vaut que pour ce
+ * rendu-la.
+ */
+function ownSubmissionView(submission) {
+  if (!submission) return null;
+  return {
+    id: submission.id,
+    filename: submission.filename,
+    bytes: submission.originalBytes,
+    kind: submission.kind,
+    inline: submission.inline,
+    textBody: submission.textBody,
+    uploadedAt: submission.uploadedAt,
+    late: submission.late,
+    status: submission.status,
+    replacedCount: submission.replacedCount,
+    url: submission.originalKey
+      ? `/api/media/${submission.renditionId}?k=${signMedia(config.secret, submission.renditionId)}`
+      : null,
   };
 }
 
@@ -190,6 +219,11 @@ function participantView(session) {
  * appartient ne l'est pas.
  */
 function hostView(session) {
+  // Qui a rendu quelque chose : necessaire pour relancer les retardataires.
+  // Ce n'est pas une fuite d'anonymat — l'ensemble des auteurs est de toute
+  // facon deduit du nombre de rendus. Ce qui reste protege, c'est lequel des
+  // rendus anonymes appartient a qui.
+  const submitted = new Set(repo.submittedParticipantIds(session.id));
   return {
     ...commonView(session),
     isHost: true,
@@ -203,7 +237,7 @@ function hostView(session) {
         disqualified: p.disqualified,
         joinedAt: p.joinedAt,
         lastSeenAt: p.lastSeenAt,
-        hasSubmitted: false,
+        hasSubmitted: submitted.has(p.id),
       })),
   };
 }
@@ -233,13 +267,13 @@ function youView(session, participant) {
     isHost: participant.isHost,
     disqualified: participant.disqualified,
     joinedAt: participant.joinedAt,
-    submission: null,
+    submission: ownSubmissionView(repo.submissionOf(session.id, participant.id)),
     votes: {},
   };
 }
 
 module.exports = {
   authorsVisible, authorOf,
-  configView, clockView, rosterView, countsView, assetsView,
+  configView, clockView, rosterView, countsView, assetsView, ownSubmissionView,
   commonView, participantView, hostView, screenView, youView,
 };

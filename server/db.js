@@ -151,6 +151,13 @@ const MIGRATIONS = [
       ALTER TABLE submission ADD COLUMN inline INTEGER NOT NULL DEFAULT 0;
     `);
   },
+
+  function submissionFilename(d) {
+    // Le nom d'origine sert a proposer un telechargement lisible **apres** la
+    // revelation. Il n'apparait jamais pendant la diffusion : c'est souvent la
+    // premiere chose qui trahit un auteur.
+    d.exec("ALTER TABLE submission ADD COLUMN filename TEXT;");
+  },
 ];
 
 const applied = db.pragma('user_version', { simple: true });

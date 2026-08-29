@@ -47,7 +47,7 @@ export function AssetUploader({
 
     setProgress(0);
     const { promise, cancel } = uploadFiles<Response>(`/api/session/${code}/assets`, files, {
-      token,
+      headers: { 'X-Arena-Token': token ?? '' },
       onProgress: setProgress,
     });
     cancelRef.current = cancel;

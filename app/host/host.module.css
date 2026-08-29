@@ -15,3 +15,7 @@
 @media (max-width: 560px) { .two { grid-template-columns: 1fr; } }
 
 .invite .row { width: 100%; }
+
+/* Un rendu recu se voit d'un coup d'oeil : c'est l'information que l'animateur
+   scrute en boucle dans les dernieres minutes. */
+.submitted { border-color: rgba(52, 211, 153, .42); background: rgba(52, 211, 153, .07); }

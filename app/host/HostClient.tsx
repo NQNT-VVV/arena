@@ -333,11 +333,16 @@ export function HostClient() {
             : (
               <div className="roster">
                 {state.roster.map((p) => (
-                  <div key={p.id} className={`roster-row ${p.connected ? '' : 'off'} ${p.disqualified ? 'dq' : ''}`}>
+                  <div
+                    key={p.id}
+                    className={`roster-row ${p.connected ? '' : 'off'} ${p.disqualified ? 'dq' : ''} ${p.hasSubmitted ? styles.submitted : ''}`}
+                  >
                     <span className="avatar" aria-hidden="true">{p.avatar}</span>
                     <span className="who grow">
                       <span className="pseudo ellipsis">{p.pseudo}</span>
-                      <span className="sub">{p.connected ? 'en ligne' : 'deconnecte'}</span>
+                      <span className="sub">
+                        {p.hasSubmitted ? '✓ a rendu' : (p.connected ? 'en ligne' : 'deconnecte')}
+                      </span>
                     </span>
                     <button
                       className="btn xs ghost"

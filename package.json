@@ -23,6 +23,8 @@
     "test:mime": "node test/mime.mjs",
     "pretest:assets": "node scripts/check-node.js",
     "test:assets": "node test/assets.mjs",
+    "pretest:submissions": "node scripts/check-node.js",
+    "test:submissions": "node test/submissions.mjs",
     "pretest": "node scripts/check-node.js",
     "test": "node test/e2e.mjs"
   },

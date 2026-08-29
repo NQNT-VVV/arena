@@ -23,7 +23,11 @@ export interface UploadHandle<T> {
 export function uploadFiles<T>(
   url: string,
   files: File[],
-  { token, onProgress }: { token?: string | null; onProgress?: (ratio: number) => void } = {},
+  { headers, onProgress }: {
+    /** Entetes d'identification : jeton d'animateur, ou jeton + identifiant de participant. */
+    headers?: Record<string, string> | null;
+    onProgress?: (ratio: number) => void;
+  } = {},
 ): UploadHandle<T> {
   const xhr = new XMLHttpRequest();
 
@@ -54,7 +58,9 @@ export function uploadFiles<T>(
     }));
 
     xhr.open('POST', url);
-    if (token) xhr.setRequestHeader('X-Arena-Token', token);
+    for (const [name, value] of Object.entries(headers ?? {})) {
+      if (value) xhr.setRequestHeader(name, value);
+    }
     xhr.send(form);
   });
 
