@@ -1,0 +1,20 @@
+.zone {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 22px 16px; border-radius: var(--r-md);
+  border: 1px dashed var(--stroke-strong); background: rgba(255, 255, 255, .022);
+  transition: border-color .2s, background .2s, transform .2s var(--ease);
+}
+.zone.over {
+  border-color: var(--accent); background: rgba(139, 92, 246, .1);
+  transform: scale(1.01);
+}
+.zone.off { opacity: .5; border-style: solid; }
+
+.icon { font-size: 26px; line-height: 1; }
+
+.bar { width: 100%; height: 6px; border-radius: 99px; background: rgba(255,255,255,.1); overflow: hidden; }
+.bar > i {
+  display: block; height: 100%; border-radius: 99px;
+  background: linear-gradient(90deg, var(--violet), var(--cyan));
+  transform-origin: left center; transition: transform .2s linear;
+}

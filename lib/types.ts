@@ -64,6 +64,28 @@ export interface RosterEntry {
   hasSubmitted?: boolean;
 }
 
+export type AssetKind = 'audio' | 'image' | 'video' | 'text' | 'other';
+
+/** Element impose par l'animateur, tel que la page le recoit. */
+export interface Asset {
+  id: string;
+  filename: string;
+  bytes: number;
+  mime: string;
+  kind: AssetKind;
+  /**
+   * Consultable directement dans la page.
+   *
+   * Decide par le serveur a partir des octets reels, pas de l'extension. Un
+   * fichier a `false` ne se telecharge que — il ne faut pas tenter de le
+   * rendre dans une balise, le serveur refuserait de le servir avec un type
+   * que le navigateur accepte d'interpreter.
+   */
+  inline: boolean;
+  position: number;
+  url: string;
+}
+
 export interface Counts {
   participants: number;
   connected: number;
@@ -81,8 +103,9 @@ export interface BattleState {
   clock: ClockState;
   counts: Counts;
   roster: RosterEntry[];
+  assets: Asset[];
+  assetsZipUrl: string;
   /** Renseignes par les increments a venir. */
-  assets: unknown[];
   diffusion: unknown | null;
   podium: unknown | null;
   serverNow: number;

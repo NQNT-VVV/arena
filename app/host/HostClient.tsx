@@ -3,23 +3,34 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Socket } from 'socket.io-client';
 
+import { AssetPack } from '@/components/AssetPack';
+import { AssetUploader } from '@/components/AssetUploader';
 import { Brand } from '@/components/Brand';
 import { Chrono } from '@/components/Chrono';
 import { PhaseRail } from '@/components/PhaseRail';
 import { QrCode } from '@/components/QrCode';
+import { humanBytes, humanDuration, humanThreshold, PHASE_LABELS } from '@/lib/format';
 import { hostKeys } from '@/lib/identity';
-import { humanDuration, humanThreshold, PHASE_LABELS } from '@/lib/format';
 import { sfx } from '@/lib/sfx';
 import { call } from '@/lib/socket';
 import { copyToClipboard } from '@/lib/storage';
 import { toast } from '@/lib/toast';
-import { MEDIA_LABELS, type LatePolicy, type MediaType } from '@/lib/types';
+import { MEDIA_LABELS, type Asset, type LatePolicy, type MediaType } from '@/lib/types';
 import { useBattleSocket } from '@/lib/useBattleSocket';
 import { usePhaseClock } from '@/lib/usePhaseClock';
 import styles from './host.module.css';
 
 /** Seuils proposes en un clic. L'animateur en coche autant qu'il veut. */
 const ALERT_CHOICES = [900, 600, 300, 120, 60, 30];
+
+/**
+ * Miroir de `BattleServer.ASSET_ADD_PHASES` et `ASSET_REMOVE_PHASES`.
+ *
+ * Le serveur reste seul juge — il refuse ce qu'il doit refuser. Ces ensembles
+ * ne servent qu'a griser les commandes plutot qu'a laisser cliquer pour rien.
+ */
+const ASSET_ADD_PHASES = new Set(['config', 'lobby', 'creation']);
+const ASSET_REMOVE_PHASES = new Set(['config', 'lobby']);
 
 const LATE_POLICIES: { id: LatePolicy; label: string; hint: string }[] = [
   { id: 'reject', label: 'Refuses', hint: 'Passe l’heure, le depot est bloque.' },
@@ -169,6 +180,24 @@ export function HostClient() {
     sfx.phase();
   };
 
+  /**
+   * Retrait d'un element.
+   *
+   * Passe par HTTP et non par la socket : c'est la meme ressource que le
+   * depot, et la faire vivre a deux endroits garantit qu'un jour les deux
+   * divergeront.
+   */
+  const dropAsset = async (asset: Asset) => {
+    if (!code) return;
+    const res = await fetch(`/api/session/${code}/assets/${asset.id}`, {
+      method: 'DELETE',
+      headers: { 'X-Arena-Token': hostKeys.get(code) ?? '' },
+    });
+    const body = await res.json().catch(() => ({ error: 'Reponse illisible.' }));
+    if (!res.ok) toast(body.error || 'Retrait impossible.', 'err');
+    else toast('Element retire', 'ok');
+  };
+
   const saveConfig = () => act('host:configure', {
     name: draft.name,
     mediaType: draft.mediaType,
@@ -266,6 +295,33 @@ export function HostClient() {
               </>
             )}
           </div>
+        </section>
+
+        <section className="card pad col">
+          <h2 className="section-title">
+            Elements imposes
+            {state.assets.length > 0 && (
+              <span className="faint" style={{ fontSize: 11.5, letterSpacing: 0, textTransform: 'none' }}>
+                {state.assets.length} • {humanBytes(state.assets.reduce((n, a) => n + a.bytes, 0))}
+              </span>
+            )}
+          </h2>
+          <p className="muted" style={{ fontSize: 13.5 }}>
+            Samples, screenshots, rushes, templates. Les participants les consultent directement
+            dans leur page et peuvent recuperer le pack complet.
+          </p>
+          <AssetUploader
+            code={state.code}
+            token={hostKeys.get(state.code)}
+            disabled={!ASSET_ADD_PHASES.has(phase)}
+            hint="ou glisse-les ici — plusieurs a la fois"
+          />
+          <AssetPack
+            assets={state.assets}
+            zipUrl={state.assets.length ? state.assetsZipUrl : undefined}
+            onRemove={ASSET_REMOVE_PHASES.has(phase) ? dropAsset : undefined}
+            emptyLabel="Aucun element pour l'instant. Une session peut tres bien s'en passer : une consigne seule suffit."
+          />
         </section>
 
         {editable && <section className="card pad col">{renderForm(true)}</section>}

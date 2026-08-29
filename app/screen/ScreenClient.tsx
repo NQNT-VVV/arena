@@ -121,7 +121,10 @@ export function ScreenClient() {
             <b>{state.counts.participants}</b> participant{state.counts.participants > 1 ? 's' : ''}
             {state.counts.participants > 0 && ` • ${state.counts.connected} en ligne`}
           </p>
-          <p className="muted">{humanDuration(state.config.durationMs)} de creation</p>
+          <p className="muted">
+            {humanDuration(state.config.durationMs)} de creation
+            {state.assets.length > 0 && ` • ${state.assets.length} element${state.assets.length > 1 ? 's' : ''} impose${state.assets.length > 1 ? 's' : ''}`}
+          </p>
         </>
       )}
 

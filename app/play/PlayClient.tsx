@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import type { Socket } from 'socket.io-client';
 
+import { AssetPack } from '@/components/AssetPack';
 import { Brand } from '@/components/Brand';
 import { Chrono } from '@/components/Chrono';
 import { JoinForm } from '@/components/JoinForm';
@@ -209,6 +210,15 @@ export function PlayClient() {
             <span>•</span>
             <span>note sur {state.config.scale}</span>
           </div>
+        </section>
+
+        <section className="card pad col">
+          <h2 className="section-title">Elements imposes</h2>
+          <AssetPack
+            assets={state.assets}
+            zipUrl={state.assets.length ? state.assetsZipUrl : undefined}
+            emptyLabel="Aucun element impose : la consigne seule fait foi."
+          />
         </section>
 
         <section className="card pad col">
