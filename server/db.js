@@ -138,6 +138,19 @@ const MIGRATIONS = [
       CREATE INDEX session_event_idx ON session_event(session_id, id);
     `);
   },
+
+  function fileKinds(d) {
+    // `kind` pilote l'affichage (audio, image, video, text, other) et `inline`
+    // dit si le fichier a le droit d'etre rendu dans la page. Les deux sont
+    // decides une fois, au televersement, a partir des octets reels : les
+    // recalculer a chaque requete voudrait dire relire chaque fichier.
+    d.exec(`
+      ALTER TABLE asset      ADD COLUMN kind   TEXT    NOT NULL DEFAULT 'other';
+      ALTER TABLE asset      ADD COLUMN inline INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE submission ADD COLUMN kind   TEXT    NOT NULL DEFAULT 'other';
+      ALTER TABLE submission ADD COLUMN inline INTEGER NOT NULL DEFAULT 0;
+    `);
+  },
 ];
 
 const applied = db.pragma('user_version', { simple: true });

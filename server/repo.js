@@ -201,6 +201,62 @@ Object.assign(repo, {
 });
 
 /* ------------------------------------------------------------------ */
+/* Assets imposes                                                      */
+/* ------------------------------------------------------------------ */
+
+function toAsset(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    sessionId: row.session_id,
+    filename: row.filename,
+    storageKey: row.storage_key,
+    bytes: row.bytes,
+    mime: row.mime,
+    kind: row.kind,
+    inline: !!row.inline,
+    position: row.position,
+    createdAt: row.created_at,
+  };
+}
+
+const insertAsset = db.prepare(`
+  INSERT INTO asset (id, session_id, filename, storage_key, bytes, mime, kind, inline, position, created_at)
+  VALUES (@id, @sessionId, @filename, @storageKey, @bytes, @mime, @kind, @inline, @position, @createdAt)
+`);
+const selectAsset = db.prepare('SELECT * FROM asset WHERE id = ?');
+const selectAssets = db.prepare('SELECT * FROM asset WHERE session_id = ? ORDER BY position, created_at');
+const deleteAssetStmt = db.prepare('DELETE FROM asset WHERE id = ?');
+const assetTotalsStmt = db.prepare(
+  'SELECT COUNT(*) AS n, COALESCE(SUM(bytes), 0) AS bytes, COALESCE(MAX(position), -1) AS lastPosition FROM asset WHERE session_id = ?',
+);
+
+Object.assign(repo, {
+  addAsset(asset) {
+    insertAsset.run({
+      id: asset.id,
+      sessionId: asset.sessionId,
+      filename: asset.filename,
+      storageKey: asset.storageKey,
+      bytes: asset.bytes,
+      mime: asset.mime,
+      kind: asset.kind,
+      inline: asset.inline ? 1 : 0,
+      position: asset.position,
+      createdAt: asset.createdAt,
+    });
+    return toAsset(selectAsset.get(asset.id));
+  },
+
+  asset: (id) => toAsset(selectAsset.get(id)),
+  assets: (sessionId) => selectAssets.all(sessionId).map(toAsset),
+  removeAsset: (id) => deleteAssetStmt.run(id).changes,
+
+  /** Compte, poids cumule et derniere position, en une seule requete. */
+  assetTotals: (sessionId) => assetTotalsStmt.get(sessionId),
+});
+
+/* ------------------------------------------------------------------ */
 /* Journal                                                             */
 /* ------------------------------------------------------------------ */
 

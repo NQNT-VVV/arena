@@ -27,6 +27,8 @@
  */
 const AUTHORS_VISIBLE = new Set(['results', 'archived']);
 
+const repo = require('./repo');
+
 function authorsVisible(session) {
   return AUTHORS_VISIBLE.has(session.phase);
 }
@@ -116,6 +118,27 @@ function rosterView(session) {
     }));
 }
 
+/**
+ * Elements imposes.
+ *
+ * Aucun anonymat en jeu : ce sont les fichiers de l'animateur, les memes pour
+ * tout le monde. On expose de quoi les consulter dans la page (`kind` et
+ * `inline`) et de quoi les recuperer, un par un ou en pack.
+ */
+function assetsView(session) {
+  return repo.assets(session.id).map((a) => ({
+    id: a.id,
+    filename: a.filename,
+    bytes: a.bytes,
+    mime: a.mime,
+    kind: a.kind,
+    /** Consultable directement dans la page, ou seulement telechargeable. */
+    inline: a.inline,
+    position: a.position,
+    url: `/api/asset/${a.id}`,
+  }));
+}
+
 function countsView(session) {
   const roster = [...session.participants.values()].filter((p) => !p.isHost);
   return {
@@ -143,7 +166,8 @@ function commonView(session) {
     clock: clockView(session),
     counts: countsView(session),
     roster: rosterView(session),
-    assets: [],
+    assets: assetsView(session),
+    assetsZipUrl: `/api/session/${session.code}/assets.zip`,
     diffusion: null,
     podium: null,
     /** Reference d'horloge : le client s'en sert pour mesurer sa derive. */
@@ -216,6 +240,6 @@ function youView(session, participant) {
 
 module.exports = {
   authorsVisible, authorOf,
-  configView, clockView, rosterView, countsView,
+  configView, clockView, rosterView, countsView, assetsView,
   commonView, participantView, hostView, screenView, youView,
 };

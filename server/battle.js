@@ -52,12 +52,20 @@ const TRANSITIONS = {
 const MEDIA_TYPES = new Set(['audio', 'image', 'video', 'text', 'file']);
 const LATE_POLICIES = new Set(['reject', 'unranked', 'penalty']);
 
-/** Erreur destinee au client : son message est affichable tel quel. */
+/**
+ * Erreur destinee au client : son message est affichable tel quel.
+ *
+ * Le code HTTP distingue trois refus que le client ne traite pas pareil :
+ * 403 « ce n'est pas vous l'animateur » invite a verifier son lien, 409 « pas
+ * a ce moment-la » invite a attendre, 404 « ca n'existe pas ». Tout replier
+ * sur 403 obligerait l'interface a lire le message pour deviner.
+ */
 class BattleError extends Error {
-  constructor(message) {
+  constructor(message, status = 409) {
     super(message);
     this.name = 'BattleError';
     this.expected = true;
+    this.status = status;
   }
 }
 
@@ -213,7 +221,7 @@ class BattleServer {
 
   require(code) {
     const s = this.get(code);
-    if (!s) throw new BattleError("Cette session n'existe pas ou plus.");
+    if (!s) throw new BattleError("Cette session n'existe pas ou plus.", 404);
     return s;
   }
 
@@ -221,7 +229,7 @@ class BattleServer {
   requireHost(code, token) {
     const s = this.require(code);
     if (!tokenMatches(token, s.hostTokenHash)) {
-      throw new BattleError("Vous n'etes pas l'animateur de cette session.");
+      throw new BattleError("Vous n'etes pas l'animateur de cette session.", 403);
     }
     return s;
   }
@@ -354,12 +362,63 @@ class BattleServer {
   setDisqualified(code, token, participantId, on) {
     const s = this.requireHost(code, token);
     const p = s.participants.get(participantId);
-    if (!p) throw new BattleError('Participant introuvable.');
+    if (!p) throw new BattleError('Participant introuvable.', 404);
     p.disqualified = !!on;
     repo.setDisqualified(participantId, on);
     repo.logEvent(s.id, on ? 'participant:disqualified' : 'participant:requalified', { pseudo: p.pseudo });
     this.publish(s);
     return s;
+  }
+
+  /* ---------------------------- assets --------------------------- */
+
+  /**
+   * Phases ou l'animateur peut encore deposer un element.
+   *
+   * `creation` en fait partie : oublier un sample et s'en apercevoir dix
+   * minutes apres le depart arrive, et interdire l'ajout obligerait a relancer
+   * toute la session. Les participants recoivent le nouvel element en direct.
+   */
+  static ASSET_ADD_PHASES = new Set(['config', 'lobby', 'creation']);
+
+  /**
+   * Phases ou il peut en retirer un.
+   *
+   * Volontairement plus etroit que l'ajout : retirer une contrainte alors que
+   * des gens ont deja construit dessus invalide leur travail.
+   */
+  static ASSET_REMOVE_PHASES = new Set(['config', 'lobby']);
+
+  /** Verifie qu'un depot d'element est possible, et dit ce qu'il reste comme place. */
+  openAssetSlot(code, token) {
+    const session = this.requireHost(code, token);
+    if (!BattleServer.ASSET_ADD_PHASES.has(session.phase)) {
+      throw new BattleError('Les elements ne se deposent plus une fois la creation terminee.');
+    }
+    const totals = repo.assetTotals(session.id);
+    const slots = config.limits.maxAssets - totals.n;
+    const budget = config.limits.maxAssetsBytes - totals.bytes;
+    if (slots <= 0) throw new BattleError(`Pas plus de ${config.limits.maxAssets} elements par session.`, 413);
+    if (budget <= 0) throw new BattleError('Le poids total des elements est atteint.', 413);
+    return { session, slots, budget, nextPosition: totals.lastPosition + 1 };
+  }
+
+  recordAsset(session, asset) {
+    const saved = repo.addAsset({ ...asset, sessionId: session.id, createdAt: Date.now() });
+    repo.logEvent(session.id, 'asset:added', { filename: saved.filename, bytes: saved.bytes });
+    return saved;
+  }
+
+  removeAsset(code, token, assetId) {
+    const session = this.requireHost(code, token);
+    if (!BattleServer.ASSET_REMOVE_PHASES.has(session.phase)) {
+      throw new BattleError('Un element ne se retire plus une fois la creation lancee.');
+    }
+    const asset = repo.asset(assetId);
+    if (!asset || asset.sessionId !== session.id) throw new BattleError('Element introuvable.', 404);
+    repo.removeAsset(assetId);
+    repo.logEvent(session.id, 'asset:removed', { filename: asset.filename });
+    return { session, asset };
   }
 
   /* ---------------------------- phases --------------------------- */

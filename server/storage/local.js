@@ -42,10 +42,17 @@ module.exports = {
     const full = resolveKey(key);
     await fsp.mkdir(path.dirname(full), { recursive: true });
     // Ecriture sous un nom temporaire puis renommage : un televersement
-    // interrompu ne laisse pas un fichier tronque a la place du bon.
+    // interrompu ne laisse pas un fichier tronque a la place du bon. Et si
+    // l'ecriture echoue, le fragment part avec elle — sinon un depot refuse
+    // laisserait sur le volume des octets que plus rien ne reference.
     const tmp = `${full}.part`;
-    await pipeline(readable, fs.createWriteStream(tmp));
-    await fsp.rename(tmp, full);
+    try {
+      await pipeline(readable, fs.createWriteStream(tmp));
+      await fsp.rename(tmp, full);
+    } catch (err) {
+      await fsp.rm(tmp, { force: true }).catch(() => {});
+      throw err;
+    }
     const { size } = await fsp.stat(full);
     return { key, bytes: size };
   },

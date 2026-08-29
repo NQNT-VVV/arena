@@ -13,8 +13,8 @@ const http = require('http');
 const express = require('express');
 const next = require('next');
 const { Server } = require('socket.io');
-const QRCode = require('qrcode');
 
+const api = require('./api');
 const config = require('./config');
 const metrics = require('./metrics');
 const storage = require('./storage');
@@ -71,54 +71,12 @@ const addressOf = (socket) => socket.handshake.headers['x-forwarded-for']?.split
   || 'inconnu';
 
 /* ------------------------------------------------------------------ */
-/* API                                                                 */
+/* API HTTP                                                            */
 /* ------------------------------------------------------------------ */
 
-app.get('/api/health', (req, res) => {
-  res.json({ ok: true, sessions: battle.sessions.size, storage: storage.name, uptime: Math.round(process.uptime()) });
-});
-
-/**
- * Carte de visite d'une session, avant de la rejoindre.
- *
- * Assez pour que la page d'accueil affiche « Beat Battle #12 — audio » et que
- * le participant sache qu'il ne s'est pas trompe de code. Rien de plus : ni
- * consigne, ni liste de presents, tant qu'il n'est pas entre.
- */
-app.get('/api/session/:code', (req, res) => {
-  const s = battle.get(req.params.code);
-  if (!s) return res.status(404).json({ exists: false });
-  res.json({
-    exists: true,
-    code: s.code,
-    name: s.name,
-    mediaType: s.mediaType,
-    phase: s.phase,
-    open: BattleServer.JOINABLE.has(s.phase),
-    participants: s.participants.size,
-  });
-});
-
-app.get('/api/qr', async (req, res) => {
-  const text = String(req.query.text || '').slice(0, 512);
-  if (!text) return res.status(400).send('parametre « text » manquant');
-  try {
-    const svg = await QRCode.toString(text, {
-      type: 'svg',
-      margin: 1,
-      errorCorrectionLevel: 'M',
-      color: { dark: String(req.query.dark || '#07060E'), light: String(req.query.light || '#FFFFFF') },
-    });
-    res.type('image/svg+xml').set('Cache-Control', 'public, max-age=3600').send(svg);
-  } catch (err) {
-    res.status(500).send(err.message);
-  }
-});
-
-/** Lien court d'invitation : /j/ABC123 */
-app.get('/j/:code', (req, res) => {
-  res.redirect(`/play?code=${encodeURIComponent(String(req.params.code).toUpperCase())}`);
-});
+// Sante, carte de visite, QR, elements imposes, rendus : tout est dans api.js.
+// Le montage se fait avant le rendu Next, qui capte tout le reste.
+api.mount(app, battle);
 
 /* ------------------------------------------------------------------ */
 /* Temps reel                                                          */

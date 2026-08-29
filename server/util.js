@@ -95,6 +95,24 @@ function cleanText(raw, max) {
     .slice(0, max);
 }
 
+/**
+ * Nom de fichier affichable et sans danger.
+ *
+ * On garde le nom d'origine — un participant doit reconnaitre « 01-kick.wav »
+ * dans la liste — mais debarrasse de tout ce qui pourrait etre interprete comme
+ * un chemin. Le nom ne sert jamais de clef de stockage : celle-ci est un
+ * identifiant tire au hasard.
+ */
+function safeFilename(raw, max = 120) {
+  const base = String(raw ?? '').split(/[\\/]/).pop() || '';
+  return base
+    .replace(CONTROL, '')
+    .replace(INVISIBLE, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, max) || 'fichier';
+}
+
 /** Melange de Fisher-Yates, avec une source aleatoire cryptographique. */
 function shuffle(list) {
   const out = [...list];
@@ -110,5 +128,5 @@ const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
 module.exports = {
   CODE_ALPHABET, CODE_LENGTH,
   randomCode, uniqueCode, uuid, newToken, hashToken, tokenMatches,
-  AVATARS, pickAvatar, cleanPseudo, cleanText, shuffle, clamp,
+  AVATARS, pickAvatar, cleanPseudo, cleanText, safeFilename, shuffle, clamp,
 };
