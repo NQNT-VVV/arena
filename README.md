@@ -356,6 +356,17 @@ npm ci
 ne lui correspond, quel que soit le paquet — raison de plus pour rester sur la
 version de `.nvmrc`.
 
+### Le serveur redemarre en boucle en developpement
+
+`node --watch` surveille les modules charges par le process — et le serveur de
+developpement de Next charge ses chunks compiles depuis `.next/`. Chaque
+compilation a la demande y reecrit des fichiers, Node redemarre, et les
+requetes en vol tombent.
+
+D'ou `--watch-path=./server` dans le script `dev` : seuls les fichiers serveur
+justifient un redemarrage. Les pages et les composants sont rechargés par Next
+lui-meme, sans couper les sockets ni les sessions en cours.
+
 ### `@img/sharp-wasm32 extraneous` dans `npm ls`
 
 Sans consequence. `sharp` arrive en dependance optionnelle de Next ; sur

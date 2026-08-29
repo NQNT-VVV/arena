@@ -11,7 +11,7 @@
   "scripts": {
     "check:node": "node scripts/check-node.js",
     "predev": "node scripts/check-node.js",
-    "dev": "node --watch server/index.js",
+    "dev": "node --watch-path=./server --watch-preserve-output server/index.js",
     "prestart": "node scripts/check-node.js",
     "start": "NODE_ENV=production node server/index.js",
     "prebuild": "node scripts/check-node.js",
