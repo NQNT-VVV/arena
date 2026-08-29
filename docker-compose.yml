@@ -1,0 +1,35 @@
+# Arena — pile locale complete.
+#   SESSION_SECRET=$(openssl rand -hex 32) docker compose up --build
+#
+# Un seul service : l'etat vit dans le process et dans un fichier SQLite, il
+# n'y a ni base externe ni cache a orchestrer.
+
+services:
+  arena:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-3000}:3000"
+      # Metriques : publiees en local pour pouvoir les lire, jamais exposees
+      # sur Internet en production.
+      - "127.0.0.1:${METRICS_PORT:-9464}:9464"
+    environment:
+      # Obligatoire : sans lui, un redemarrage deconnecte tous les participants.
+      SESSION_SECRET: ${SESSION_SECRET:?definir SESSION_SECRET, par exemple avec openssl rand -hex 32}
+      PUBLIC_URL: ${PUBLIC_URL:-}
+      STORAGE_DRIVER: local
+      DEFAULT_DURATION_S: ${DEFAULT_DURATION_S:-3600}
+      DEFAULT_GRACE_S: ${DEFAULT_GRACE_S:-120}
+      DEFAULT_ALERTS_S: ${DEFAULT_ALERTS_S:-600,120,60,30}
+      MAX_FILE_BYTES: ${MAX_FILE_BYTES:-209715200}
+      TRANSCODE_CONCURRENCY: ${TRANSCODE_CONCURRENCY:-2}
+    volumes:
+      - arena-data:/app/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 4s
+      start_period: 25s
+
+volumes:
+  arena-data:

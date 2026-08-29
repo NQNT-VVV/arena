@@ -1,0 +1,50 @@
+.wrap { max-width: 1040px; margin: 0 auto; padding: 6vh 22px 60px; }
+
+.topbar { display: flex; align-items: center; gap: 14px; margin-bottom: 5vh; font-size: 17px; }
+.topbar .spacer { flex: 1; }
+
+.hero { text-align: center; margin-bottom: 46px; }
+.badge { margin-bottom: 22px; }
+.hero h1 {
+  font-size: clamp(46px, 9vw, 96px); line-height: .95; margin-bottom: 18px;
+  background: linear-gradient(120deg, #fff 20%, #c4b5fd 45%, #67e8f9 75%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.hero p { font-size: clamp(16px, 2.2vw, 19px); color: var(--muted); max-width: 580px; margin: 0 auto; }
+
+.choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+
+.choice { padding: 30px; display: flex; flex-direction: column; gap: 18px; position: relative; overflow: hidden; }
+.choice::before {
+  content: ''; position: absolute; inset: -1px -1px auto -1px; height: 3px;
+  background: linear-gradient(90deg, var(--violet), var(--cyan));
+  opacity: .8;
+}
+.choice.join::before { background: linear-gradient(90deg, var(--pink), var(--amber)); }
+.choice h2 { font-size: 25px; }
+.lead { color: var(--muted); font-size: 14.5px; line-height: 1.6; }
+.icon { font-size: 34px; line-height: 1; }
+
+.codeInput {
+  text-align: center; font-family: var(--display); font-size: 30px; font-weight: 700;
+  letter-spacing: .35em; text-indent: .35em; text-transform: uppercase; padding: 16px;
+}
+
+.examples { margin-top: 46px; display: flex; flex-direction: column; gap: 14px; }
+.exampleGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.example {
+  padding: 16px 18px; border-radius: var(--r-md);
+  background: var(--surface); border: 1px solid var(--stroke);
+  display: flex; flex-direction: column; gap: 4px;
+}
+.exampleIcon { font-size: 24px; line-height: 1; margin-bottom: 4px; }
+.example b { font-family: var(--display); font-size: 14.5px; }
+.example span:last-child { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+
+.feats { margin-top: 26px; display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+.feat { padding: 18px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--stroke); }
+.feat b { display: block; font-family: var(--display); font-size: 14.5px; margin-bottom: 5px; }
+.feat span { font-size: 13px; color: var(--muted); line-height: 1.55; }
+
+.footer { margin-top: 46px; text-align: center; font-size: 12.5px; color: var(--faint); }
+.footer a { color: var(--muted); border-bottom: 1px dotted var(--stroke-strong); }

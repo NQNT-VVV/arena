@@ -1,0 +1,26 @@
+.gate {
+  min-height: 100dvh; max-width: 420px; margin: 0 auto;
+  padding: 8vh 22px 40px;
+  display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center;
+}
+.gate h1 { font-size: clamp(26px, 7vw, 36px); line-height: 1.1; }
+.gate .field { text-align: left; }
+
+.codeInput {
+  text-align: center; font-family: var(--display); font-size: 28px; font-weight: 700;
+  letter-spacing: .34em; text-indent: .34em; text-transform: uppercase; padding: 15px;
+}
+
+.error {
+  padding: 11px 15px; border-radius: var(--r-md); font-size: 13.5px;
+  background: rgba(251, 93, 93, .13); border: 1px solid rgba(251, 93, 93, .34); color: #ffc0c0;
+}
+
+.stage { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+
+.waiting { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; padding: 14px 0; }
+.waiting h2 { font-size: 22px; }
+.waiting p { font-size: 14px; max-width: 42ch; }
+.bigIcon { font-size: 46px; line-height: 1; }
+
+.footer { text-align: center; padding-bottom: 20px; }

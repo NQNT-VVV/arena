@@ -1,0 +1,17 @@
+.boot { min-height: 100dvh; display: grid; place-items: center; }
+
+.grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+.stage { display: flex; flex-direction: column; align-items: center; gap: 22px; }
+.controls { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; width: 100%; }
+.controls p { font-size: 14px; }
+
+.invite { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.invite .screen-qr { width: 172px; }
+.codeBig { font-size: clamp(30px, 6vw, 44px); letter-spacing: .18em; }
+
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 560px) { .two { grid-template-columns: 1fr; } }
+
+.invite .row { width: 100%; }
