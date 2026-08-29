@@ -9,12 +9,23 @@
  */
 
 import { spawn } from 'node:child_process';
-import { rmSync } from 'node:fs';
+import { existsSync, rmSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
 const { io } = require('socket.io-client');
+
+/**
+ * Le serveur est demarre en mode production : c'est le mode dans lequel il
+ * tourne reellement, et le seul qui ne recompile pas les pages au vol pendant
+ * qu'on le mesure. Il lui faut donc un build. Sans ce controle, l'absence de
+ * .next produit une trace de demarrage illisible plutot qu'une consigne.
+ */
+if (!existsSync(new URL('../.next', import.meta.url))) {
+  console.error('\n  Ce test demarre le serveur en production : il lui faut un build.\n\n      npm run build\n');
+  process.exit(1);
+}
 
 const PORT = 3400 + Math.floor(Math.random() * 300);
 const BASE = `http://127.0.0.1:${PORT}`;
