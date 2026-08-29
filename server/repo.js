@@ -371,6 +371,68 @@ Object.assign(repo, {
 });
 
 /* ------------------------------------------------------------------ */
+/* Votes                                                               */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Un vote s'ecrase, il ne s'accumule pas.
+ *
+ * Quelqu'un qui change d'avis avant la fin d'un passage doit pouvoir le faire
+ * sans laisser deux notes derriere lui. La clef primaire (rendu, votant,
+ * critere) rend l'ecrasement automatique.
+ */
+const upsertVoteStmt = db.prepare(`
+  INSERT INTO vote (session_id, submission_id, voter_id, criterion_id, value, at)
+  VALUES (@sessionId, @submissionId, @voterId, @criterionId, @value, @at)
+  ON CONFLICT(submission_id, voter_id, criterion_id)
+  DO UPDATE SET value = excluded.value, at = excluded.at
+`);
+
+const selectVotesOf = db.prepare('SELECT submission_id, criterion_id, value FROM vote WHERE session_id = ? AND voter_id = ?');
+const countVotersStmt = db.prepare('SELECT COUNT(DISTINCT voter_id) AS n FROM vote WHERE submission_id = ?');
+const deleteVotesOfStmt = db.prepare('DELETE FROM vote WHERE submission_id = ?');
+
+/**
+ * Toutes les notes d'une session, agregees par rendu et par critere.
+ *
+ * Une seule requete pour tout le classement : parcourir les rendus en
+ * interrogeant la base a chaque tour ferait autant d'allers-retours que de
+ * participants, au moment precis ou tout le monde attend le podium.
+ */
+const tallyStmt = db.prepare(`
+  SELECT submission_id, criterion_id, COUNT(*) AS n, SUM(value) AS total
+    FROM vote
+   WHERE session_id = ?
+   GROUP BY submission_id, criterion_id
+`);
+
+Object.assign(repo, {
+  castVote(vote) {
+    upsertVoteStmt.run({
+      sessionId: vote.sessionId,
+      submissionId: vote.submissionId,
+      voterId: vote.voterId,
+      criterionId: vote.criterionId,
+      value: vote.value,
+      at: Date.now(),
+    });
+  },
+
+  /** Ce qu'un votant a deja donne : { submissionId: { criterionId: valeur } }. */
+  votesOf(sessionId, voterId) {
+    const out = {};
+    for (const row of selectVotesOf.all(sessionId, voterId)) {
+      (out[row.submission_id] ??= {})[row.criterion_id] = row.value;
+    }
+    return out;
+  },
+
+  countVoters: (submissionId) => countVotersStmt.get(submissionId).n,
+  removeVotesOf: (submissionId) => deleteVotesOfStmt.run(submissionId).changes,
+  tally: (sessionId) => tallyStmt.all(sessionId),
+});
+
+/* ------------------------------------------------------------------ */
 /* Journal                                                             */
 /* ------------------------------------------------------------------ */
 

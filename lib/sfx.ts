@@ -86,6 +86,9 @@ class Sfx {
   /** Quelqu'un rejoint le lobby. */
   join() { this.tone({ freq: 784, dur: 0.1, type: 'triangle', gain: 0.09 }); }
 
+  /** Note enregistree : discret, il sera joue des dizaines de fois. */
+  vote() { this.tone({ freq: 920, dur: 0.07, type: 'triangle', gain: 0.07 }); }
+
   /** Revelation du classement. */
   reveal() { this.chord([392, 587], 0.1, { dur: 0.4, gain: 0.13 }); }
 

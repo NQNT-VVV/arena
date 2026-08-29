@@ -21,3 +21,7 @@
 }
 
 .bigIcon { font-size: clamp(60px, 12vw, 140px); line-height: 1; }
+
+/* La scene et le podium occupent la largeur : le reste de la page est centre,
+   eux ont besoin de place. */
+.wide { width: min(1100px, 94vw); display: flex; flex-direction: column; align-items: center; gap: 18px; }

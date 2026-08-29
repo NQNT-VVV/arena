@@ -1,0 +1,37 @@
+.stage { display: flex; flex-direction: column; gap: 14px; width: 100%; }
+
+.counter { display: flex; align-items: baseline; gap: 8px; }
+.position { font-family: var(--display); font-weight: 700; font-size: 30px; line-height: 1; font-variant-numeric: tabular-nums; }
+
+.media { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
+.audio { width: 100%; }
+.video { width: 100%; max-height: 50vh; border-radius: var(--r-md); background: #000; }
+.imageLink { display: block; width: 100%; border-radius: var(--r-md); overflow: hidden; background: rgba(0,0,0,.35); }
+.image { width: 100%; max-height: 50vh; object-fit: contain; }
+.text {
+  margin: 0; width: 100%; max-height: 42vh; overflow: auto;
+  padding: 16px 18px; border-radius: var(--r-md);
+  background: rgba(0,0,0,.3); border: 1px solid var(--stroke);
+  /* Un texte se lit ; on ne l'enferme pas dans une police a chasse fixe. */
+  font-family: var(--body); font-size: 15.5px; line-height: 1.65;
+  white-space: pre-wrap; overflow-wrap: anywhere;
+}
+
+.meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--faint); }
+.tally { font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 600; }
+
+.votes { display: flex; flex-direction: column; gap: 14px; padding-top: 4px; }
+.mine {
+  padding: 13px 16px; border-radius: var(--r-md); font-size: 13.5px; text-align: center;
+  background: var(--surface-2); border: 1px dashed var(--stroke-strong); color: var(--muted);
+}
+
+.empty { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; padding: 20px 0; }
+.empty h2 { font-size: 20px; }
+.icon { font-size: 44px; line-height: 1; }
+
+/* Grand ecran : tout doit rester lisible a cinq metres. */
+.large .position { font-size: clamp(38px, 6vw, 72px); }
+.large .video, .large .image { max-height: 62vh; }
+.large .text { font-size: clamp(17px, 2vw, 26px); max-height: 58vh; }
+.large .meta { font-size: clamp(13px, 1.4vw, 18px); }

@@ -156,7 +156,11 @@ io.on('connection', (socket) => {
     'host:add-time': (s, p) => battle.addTime(s, socket.data.hostToken, p?.deltaMs),
     'host:close-creation': (s) => battle.forceCloseCreation(s, socket.data.hostToken),
     'host:start-diffusion': (s) => battle.startDiffusion(s, socket.data.hostToken),
+    'host:diffusion-next': (s) => battle.moveCursor(s, socket.data.hostToken, { delta: 1 }),
+    'host:diffusion-prev': (s) => battle.moveCursor(s, socket.data.hostToken, { delta: -1 }),
+    'host:diffusion-goto': (s, p) => battle.moveCursor(s, socket.data.hostToken, { index: p?.index }),
     'host:results': (s) => battle.showResults(s, socket.data.hostToken),
+    'host:reveal': (s, p) => battle.reveal(s, socket.data.hostToken, { all: p?.all === true }),
     'host:archive': (s) => battle.archive(s, socket.data.hostToken),
     'host:disqualify': (s, p) => battle.setDisqualified(s, socket.data.hostToken, p?.participantId, p?.on),
   };
@@ -185,6 +189,23 @@ io.on('connection', (socket) => {
       you: views.youView(session, participant),
       state: views.participantView(session),
     };
+  }));
+
+  /**
+   * Une note.
+   *
+   * Passe par la socket et non par HTTP : un vote est minuscule, frequent, et
+   * doit mettre a jour le compteur « X / Y ont vote » de la regie dans la
+   * seconde. Une requete par etoile cliquee ferait le meme travail en moins
+   * bien.
+   */
+  socket.on('play:vote', (payload = {}, cb) => guard(cb, () => {
+    if (socket.data.role !== 'participant') {
+      throw Object.assign(new Error('Rejoignez la session pour voter.'), { expected: true, status: 403 });
+    }
+    const { session, participant } = battle.participantOfSocket(socket);
+    const done = battle.voteAs(session, participant, payload);
+    return { value: done.value, criterionId: done.criterionId, you: views.youView(session, participant) };
   }));
 
   socket.on('play:leave', (payload, cb) => guard(cb, () => {

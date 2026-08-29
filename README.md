@@ -23,13 +23,15 @@ Le projet avance par increments. Ce qui suit est **fait et teste** :
 | 1 | **Le coeur** : sessions, machine a etats, chrono serveur, lobby, temps reel, trois surfaces | ✅ |
 | 2 | **Elements imposes** : depot animateur, consultation dans la page, pack ZIP | ✅ |
 | 3 | **Rendus** : depot participant, relecture, remplacement, retrait, hors delai | ✅ |
-| 4 | Transcodage ffmpeg/sharp, forme d'onde, troncature 45 s, nettoyage des metadonnees | ⏳ |
-| 5 | Diffusion et vote : ordre aleatoire, anonymat, blocage de l'auto-vote | ⏳ |
-| 6 | Resultats, revelation, export JSON/CSV, duplication de session | ⏳ |
-| 7 | Module Discord optionnel | ⏳ |
+| 4 | **Diffusion et vote** : ordre tire, anonymat, auto-vote bloque, ecoute bornee | ✅ |
+| 5 | **Resultats** : classement, revelation progressive, export JSON/CSV | ✅ |
+| 6 | Transcodage ffmpeg/sharp, forme d'onde, fondu serveur, nettoyage des metadonnees | ⏳ |
+| 7 | Duplication de session, module Discord optionnel | ⏳ |
 
-Les phases pas encore construites existent deja dans la machine a etats : elles
-s'affichent et se traversent, avec un ecran d'attente a la place du contenu.
+**La boucle complete tourne** : contraintes deposees, creation chronometree,
+rendus televerses, diffusion en aveugle, notation, classement revele, archive
+exportee. Ce qui reste concerne la qualite du media — normalisation des formats
+et fondu calcules par le serveur plutot que par la page.
 
 ---
 
@@ -280,9 +282,13 @@ npm run test:state         # machine a etats et chrono, en memoire   (13)
 npm run test:mime          # reconnaissance de type et refus d'affichage (22)
 npm run build              # necessaire aux suites qui suivent
 npm run test:assets        # elements imposes, par le reseau         (13)
+npm run test:scoring       # classement : abstentions, retards, egalites (9)
 npm run test:submissions   # depot des rendus, par le reseau         (16)
+npm run test:voting        # diffusion, notation, revelation, export (16)
 npm test                   # parcours complet, vraies sockets        (15)
 ```
+
+Cent quatre verifications au total.
 
 `test/state.mjs` attaque les objets directement : transitions interdites,
 pause qui ne perd pas de secondes, echeance qui se declenche seule, reprise

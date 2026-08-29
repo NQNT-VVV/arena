@@ -24,3 +24,6 @@
 .bigIcon { font-size: 46px; line-height: 1; }
 
 .footer { text-align: center; padding-bottom: 20px; }
+
+.results { display: flex; flex-direction: column; gap: 12px; width: 100%; }
+.results h2 { font-size: 20px; text-align: center; }

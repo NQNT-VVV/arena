@@ -6,6 +6,8 @@ import type { Socket } from 'socket.io-client';
 
 import { AssetPack } from '@/components/AssetPack';
 import { Brand } from '@/components/Brand';
+import { DiffusionStage } from '@/components/DiffusionStage';
+import { Podium } from '@/components/Podium';
 import { Chrono } from '@/components/Chrono';
 import { JoinForm } from '@/components/JoinForm';
 import { PhaseRail } from '@/components/PhaseRail';
@@ -106,6 +108,21 @@ export function PlayClient() {
     setBusy(true);
     await enter(socket, pseudo.trim());
     setBusy(false);
+  };
+
+  /**
+   * Une note.
+   *
+   * Le rendu vise est celui affiche par l'etat commun, mais la comparaison
+   * « est-ce le mien ? » se fait avec le canal personnel : l'etat partage ne
+   * contient aucun lien entre un rendu et son auteur, et c'est bien ainsi.
+   */
+  const vote = async (criterionId: string, value: number) => {
+    const current = state?.diffusion?.current;
+    if (!socket || !current) return;
+    const res = await call(socket, 'play:vote', { renditionId: current.renditionId, criterionId, value });
+    if (!res.ok) { toast(res.error, 'err'); return; }
+    sfx.vote();
   };
 
   const leave = () => {
@@ -317,27 +334,31 @@ export function PlayClient() {
             {renderSubmission()}
           </>
         );
-      case 'diffusion':
+      case 'diffusion': {
+        const d = state!.diffusion;
+        if (!d) return null;
+        const current = d.current;
         return (
-          <div className={styles.waiting}>
-            <span className={styles.bigIcon} aria-hidden="true">🕶️</span>
-            <h2>Diffusion en cours</h2>
-            <p className="muted">
-              {you?.submission
-                ? 'Ton rendu est dans la course. Les rendus defilent en aveugle.'
-                : 'Tu n’as rien depose : tu peux suivre la diffusion sans concourir.'}
-            </p>
-            <p className="faint" style={{ fontSize: 12.5 }}>La notation arrive avec la suite du chantier.</p>
-          </div>
+          <DiffusionStage
+            diffusion={d}
+            config={state!.config}
+            votes={current ? (you?.votes?.[current.renditionId] ?? {}) : {}}
+            isMine={!!current && you?.submission?.renditionId === current.renditionId}
+            canVote={!you?.disqualified}
+            onVote={vote}
+          />
         );
+      }
       case 'results':
-        return (
-          <div className={styles.waiting}>
-            <span className={styles.bigIcon} aria-hidden="true">🏆</span>
-            <h2>Resultats</h2>
-            <p className="muted">Le classement s&apos;affiche ici une fois la notation branchee.</p>
+        return state!.podium ? (
+          <div className={styles.results}>
+            <h2>Classement</h2>
+            {state!.podium.complete
+              ? null
+              : <p className="muted" style={{ fontSize: 13.5 }}>L&apos;animateur devoile les places une par une.</p>}
+            <Podium podium={state!.podium} meId={you?.id} />
           </div>
-        );
+        ) : null;
       default:
         return (
           <div className={styles.waiting}>

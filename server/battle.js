@@ -20,7 +20,7 @@ const repo = require('./repo');
 const views = require('./views');
 const {
   uuid, uniqueCode, newToken, hashToken, tokenMatches,
-  pickAvatar, cleanPseudo, cleanText, clamp,
+  pickAvatar, cleanPseudo, cleanText, clamp, shuffle,
 } = require('./util');
 
 /* ------------------------------------------------------------------ */
@@ -619,17 +619,123 @@ class BattleServer {
     return this.closeCreation(this.requireHost(code, token));
   }
 
-  /** UPLOAD -> DIFFUSION. L'ordre de passage est tire ici, une fois pour toutes. */
+  /**
+   * UPLOAD -> DIFFUSION.
+   *
+   * L'ordre de passage est tire ici, une fois pour toutes, et conserve : il
+   * doit etre le meme sur les trois surfaces et survivre a un redemarrage.
+   * Le retirer a chaque affichage ferait defiler les rendus dans un ordre
+   * different sur le grand ecran et sur les telephones.
+   */
   startDiffusion(code, token) {
     const s = this.requireHost(code, token);
-    // L'ordre viendra des rendus reellement televerses (increment televersement).
-    return this.setPhase(s, 'diffusion', { order: [], cursor: 0 });
+    const eligible = repo.submissions(s.id).filter((sub) => {
+      const author = s.participants.get(sub.participantId);
+      return sub.status === 'ready' && author && !author.disqualified;
+    });
+    return this.setPhase(s, 'diffusion', { order: shuffle(eligible.map((x) => x.id)), cursor: 0 });
+  }
+
+  /** Deplacement dans la file de diffusion, pilote par la regie. */
+  moveCursor(code, token, { delta, index } = {}) {
+    const s = this.requireHost(code, token);
+    if (s.phase !== 'diffusion') throw new BattleError('La diffusion n’est pas en cours.');
+    const total = (s.order ?? []).length;
+    if (!total) throw new BattleError('Aucun rendu a diffuser.');
+
+    const target = Number.isFinite(index) ? Math.trunc(index) : s.cursor + Math.trunc(delta ?? 0);
+    const next = clamp(target, 0, total - 1);
+    if (next === s.cursor) return s;
+
+    s.patch({ cursor: next });
+    repo.logEvent(s.id, 'diffusion:cursor', { index: next });
+    this.publish(s);
+    return s;
+  }
+
+  /**
+   * Une note.
+   *
+   * Trois refus, tous cote serveur : on ne note pas son propre rendu, on ne
+   * note pas un rendu qui n'est pas encore passe, et on ne note pas hors du
+   * bareme. Griser le bouton dans la page ne protege de rien — c'est ici que
+   * la regle tient.
+   */
+  castVote(code, participantId, token, data) {
+    const { session, participant } = this.requireParticipant(code, participantId, token);
+    return this.voteAs(session, participant, data);
+  }
+
+  /**
+   * Meme regle, participant deja authentifie.
+   *
+   * Une socket a presente son jeton en entrant ; le redemander a chaque etoile
+   * cliquee ferait circuler le secret des dizaines de fois par soiree pour
+   * n'apporter aucune garantie de plus.
+   */
+  voteAs(session, participant, { renditionId, criterionId, value } = {}) {
+    if (session.phase !== 'diffusion') throw new BattleError('Les votes sont fermes.');
+    if (participant.disqualified) throw new BattleError('Vous etes hors classement.', 403);
+
+    const submission = repo.submissionByRendition(String(renditionId || ''));
+    if (!submission || submission.sessionId !== session.id) throw new BattleError('Rendu introuvable.', 404);
+
+    const position = (session.order ?? []).indexOf(submission.id);
+    if (position < 0) throw new BattleError('Ce rendu ne fait pas partie de la diffusion.', 404);
+    // On peut revenir sur un passage deja vu — quelqu'un qui a rate une note
+    // doit pouvoir la rattraper — mais pas voter en avance sur ce que
+    // l'animateur n'a pas encore diffuse.
+    if (position > session.cursor) throw new BattleError('Ce rendu n’est pas encore passe.');
+
+    if (submission.participantId === participant.id) {
+      throw new BattleError('On ne note pas sa propre creation.', 403);
+    }
+
+    const criteria = session.config.criteria.length
+      ? session.config.criteria.map((c) => c.id)
+      : ['_'];
+    const criterion = criteria.includes(String(criterionId)) ? String(criterionId) : criteria[0];
+
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) throw new BattleError('Note invalide.');
+    const bounded = clamp(numeric, 0, session.config.scale);
+
+    repo.castVote({
+      sessionId: session.id,
+      submissionId: submission.id,
+      voterId: participant.id,
+      criterionId: criterion,
+      value: bounded,
+    });
+
+    this.publish(session);
+    this.publishYou(session, participant);
+    return { session, participant, value: bounded, criterionId: criterion };
+  }
+
+  /**
+   * Revelation progressive du classement.
+   *
+   * Du dernier vers le premier, un cran par appel. `revealedRank` compte les
+   * places deja devoilees en partant du bas : le suspense se construit la, pas
+   * dans une animation.
+   */
+  reveal(code, token, { all = false } = {}) {
+    const s = this.requireHost(code, token);
+    if (s.phase !== 'results') throw new BattleError('Le classement n’est pas encore affiche.');
+    const total = (s.order ?? []).length;
+    const current = s.revealedRank ?? 0;
+    s.patch({ revealedRank: all ? total : Math.min(total, current + 1) });
+    repo.logEvent(s.id, 'results:reveal', { revealed: s.revealedRank });
+    this.publish(s);
+    return s;
   }
 
   /** DIFFUSION -> RESULTATS. */
   showResults(code, token) {
     const s = this.requireHost(code, token);
-    return this.setPhase(s, 'results', { endedAt: Date.now(), revealedRank: null });
+    // Rien n'est devoile a l'arrivee : l'animateur declenche chaque cran.
+    return this.setPhase(s, 'results', { endedAt: Date.now(), revealedRank: 0 });
   }
 
   archive(code, token) {
@@ -761,6 +867,14 @@ class BattleServer {
     this.io.to(roomAll(session.code)).emit('state', views.participantView(session));
     this.io.to(roomHost(session.code)).emit('state', views.hostView(session));
     this.io.to(roomScreen(session.code)).emit('state', views.screenView(session));
+  }
+
+  /** Participant attache a une socket, deja authentifie a l'entree. */
+  participantOfSocket(socket) {
+    const session = this.get(socket.data.code);
+    const participant = session?.participants.get(socket.data.participantId);
+    if (!session || !participant) throw new BattleError('Rejoignez la session pour voter.', 403);
+    return { session, participant };
   }
 
   /** Etat personnel d'un participant, sur ses propres sockets uniquement. */

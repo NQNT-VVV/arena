@@ -316,6 +316,90 @@ function mount(app, battle) {
     res.json({ ok: true });
   }));
 
+  /* ---------------------------------------------------------------- */
+  /* Export du classement                                              */
+  /* ---------------------------------------------------------------- */
+
+  /**
+   * Archive de la session.
+   *
+   * Reservee a l'animateur, et seulement une fois les resultats affiches :
+   * avant, ce serait le classement complet servi sur demande a qui devine
+   * l'URL. Le format CSV existe parce qu'un classement finit souvent dans un
+   * tableur ou dans un message recapitulatif.
+   */
+  const requireResults = (code, token) => {
+    const session = battle.requireHost(code, token);
+    if (session.phase !== 'results' && session.phase !== 'archived') {
+      throw Object.assign(new Error('Le classement n’est pas encore etabli.'), { expected: true, status: 409 });
+    }
+    return session;
+  };
+
+  /** Classement complet, quel que soit l'etat de la revelation a l'ecran. */
+  const fullPodium = (session) => views.podiumView({ ...session, revealedRank: Number.MAX_SAFE_INTEGER });
+
+  app.get('/api/session/:code/results.json', guard(async (req, res) => {
+    const session = requireResults(req.params.code, tokenOf(req));
+    const podium = fullPodium(session);
+    res.set('Content-Disposition', files.contentDisposition('attachment', `${session.code}-classement.json`));
+    res.json({
+      session: {
+        code: session.code,
+        name: session.name,
+        mediaType: session.mediaType,
+        brief: session.brief,
+        createdAt: session.createdAt,
+        startedAt: session.startedAt,
+        endedAt: session.endedAt,
+        config: views.configView(session.config),
+      },
+      participants: views.rosterView(session),
+      assets: views.assetsView(session).map(({ url, ...rest }) => rest),
+      results: podium.rows,
+      events: repo.events(session.id),
+    });
+  }));
+
+  app.get('/api/session/:code/results.csv', guard(async (req, res) => {
+    const session = requireResults(req.params.code, tokenOf(req));
+    const podium = fullPodium(session);
+
+    // Guillemets doubles pour echapper un guillemet : c'est la convention que
+    // les tableurs comprennent tous, contrairement a l'antislash.
+    const cell = (v) => {
+      const text = v === null || v === undefined ? '' : String(v);
+      return /[",;\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    };
+
+    // En mono-critere, la colonne du critere repeterait la note : on ne detaille
+    // que lorsqu'un bareme a plusieurs axes a montrer.
+    const criteria = session.config.criteria.length ? session.config.criteria : [];
+    const header = ['rang', 'pseudo', 'note', ...criteria.map((c) => c.label), 'votants', 'attendus', 'hors_delai', 'penalite', 'fichier'];
+    const lines = [header.join(';')];
+
+    for (const row of podium.rows) {
+      lines.push([
+        row.unranked ? 'HC' : row.rank,
+        row.author?.pseudo ?? '',
+        row.score ?? row.raw,
+        ...criteria.map((c) => row.criteria.find((x) => x.id === c.id)?.average ?? ''),
+        row.voters,
+        row.expected,
+        row.late ? 'oui' : 'non',
+        row.penalty || '',
+        row.filename ?? '',
+      ].map(cell).join(';'));
+    }
+
+    // Le prefixe BOM evite qu'Excel lise les accents de travers.
+    res.set({
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': files.contentDisposition('attachment', `${session.code}-classement.csv`),
+      'X-Content-Type-Options': 'nosniff',
+    }).send(`\ufeff${lines.join('\n')}\n`);
+  }));
+
   /**
    * Lecture d'un rendu.
    *

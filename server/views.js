@@ -29,6 +29,7 @@ const AUTHORS_VISIBLE = new Set(['results', 'archived']);
 
 const config = require('./config');
 const repo = require('./repo');
+const { rank } = require('./scoring');
 const { signMedia } = require('./util');
 
 function authorsVisible(session) {
@@ -164,6 +165,8 @@ function ownSubmissionView(submission) {
   if (!submission) return null;
   return {
     id: submission.id,
+    /** Sert au participant a reconnaitre son propre rendu pendant la diffusion. */
+    renditionId: submission.renditionId,
     filename: submission.filename,
     bytes: submission.originalBytes,
     kind: submission.kind,
@@ -176,6 +179,115 @@ function ownSubmissionView(submission) {
     url: submission.originalKey
       ? `/api/media/${submission.renditionId}?k=${signMedia(config.secret, submission.renditionId)}`
       : null,
+  };
+}
+
+/**
+ * Un rendu en cours de diffusion, tel que tout le monde le voit.
+ *
+ * La liste des champs est la liste des champs. Ce qui n'y figure pas ne sort
+ * pas : ni `participantId`, ni `filename`, ni l'identifiant interne du rendu.
+ * Le `renditionId` est un identifiant opaque, tire a nouveau a chaque
+ * remplacement, qui ne se relie a rien.
+ *
+ * `late` est expose volontairement : un votant a le droit de savoir qu'un
+ * rendu est arrive hors delai. Cela dit qu'il est en retard, pas qui il est.
+ */
+function anonymousCard(submission) {
+  return {
+    renditionId: submission.renditionId,
+    kind: submission.kind,
+    mime: submission.originalMime,
+    inline: submission.inline,
+    textBody: submission.textBody,
+    bytes: submission.originalBytes,
+    late: submission.late,
+    url: submission.originalKey ? `/api/media/${submission.renditionId}` : null,
+  };
+}
+
+/** Etat de la diffusion : ou en est-on, et sur quoi. */
+function diffusionView(session) {
+  if (session.phase !== 'diffusion') return null;
+  const order = session.order ?? [];
+  const currentId = order[session.cursor] ?? null;
+  const submission = currentId ? repo.submission(currentId) : null;
+
+  const voters = [...session.participants.values()].filter((p) => !p.isHost && !p.disqualified);
+  // Tout le monde sauf l'auteur. Le nombre attendu ne dit pas qui est l'auteur,
+  // seulement qu'il y en a un parmi les presents.
+  const eligible = submission
+    ? Math.max(0, voters.length - (voters.some((p) => p.id === submission.participantId) ? 1 : 0))
+    : 0;
+
+  return {
+    index: session.cursor,
+    total: order.length,
+    current: submission ? anonymousCard(submission) : null,
+    voted: submission ? repo.countVoters(submission.id) : 0,
+    eligible,
+    playMaxS: session.config.playMaxS,
+  };
+}
+
+/**
+ * Classement, devoile par crans.
+ *
+ * Les places encore cachees ne partent pas amputees de leur auteur : elles ne
+ * partent pas du tout. Envoyer la ligne complete en comptant sur l'interface
+ * pour ne pas l'afficher, c'est publier le classement dans l'onglet reseau du
+ * navigateur avant de l'annoncer a l'ecran.
+ */
+function podiumView(session) {
+  if (!AUTHORS_VISIBLE.has(session.phase)) return null;
+
+  const submissions = repo.submissions(session.id).filter((sub) => {
+    const author = session.participants.get(sub.participantId);
+    return sub.status === 'ready' && author && !author.disqualified;
+  });
+
+  const voters = [...session.participants.values()].filter((p) => !p.isHost && !p.disqualified);
+  const rows = rank({
+    submissions,
+    tally: repo.tally(session.id),
+    voterIds: voters.map((p) => p.id),
+    config: session.config,
+  });
+
+  const revealed = session.revealedRank ?? 0;
+  const byId = new Map(submissions.map((sub) => [sub.id, sub]));
+
+  return {
+    total: rows.length,
+    revealed,
+    complete: revealed >= rows.length,
+    rows: rows.map((row, index) => {
+      // On devoile du bas vers le haut : les dernieres lignes du tableau
+      // d'abord, la premiere en dernier.
+      const shown = index >= rows.length - revealed;
+      if (!shown) return { position: index + 1, hidden: true };
+
+      const submission = byId.get(row.submissionId);
+      const author = authorOf(session, row.participantId);
+      return {
+        position: index + 1,
+        hidden: false,
+        rank: row.rank,
+        score: row.score === null ? null : Math.round(row.score * 100) / 100,
+        raw: Math.round(row.raw * 100) / 100,
+        voters: row.voters,
+        expected: row.expected,
+        late: row.late,
+        unranked: row.unranked,
+        penalty: row.penalty,
+        criteria: row.criteria.map((c) => ({
+          id: c.id, label: c.label, average: Math.round(c.average * 100) / 100,
+        })),
+        author,
+        rendition: submission ? anonymousCard(submission) : null,
+        filename: submission?.filename ?? null,
+      };
+    }),
   };
 }
 
@@ -197,8 +309,8 @@ function commonView(session) {
     roster: rosterView(session),
     assets: assetsView(session),
     assetsZipUrl: `/api/session/${session.code}/assets.zip`,
-    diffusion: null,
-    podium: null,
+    diffusion: diffusionView(session),
+    podium: podiumView(session),
     /** Reference d'horloge : le client s'en sert pour mesurer sa derive. */
     serverNow: Date.now(),
   };
@@ -268,12 +380,30 @@ function youView(session, participant) {
     disqualified: participant.disqualified,
     joinedAt: participant.joinedAt,
     submission: ownSubmissionView(repo.submissionOf(session.id, participant.id)),
-    votes: {},
+    /**
+     * Ses propres votes, indexes par identifiant public de rendu.
+     *
+     * Sur le canal personnel uniquement : le vote est anonyme, et personne —
+     * animateur compris — ne doit pouvoir reconstituer qui a mis quoi.
+     */
+    votes: votesView(session, participant),
   };
+}
+
+function votesView(session, participant) {
+  const bySubmission = repo.votesOf(session.id, participant.id);
+  if (!Object.keys(bySubmission).length) return {};
+  const out = {};
+  for (const submission of repo.submissions(session.id)) {
+    const given = bySubmission[submission.id];
+    if (given) out[submission.renditionId] = given;
+  }
+  return out;
 }
 
 module.exports = {
   authorsVisible, authorOf,
   configView, clockView, rosterView, countsView, assetsView, ownSubmissionView,
+  anonymousCard, diffusionView, podiumView,
   commonView, participantView, hostView, screenView, youView,
 };

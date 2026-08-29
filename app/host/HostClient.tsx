@@ -6,6 +6,8 @@ import type { Socket } from 'socket.io-client';
 import { AssetPack } from '@/components/AssetPack';
 import { AssetUploader } from '@/components/AssetUploader';
 import { Brand } from '@/components/Brand';
+import { DiffusionStage } from '@/components/DiffusionStage';
+import { Podium } from '@/components/Podium';
 import { Chrono } from '@/components/Chrono';
 import { PhaseRail } from '@/components/PhaseRail';
 import { QrCode } from '@/components/QrCode';
@@ -198,6 +200,31 @@ export function HostClient() {
     else toast('Element retire', 'ok');
   };
 
+  /**
+   * Telechargement de l'archive.
+   *
+   * Passe par une requete et un blob, pas par un lien : un `<a href>` ne sait
+   * pas porter l'entete du jeton d'animateur, et mettre le jeton dans l'URL le
+   * ferait atterrir dans l'historique du navigateur et les journaux du serveur.
+   */
+  const download = async (format: 'json' | 'csv') => {
+    if (!code) return;
+    const res = await fetch(`/api/session/${code}/results.${format}`, {
+      headers: { 'X-Arena-Token': hostKeys.get(code) ?? '' },
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      toast(body.error || 'Export impossible.', 'err');
+      return;
+    }
+    const url = URL.createObjectURL(await res.blob());
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${code}-classement.${format}`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const saveConfig = () => act('host:configure', {
     name: draft.name,
     mediaType: draft.mediaType,
@@ -276,6 +303,22 @@ export function HostClient() {
             </div>
           </div>
         </section>
+
+        {phase === 'diffusion' && state.diffusion && (
+          <section className="card pad col">
+            <h2 className="section-title">Rendu diffuse</h2>
+            {/* La regie voit exactement ce que voit la salle : aucun auteur,
+                aucun nom de fichier. Elle partage souvent son ecran. */}
+            <DiffusionStage diffusion={state.diffusion} config={state.config} votes={{}} isMine={false} />
+          </section>
+        )}
+
+        {phase === 'results' && state.podium && (
+          <section className="card pad col">
+            <h2 className="section-title">Classement</h2>
+            <Podium podium={state.podium} />
+          </section>
+        )}
 
         <section className="card pad col">
           <h2 className="section-title">Consigne</h2>
@@ -418,20 +461,63 @@ export function HostClient() {
             </div>
           </div>
         );
-      case 'diffusion':
+      case 'diffusion': {
+        const d = state!.diffusion;
+        const last = !d || d.index >= d.total - 1;
+        const everyone = !!d && d.eligible > 0 && d.voted >= d.eligible;
         return (
           <div className={styles.controls}>
-            <p className="muted">Diffusion et vote. Le pilotage rendu par rendu arrive avec la phase suivante du chantier.</p>
-            {btn('Afficher les resultats', 'host:results', {}, 'btn primary')}
+            <p className="muted">
+              {d && d.total > 0
+                ? <>Rendu <b>{d.index + 1}</b> sur {d.total} — <b>{d.voted}</b> / {d.eligible} ont note</>
+                : 'Aucun rendu a diffuser.'}
+            </p>
+            <div className="row wrap">
+              <button className="btn sm" disabled={busy || !d || d.index === 0} onClick={() => act('host:diffusion-prev')}>
+                ← Precedent
+              </button>
+              <button
+                className={`btn ${everyone ? 'good' : ''}`}
+                disabled={busy || last}
+                onClick={() => act('host:diffusion-next')}
+              >
+                Suivant →
+              </button>
+            </div>
+            {btn('Afficher les resultats', 'host:results', {}, `btn ${last ? 'primary' : ''}`)}
+            {!last && (
+              <span className="faint" style={{ fontSize: 12 }}>
+                Il reste {(d?.total ?? 0) - (d?.index ?? 0) - 1} rendu(s) a passer.
+              </span>
+            )}
           </div>
         );
-      case 'results':
+      }
+      case 'results': {
+        const p = state!.podium;
         return (
           <div className={styles.controls}>
-            <p className="muted">Classement affiche. Archive quand tu as fini.</p>
-            {btn('Archiver la session', 'host:archive', {}, 'btn')}
+            <p className="muted">
+              {p?.complete
+                ? 'Classement entierement devoile.'
+                : <>Devoile du dernier au premier — <b>{p?.revealed ?? 0}</b> / {p?.total ?? 0}</>}
+            </p>
+            <div className="row wrap">
+              <button className="btn primary" disabled={busy || !!p?.complete} onClick={() => act('host:reveal')}>
+                Devoiler la place suivante
+              </button>
+              <button className="btn sm" disabled={busy || !!p?.complete} onClick={() => act('host:reveal', { all: true })}>
+                Tout devoiler
+              </button>
+            </div>
+            <div className="row wrap">
+              <button className="btn sm ghost" onClick={() => download('csv')}>⬇ CSV</button>
+              <button className="btn sm ghost" onClick={() => download('json')}>⬇ JSON</button>
+              {btn('Archiver la session', 'host:archive', {}, 'btn sm ghost')}
+            </div>
           </div>
         );
+      }
       default:
         return <p className="muted">Session archivee.</p>;
     }

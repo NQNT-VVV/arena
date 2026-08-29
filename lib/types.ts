@@ -93,6 +93,61 @@ export interface Counts {
   voted: number;
 }
 
+/**
+ * Un rendu tel qu'il circule pendant la diffusion.
+ *
+ * Ni auteur, ni nom de fichier, ni identifiant interne. `renditionId` est
+ * opaque et sert uniquement a voter — il change a chaque remplacement, donc
+ * deux versions d'un meme rendu ne se relient pas.
+ */
+export interface RenditionCard {
+  renditionId: string;
+  kind: AssetKind;
+  mime: string;
+  inline: boolean;
+  textBody: string | null;
+  bytes: number;
+  late: boolean;
+  url: string | null;
+}
+
+export interface DiffusionState {
+  index: number;
+  total: number;
+  current: RenditionCard | null;
+  /** Combien ont deja note le rendu affiche. */
+  voted: number;
+  /** Combien devaient le noter : tout le monde sauf son auteur. */
+  eligible: number;
+  playMaxS: number;
+}
+
+export interface PodiumRow {
+  position: number;
+  /** Une ligne cachee ne porte rien d'autre : le classement ne circule pas avant son annonce. */
+  hidden: boolean;
+  rank?: number | null;
+  score?: number | null;
+  raw?: number;
+  voters?: number;
+  expected?: number;
+  late?: boolean;
+  unranked?: boolean;
+  penalty?: number;
+  criteria?: { id: string; label: string; average: number }[];
+  author?: { id: string; pseudo: string; avatar: string } | null;
+  rendition?: RenditionCard | null;
+  filename?: string | null;
+}
+
+export interface PodiumState {
+  total: number;
+  /** Nombre de places devoilees, en partant du bas. */
+  revealed: number;
+  complete: boolean;
+  rows: PodiumRow[];
+}
+
 export interface BattleState {
   code: string;
   name: string;
@@ -105,9 +160,8 @@ export interface BattleState {
   roster: RosterEntry[];
   assets: Asset[];
   assetsZipUrl: string;
-  /** Renseignes par les increments a venir. */
-  diffusion: unknown | null;
-  podium: unknown | null;
+  diffusion: DiffusionState | null;
+  podium: PodiumState | null;
   serverNow: number;
   isHost?: boolean;
   isScreen?: boolean;
@@ -124,6 +178,8 @@ export type SubmissionStatus = 'pending' | 'transcoding' | 'ready' | 'failed';
  */
 export interface OwnSubmission {
   id: string;
+  /** Sert a reconnaitre son propre rendu quand il passe en diffusion. */
+  renditionId: string;
   filename: string | null;
   bytes: number;
   kind: AssetKind;
@@ -147,7 +203,8 @@ export interface You {
   disqualified: boolean;
   joinedAt: number;
   submission: OwnSubmission | null;
-  votes: Record<string, number>;
+  /** Ses propres notes : { renditionId: { critereId: valeur } }. */
+  votes: Record<string, Record<string, number>>;
 }
 
 /** Carte de visite renvoyee par `GET /api/session/:code`. */

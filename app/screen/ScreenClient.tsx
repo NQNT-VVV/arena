@@ -5,6 +5,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Socket } from 'socket.io-client';
 
 import { Brand } from '@/components/Brand';
+import { DiffusionStage } from '@/components/DiffusionStage';
+import { Podium } from '@/components/Podium';
 import { Chrono } from '@/components/Chrono';
 import { JoinForm } from '@/components/JoinForm';
 import { QrCode } from '@/components/QrCode';
@@ -138,18 +140,18 @@ export function ScreenClient() {
         </>
       )}
 
-      {state.phase === 'diffusion' && (
-        <>
-          <span className={styles.bigIcon} aria-hidden="true">🕶️</span>
-          <p className={styles.invite}>Diffusion anonyme en cours</p>
-        </>
+      {state.phase === 'diffusion' && state.diffusion && (
+        <div className={styles.wide}>
+          {/* Aucun controle et aucun vote : cet ecran est regarde, pas touche. */}
+          <DiffusionStage diffusion={state.diffusion} config={state.config} votes={{}} isMine={false} large />
+        </div>
       )}
 
-      {(state.phase === 'results' || state.phase === 'archived') && (
-        <>
+      {(state.phase === 'results' || state.phase === 'archived') && state.podium && (
+        <div className={styles.wide}>
           <span className={styles.bigIcon} aria-hidden="true">🏆</span>
-          <p className={styles.invite}>Resultats</p>
-        </>
+          <Podium podium={state.podium} large />
+        </div>
       )}
     </div>
   );
