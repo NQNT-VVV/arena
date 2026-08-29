@@ -35,11 +35,22 @@ s'affichent et se traversent, avec un ecran d'attente a la place du contenu.
 
 ## Demarrage
 
+**Node 22 est obligatoire** — la meme version que l'image Docker. La base est un
+module natif, compile pour une interface C++ precise : un Node 18 ou 20 produit
+un binaire inutilisable. `npm install` refuse d'ailleurs de s'executer sous une
+version incompatible, et `npm run dev` verifie avant de charger quoi que ce soit.
+
 ```bash
-nvm use                # Node 22, comme l'image Docker
+nvm use                # lit .nvmrc
 npm install
 export SESSION_SECRET=$(openssl rand -hex 32)
 npm run dev            # http://localhost:3000
+```
+
+Si `nvm` n'est pas disponible, la version installee suffit :
+
+```bash
+export PATH="$HOME/.nvm/versions/node/v22.22.3/bin:$PATH"
 ```
 
 En developpement `SESSION_SECRET` est facultatif : un secret aleatoire est tire
@@ -47,7 +58,8 @@ au demarrage. En production il est **obligatoire** et le serveur refuse de
 demarrer sans lui — sans valeur fixe, chaque redemarrage invaliderait les
 jetons et deconnecterait tous les participants au pire moment.
 
-Avec Docker :
+Avec Docker, aucune de ces precautions ne s'applique : l'image embarque la bonne
+version.
 
 ```bash
 SESSION_SECRET=$(openssl rand -hex 32) docker compose up --build
@@ -298,6 +310,57 @@ rejetterait la quasi-totalite des rendus video.
 `arena_phase_transitions_total`, `arena_socket_errors_total` par motif, sur
 `METRICS_PORT`. Le port n'est pas publie par l'Ingress : pas besoin de proteger
 `/metrics` par un filtre d'URL.
+
+---
+
+## En cas de pepin
+
+### `nvm : commande introuvable`, alors que `~/.nvm` existe
+
+nvm est une fonction de shell definie par `~/.bashrc`. Un terminal qui ouvre un
+**shell de connexion** — c'est le cas par defaut sous WSL et dans plusieurs
+terminaux integres — lit `~/.profile`, pas `~/.bashrc`. Le `.profile` de Debian
+fait normalement le pont ; certains installeurs l'ecrasent et le pont disparait.
+
+Verifier :
+
+```bash
+bash -lc 'type -t nvm'    # vide  -> le pont manque
+bash -ic 'type -t nvm'    # function -> nvm est bien installe
+```
+
+Retablir, une fois pour toutes et pour tous vos projets :
+
+```bash
+printf '\nif [ -n "$BASH_VERSION" ] && [ -f "$HOME/.bashrc" ]; then . "$HOME/.bashrc"; fi\n' >> ~/.profile
+```
+
+puis rouvrir le terminal.
+
+### `npm error code EBADENGINE`
+
+C'est le refus attendu : Node est trop ancien. Le message donne la version
+requise et la version en cours. Passez en Node 22 avant de reinstaller.
+
+### `NODE_MODULE_VERSION 127 ... requires 109`
+
+Les dependances ont ete installees sous une version de Node, et sont executees
+sous une autre. Repassez sur la bonne version, puis :
+
+```bash
+npm ci
+```
+
+À noter : le Node 18 empaquete par Debian et Ubuntu annonce l'interface native
+**109** la ou le Node 18 officiel annonce 108. Aucun binaire precompile publie
+ne lui correspond, quel que soit le paquet — raison de plus pour rester sur la
+version de `.nvmrc`.
+
+### `@img/sharp-wasm32 extraneous` dans `npm ls`
+
+Sans consequence. `sharp` arrive en dependance optionnelle de Next ; sur
+linux-x64 c'est la variante native qui sert, et npm etiquette le repli WebAssembly
+comme superflu tout en l'installant. Rien a corriger.
 
 ---
 
