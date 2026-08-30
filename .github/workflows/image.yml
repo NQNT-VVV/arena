@@ -25,15 +25,38 @@ jobs:
           node-version: 22
           cache: npm
 
+      # La suite de transcodage travaille avec un vrai ffmpeg : sans lui elle
+      # s'ignore d'elle-meme, et on perdrait justement les verifications
+      # d'anonymat les plus importantes (metadonnees, coupure, fondu).
+      - name: Installer ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+
       - name: Installer les dependances
         run: npm ci
 
-      - name: Verifier les types, la syntaxe serveur et les tests
+      - name: Types et syntaxe serveur
         run: |
           npm run typecheck
-          for f in server/*.js server/storage/*.js; do node --check "$f"; done
+          for f in server/*.js server/storage/*.js server/integrations/*.js; do node --check "$f"; done
+
+      - name: Suites sans reseau
+        run: |
           npm run test:state
-          npm run build
+          npm run test:mime
+          npm run test:scoring
+
+      - name: Build Next
+        run: SESSION_SECRET=ci-only npm run build
+
+      # Les suites reseau demarrent le serveur en production : elles ont
+      # besoin du build qui precede.
+      - name: Suites sur serveur reel
+        run: |
+          npm run test:assets
+          npm run test:submissions
+          npm run test:voting
+          npm run test:transcode
+          npm run test:discord
           npm test
 
       - uses: docker/setup-buildx-action@v3

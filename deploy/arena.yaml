@@ -67,6 +67,11 @@ spec:
               value: /app/data
             - name: STORAGE_DRIVER
               value: local
+            # Origine publique : sert aux annonces Discord et aux liens
+            # construits cote serveur. Les pages, elles, se servent de
+            # l'origine de la requete.
+            - name: PUBLIC_URL
+              value: https://arena.danwalex.com
             # Obligatoire : le serveur refuse de demarrer sans lui en production.
             - name: SESSION_SECRET
               valueFrom:
