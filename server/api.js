@@ -16,6 +16,7 @@ const files = require('./files');
 const mime = require('./mime');
 const repo = require('./repo');
 const storage = require('./storage');
+const transcode = require('./transcode');
 const views = require('./views');
 const { receiveFiles, UploadError } = require('./upload');
 const { uuid, safeFilename, cleanText, verifyMedia } = require('./util');
@@ -300,10 +301,15 @@ function mount(app, battle) {
     if (existing?.originalKey && existing.originalKey !== saved.originalKey) {
       await storage.remove(existing.originalKey).catch(() => {});
     }
+    if (existing) await transcode.removeRenditions(existing);
+
+    // Le transcodage part en tache de fond ; la reponse n'attend pas.
+    transcode.enqueue(saved);
+    const fresh = repo.submission(saved.id) ?? saved;
 
     battle.publish(session);
     battle.publishYou(session, participant);
-    res.json({ ok: true, submission: views.ownSubmissionView(saved), late });
+    res.json({ ok: true, submission: views.ownSubmissionView(fresh), late });
   }));
 
   app.delete('/api/session/:code/submission', guard(async (req, res) => {
@@ -311,6 +317,8 @@ function mount(app, battle) {
       req.params.code, participantOf(req), tokenOf(req),
     );
     if (removed.originalKey) await storage.remove(removed.originalKey).catch(() => {});
+    await transcode.removeRenditions(removed);
+    repo.removeJobsOf(removed.id);
     battle.publish(session);
     battle.publishYou(session, participant);
     res.json({ ok: true });
@@ -401,50 +409,106 @@ function mount(app, battle) {
   }));
 
   /**
-   * Lecture d'un rendu.
+   * Acces aux fichiers d'un rendu.
    *
-   * Deux portes, et une seule suffit :
+   * Deux niveaux, et la distinction est le coeur de l'anonymat :
    *
-   *   - une signature valide, remise a l'auteur pour qu'il puisse verifier ce
-   *     qu'il vient de deposer ;
-   *   - la phase de diffusion ou d'apres, ou les rendus sont faits pour etre
-   *     vus — l'identifiant opaque tient alors lieu de droit d'acces, et il
-   *     n'est publie qu'a l'ecran en cours.
+   *   - **l'extrait** (`/preview`, `/peaks`, `/thumb`) est re-encode par le
+   *     serveur, donc sans metadonnee, et deja coupe a la duree d'ecoute. Il
+   *     est lisible par tous des la diffusion : l'identifiant opaque tient
+   *     lieu de droit, et il n'est publie qu'a l'ecran en cours.
+   *   - **l'original** porte encore ses tags ID3, son EXIF, son « cree par ».
+   *     Il n'est servi qu'a son auteur, par signature, ou a tout le monde
+   *     une fois les auteurs reveles — jamais pendant la diffusion.
    *
    * Hors de ces cas : 404, et non 403. Confirmer l'existence d'un rendu a
    * quelqu'un qui n'y a pas droit est deja une information de trop.
    */
   const REVEALED_PHASES = new Set(['diffusion', 'results', 'archived']);
+  const AUTHORS_PHASES = new Set(['results', 'archived']);
+
+  const loadMedia = (req) => {
+    const sub = repo.submissionByRendition(req.params.renditionId);
+    if (!sub || !sub.originalKey) return null;
+    const session = repo.sessionById(sub.sessionId);
+    if (!session) return null;
+    const signed = verifyMedia(config.secret, sub.renditionId, req.query.k);
+    return { sub, session, signed };
+  };
+
+  /** Nom montre : le vrai seulement a l'auteur ou apres la revelation. */
+  const shownName = (sub, session, signed, ext) => {
+    const revealed = signed || AUTHORS_PHASES.has(session.phase);
+    if (revealed && sub.filename) return sub.filename.replace(/\.[^.]+$/, '') + ext;
+    return `rendu${ext}`;
+  };
 
   app.get('/api/media/:renditionId', guard(async (req, res) => {
-    const sub = repo.submissionByRendition(req.params.renditionId);
-    if (!sub || !sub.originalKey) return res.status(404).json({ error: 'Rendu introuvable.' });
-
-    const session = repo.sessionById(sub.sessionId);
-    const signed = verifyMedia(config.secret, sub.renditionId, req.query.k);
-    if (!signed && !(session && REVEALED_PHASES.has(session.phase))) {
+    const found = loadMedia(req);
+    if (!found) return res.status(404).json({ error: 'Rendu introuvable.' });
+    const { sub, session, signed } = found;
+    if (!signed && !AUTHORS_PHASES.has(session.phase)) {
       return res.status(404).json({ error: 'Rendu introuvable.' });
     }
 
-    /**
-     * Le nom du fichier est cache avant la revelation.
-     *
-     * « beat-alexis-v3.wav » annule tout le reste du dispositif. Le nom
-     * d'origine n'est rendu qu'aux resultats — et a l'auteur, qui le connait
-     * deja.
-     */
-    const revealed = signed || (session && (session.phase === 'results' || session.phase === 'archived'));
-    const ext = sub.filename ? mime.safeExtension(sub.filename) : '';
-    const shown = revealed && sub.filename ? sub.filename : `rendu${ext}`;
+    // Apres la revelation, la version complete nettoyee remplace l'original
+    // quand elle existe : meme pour un telechargement d'archive, personne n'a
+    // besoin des metadonnees d'origine.
+    const full = sub.renditions?.files?.full;
+    const useClean = full && !signed;
+    const ext = useClean
+      ? mime.safeExtension(full.key)
+      : (sub.filename ? mime.safeExtension(sub.filename) : '');
 
     await files.sendStored(req, res, {
-      key: sub.originalKey,
-      filename: shown,
-      identity: { mime: sub.originalMime, source: sub.inline ? 'bytes' : 'extension' },
+      key: useClean ? full.key : sub.originalKey,
+      filename: shownName(sub, session, signed, ext),
+      identity: useClean
+        ? { mime: full.mime, source: 'bytes' }
+        : { mime: sub.originalMime, source: sub.inline ? 'bytes' : 'extension' },
       forceDownload: req.query.dl === '1',
       cacheSeconds: 0,
     });
   }));
+
+  /** Une variante nettoyee ; a defaut, l'original pour ne pas priver la salle du rendu. */
+  const serveRendition = (name) => guard(async (req, res) => {
+    const found = loadMedia(req);
+    if (!found) return res.status(404).json({ error: 'Rendu introuvable.' });
+    const { sub, session, signed } = found;
+    if (!signed && !REVEALED_PHASES.has(session.phase)) {
+      return res.status(404).json({ error: 'Rendu introuvable.' });
+    }
+
+    const file = sub.renditions?.files?.[name];
+    if (file) {
+      await files.sendStored(req, res, {
+        key: file.key,
+        filename: shownName(sub, session, signed, mime.safeExtension(file.key)),
+        identity: { mime: file.mime, source: 'bytes' },
+        forceDownload: req.query.dl === '1',
+        // Les variantes sont immuables : un remplacement change d'identifiant.
+        cacheSeconds: 3600,
+      });
+      return;
+    }
+
+    if (name !== 'preview') return res.status(404).json({ error: 'Variante indisponible.' });
+
+    // Pas d'extrait — transcodage rate ou impossible. Plutot que d'ecarter le
+    // rendu, on sert l'original et la page applique la coupure elle-meme.
+    await files.sendStored(req, res, {
+      key: sub.originalKey,
+      filename: shownName(sub, session, signed, sub.filename ? mime.safeExtension(sub.filename) : ''),
+      identity: { mime: sub.originalMime, source: sub.inline ? 'bytes' : 'extension' },
+      forceDownload: req.query.dl === '1',
+      cacheSeconds: 0,
+    });
+  });
+
+  app.get('/api/media/:renditionId/preview', serveRendition('preview'));
+  app.get('/api/media/:renditionId/peaks', serveRendition('peaks'));
+  app.get('/api/media/:renditionId/thumb', serveRendition('thumb'));
 }
 
 module.exports = { mount };

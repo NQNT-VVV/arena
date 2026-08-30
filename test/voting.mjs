@@ -57,6 +57,16 @@ const call = (socket, event, payload = {}) => new Promise((resolve, reject) => {
 
 const wav = (fill) => Buffer.concat([Buffer.from('RIFF'), Buffer.alloc(4), Buffer.from('WAVE'), Buffer.alloc(200, fill)]);
 
+/** Attend que le transcodage (ici rate, fichiers factices) ait rendu la main. */
+async function waitProcessed(h, c, t, tries = 60) {
+  for (let i = 0; i < tries; i++) {
+    const st = (await call(h, 'host:attach', { code: c, hostToken: t })).state;
+    if (st.pendingSubmissions === 0) return st;
+    await sleep(150);
+  }
+  throw new Error('des rendus restent en traitement');
+}
+
 const sockets = [];
 const open = () => { const s = io(BASE, { transports: ['websocket'], forceNew: true }); sockets.push(s); return s; };
 const ready = (s) => new Promise((r) => (s.connected ? r() : s.once('connect', r)));
@@ -108,6 +118,7 @@ for (const [name, fill] of [['Alice', 1], ['Bob', 2], ['Cleo', 3]]) {
   people[name].rendition = done.submission.renditionId;
 }
 await call(host, 'host:close-creation');
+await waitProcessed(host, code, hostToken);
 
 let diffusion;
 
@@ -145,6 +156,7 @@ test('anonymat : la regie n’en sait pas plus que la salle', async () => {
 });
 
 test('le rendu diffuse est lisible par tous, sans signature', async () => {
+  assert.match(diffusion.current.url, /\/preview$/, 'la carte pointe vers l’extrait, jamais l’original');
   const res = await fetch(`${BASE}${diffusion.current.url}`);
   assert.equal(res.status, 200);
   assert.equal(res.headers.get('content-type'), 'audio/wav');
@@ -338,6 +350,7 @@ async function readyToDiffuse(config, n = 3) {
   await call(h, 'host:start');
   for (let i = 0; i < n; i++) await submit(created.code, crew[i], 10 + i, `p${i}.wav`);
   await call(h, 'host:close-creation');
+  await waitProcessed(h, created.code, created.hostToken);
   return { h, code: created.code, hostToken: created.hostToken, crew };
 }
 

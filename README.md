@@ -25,13 +25,13 @@ Le projet avance par increments. Ce qui suit est **fait et teste** :
 | 3 | **Rendus** : depot participant, relecture, remplacement, retrait, hors delai | ✅ |
 | 4 | **Diffusion et vote** : ordre tire, anonymat, auto-vote bloque, ecoute synchronisee et enchainement automatique | ✅ |
 | 5 | **Resultats** : classement, revelation progressive, export JSON/CSV | ✅ |
-| 6 | Transcodage ffmpeg/sharp, forme d'onde, fondu serveur, nettoyage des metadonnees | ⏳ |
+| 6 | **Transcodage** ffmpeg/sharp : format unique, extrait coupe et fondu, metadonnees supprimees, forme d'onde | ✅ |
 | 7 | Duplication de session, module Discord optionnel | ⏳ |
 
 **La boucle complete tourne** : contraintes deposees, creation chronometree,
-rendus televerses, diffusion en aveugle, notation, classement revele, archive
-exportee. Ce qui reste concerne la qualite du media — normalisation des formats
-et fondu calcules par le serveur plutot que par la page.
+rendus televerses et re-encodes, diffusion en aveugle avec ecoute synchronisee,
+notation, classement revele, archive exportee. Il reste la duplication d'une
+session et le module Discord.
 
 ---
 
@@ -227,10 +227,53 @@ rendu a qui n'y a pas droit est deja une information de trop.
 **Pas de dossier statique.** Les fichiers sortent par une route qui verifie la
 phase avant de servir le moindre octet, et qui decide seule des entetes.
 
-Une defense reste a construire, avec l'increment transcodage :
-**le re-encodage systematique**, jamais de copie directe. C'est ce qui fera
-disparaitre les tags ID3, EXIF et XMP — plutot qu'un nettoyeur de tags qu'on
-oublierait de mettre a jour au prochain format.
+**Le re-encodage systematique.** Un rendu est transcode, jamais copie : c'est
+ce qui fait disparaitre les tags ID3, l'EXIF, le XMP et le « cree par » —
+plutot qu'un nettoyeur de tags qu'on oublierait de mettre a jour au prochain
+format. Pendant la diffusion, seul **l'extrait** re-encode est servi ; l'original
+est introuvable, meme pour la regie. Il ne redevient accessible qu'a la
+revelation, et encore : c'est la version complete nettoyee qui part au
+telechargement quand elle existe. Voir « Le transcodage » plus bas.
+
+---
+
+## Le transcodage
+
+Des qu'un rendu est depose, un ouvrier le re-encode en tache de fond. Le
+participant voit « traitement » puis « pret » ; la regie voit le compteur et ne
+peut pas lancer la diffusion tant qu'il reste un rendu sans extrait — un
+morceau prend quelques secondes.
+
+| Entree | Sorties |
+|---|---|
+| audio, n'importe quel format | `preview.mp3` coupe a la duree d'ecoute avec fondu • `full.mp3` complet nettoye • `peaks.json`, 800 cretes pour la forme d'onde |
+| video | `preview.mp4` h264/aac, 1280 px max, coupe et fondu • `full.mp4` remultiplexe sans metadonnee • cretes de la piste son |
+| image | `preview.webp` 2048 px max • `thumb.webp` 480 px • `full.<format d'origine>` re-encode, pour l'archive |
+| texte, fichier libre | rien : pret tel quel |
+
+Trois consequences pour l'ecoute :
+
+- **La duree reelle est connue.** Un morceau de trente secondes ouvre une
+  fenetre de trente secondes, pas de quarante-cinq : personne n'ecoute de
+  silence.
+- **Le fondu est dans le fichier.** Il marche donc aussi sur iOS, ou la page
+  n'a pas le droit de toucher au volume.
+- **La forme d'onde vient du serveur.** Il decode le son de toute facon ; huit
+  cents nombres pesent quelques kilo-octets et epargnent le decodage a chaque
+  telephone.
+
+Pour les images, l'orientation EXIF est appliquee **avant** que l'EXIF ne
+disparaisse : sinon une photo de telephone se retrouve couchee.
+
+**Si le transcodage echoue** — fichier corrompu, format exotique, ffmpeg absent
+— le rendu n'est pas elimine : il concourt, servi tel quel, avec la coupure et
+le fondu appliques par la page. L'auteur en est informe. Un echec de
+conversion ne doit pas couter sa place a quelqu'un.
+
+La file vit en base : un redemarrage au milieu d'un transcodage le reprend au
+lieu de laisser un rendu bloque en « traitement ». Les ouvriers tournent dans
+le process, `TRANSCODE_CONCURRENCY` a la fois ; les fichiers intermediaires
+passent par `/tmp`, monte en volume ephemere dans Kubernetes.
 
 ---
 
@@ -290,7 +333,9 @@ server/
   battle.js     sessions, machine a etats, chrono            ← le coeur
   views.js      serialisation par audience                   ← l'anonymat
   util.js       codes, jetons, nettoyage des saisies
-  api.js        routes HTTP : fichiers, pack, sante, QR
+  api.js        routes HTTP : fichiers, extraits, pack, export, sante, QR
+  transcode.js  ouvriers ffmpeg/sharp, file en base
+  scoring.js    calcul du classement, fonction pure
   upload.js     reception en flux, plafonds appliques pendant le transfert
   files.js      service des fichiers : entetes, requetes partielles
   mime.js       reconnaissance par les octets, et refus d'affichage
@@ -336,10 +381,12 @@ npm run test:assets        # elements imposes, par le reseau         (13)
 npm run test:scoring       # classement : abstentions, retards, egalites (9)
 npm run test:submissions   # depot des rendus, par le reseau         (16)
 npm run test:voting        # diffusion, notation, ecoute synchronisee, revelation, export (21)
+npm run test:transcode     # vrai ffmpeg : metadonnees, coupure, fondu, duree, cretes, image (11)
 npm test                   # parcours complet, vraies sockets        (15)
 ```
 
-Cent dix verifications au total.
+Cent vingt-et-une verifications au total. La suite de transcodage s'ignore
+d'elle-meme quand ffmpeg manque sur la machine.
 
 `test/state.mjs` attaque les objets directement : transitions interdites,
 pause qui ne perd pas de secondes, echeance qui se declenche seule, reprise

@@ -45,6 +45,7 @@ function toSession(row) {
     order: json(row.diffusion_order, []),
     cursor: row.cursor,
     diffusionStartedAt: row.diffusion_started_at,
+    diffusionEndsAt: row.diffusion_ends_at,
     diffusionAdvanceAt: row.diffusion_advance_at,
     revealedRank: row.revealed_rank,
     touchedAt: row.touched_at,
@@ -88,6 +89,7 @@ const SESSION_COLUMNS = {
   order: 'diffusion_order',
   cursor: 'cursor',
   diffusionStartedAt: 'diffusion_started_at',
+  diffusionEndsAt: 'diffusion_ends_at',
   diffusionAdvanceAt: 'diffusion_advance_at',
   revealedRank: 'revealed_rank',
 };
@@ -372,6 +374,47 @@ Object.assign(repo, {
    */
   submittedParticipantIds: (sessionId) =>
     submittedIdsStmt.all(sessionId).map((r) => r.participant_id),
+});
+
+/* ------------------------------------------------------------------ */
+/* Travaux de transcodage                                              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * La file vit en base, pas en memoire.
+ *
+ * Un redemarrage au milieu d'un transcodage ne doit pas laisser un rendu
+ * bloque en « traitement » jusqu'a la fin des temps : au demarrage, tout ce
+ * qui etait en cours repart dans la file.
+ */
+const insertJob = db.prepare(`
+  INSERT INTO media_job (id, submission_id, kind, status, attempts, created_at, updated_at)
+  VALUES (@id, @submissionId, @kind, 'queued', 0, @now, @now)
+`);
+const claimJobStmt = db.prepare(`
+  UPDATE media_job SET status = 'running', attempts = attempts + 1, updated_at = @now
+   WHERE id = (SELECT id FROM media_job WHERE status = 'queued' ORDER BY created_at LIMIT 1)
+  RETURNING *
+`);
+const finishJobStmt = db.prepare("UPDATE media_job SET status = @status, error = @error, updated_at = @now WHERE id = @id");
+const requeueRunningStmt = db.prepare("UPDATE media_job SET status = 'queued', updated_at = ? WHERE status = 'running'");
+const deleteJobsOfStmt = db.prepare('DELETE FROM media_job WHERE submission_id = ?');
+const countPendingStmt = db.prepare(`
+  SELECT COUNT(*) AS n FROM submission WHERE session_id = ? AND status IN ('pending', 'transcoding')
+`);
+
+Object.assign(repo, {
+  enqueueJob(job) {
+    const now = Date.now();
+    insertJob.run({ id: job.id, submissionId: job.submissionId, kind: job.kind, now });
+  },
+  /** Prend le plus ancien travail en attente, ou null. Atomique : deux ouvriers ne se le disputent pas. */
+  claimJob: () => claimJobStmt.get({ now: Date.now() }) ?? null,
+  finishJob: (id, status, error = null) => finishJobStmt.run({ id, status, error, now: Date.now() }),
+  requeueRunningJobs: () => requeueRunningStmt.run(Date.now()).changes,
+  removeJobsOf: (submissionId) => deleteJobsOfStmt.run(submissionId).changes,
+  /** Rendus pas encore prets a etre diffuses. */
+  countPendingSubmissions: (sessionId) => countPendingStmt.get(sessionId).n,
 });
 
 /* ------------------------------------------------------------------ */

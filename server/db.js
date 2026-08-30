@@ -168,6 +168,13 @@ const MIGRATIONS = [
       ALTER TABLE session ADD COLUMN diffusion_advance_at INTEGER;
     `);
   },
+
+  function diffusionEndsAt(d) {
+    // La fin d'ecoute est stockee plutot que recalculee : elle depend de la
+    // duree reelle du rendu quand le transcodage l'a mesuree, et ce calcul ne
+    // doit etre fait qu'une fois, a l'ouverture du rendu.
+    d.exec('ALTER TABLE session ADD COLUMN diffusion_ends_at INTEGER;');
+  },
 ];
 
 const applied = db.pragma('user_version', { simple: true });

@@ -192,8 +192,13 @@ class LiveSession {
 
   /** Instant ou l'ecoute du rendu en cours s'arrete, ou null hors diffusion. */
   renditionEndsAt() {
-    if (!this.diffusionStartedAt) return null;
-    return this.diffusionStartedAt + this.config.playMaxS * 1000;
+    return this.diffusionEndsAt ?? null;
+  }
+
+  /** Rendu affiche par la diffusion, ou null. */
+  currentSubmission() {
+    const id = (this.order ?? [])[this.cursor];
+    return id ? repo.submission(id) : null;
   }
 
   /** Duree restante de creation, en millisecondes. Fait autorite. */
@@ -665,10 +670,18 @@ class BattleServer {
    * et enfin le passage au suivant, si la regie l'a laisse en automatique.
    * Deux instants absolus suffisent ; le client compte tout seul.
    */
-  renditionTiming(session, now = Date.now()) {
-    const endsAt = now + session.config.playMaxS * 1000;
+  renditionTiming(session, submission, now = Date.now()) {
+    // La duree d'ecoute est plafonnee par le reglage, mais aussi par le rendu
+    // lui-meme quand le transcodage l'a mesure : un morceau de trente secondes
+    // ne fait pas ecouter quinze secondes de silence.
+    const measured = submission?.renditions?.durationMs;
+    const timed = submission && (submission.kind === 'audio' || submission.kind === 'video');
+    const playMs = session.config.playMaxS * 1000;
+    const listenMs = timed && measured ? Math.min(playMs, Math.max(1000, measured)) : playMs;
+    const endsAt = now + listenMs;
     return {
       diffusionStartedAt: now,
+      diffusionEndsAt: endsAt,
       diffusionAdvanceAt: session.config.autoNext ? endsAt + session.config.voteWindowS * 1000 : null,
     };
   }
@@ -686,7 +699,8 @@ class BattleServer {
     const next = clamp(Math.trunc(index), 0, total - 1);
     if (next === session.cursor && !restart) return session;
 
-    session.patch({ cursor: next, ...this.renditionTiming(session) });
+    const submission = repo.submission((session.order ?? [])[next]);
+    session.patch({ cursor: next, ...this.renditionTiming(session, submission) });
     repo.logEvent(session.id, restart ? 'diffusion:replay' : 'diffusion:cursor', { index: next });
     this.arm(session);
     this.publish(session);
@@ -727,10 +741,9 @@ class BattleServer {
     }
     const enabled = on !== false;
     const patch = { config: { ...s.config, autoNext: enabled } };
-    if (s.phase === 'diffusion' && s.diffusionStartedAt) {
-      const endsAt = s.renditionEndsAt();
+    if (s.phase === 'diffusion' && s.diffusionEndsAt) {
       patch.diffusionAdvanceAt = enabled
-        ? Math.max(Date.now() + 3000, endsAt + s.config.voteWindowS * 1000)
+        ? Math.max(Date.now() + 3000, s.diffusionEndsAt + s.config.voteWindowS * 1000)
         : null;
     }
     s.patch(patch);
@@ -938,16 +951,41 @@ class BattleServer {
 
   /** Depart de la diffusion sans jeton : appele par l'echeance de grace. */
   startDiffusionInternal(session) {
-    const eligible = repo.submissions(session.id).filter((sub) => {
+    // Un rendu encore en traitement n'a ni extrait nettoye ni duree : on ne
+    // lance pas la diffusion avec un anonymat a moitie garanti. Le transcodage
+    // d'un morceau prend quelques secondes ; l'animateur reessaie.
+    const pending = repo.countPendingSubmissions(session.id);
+    if (pending > 0) {
+      throw new BattleError(`${pending} rendu${pending > 1 ? 's' : ''} encore en traitement. Patientez quelques secondes.`);
+    }
+    const all = repo.submissions(session.id);
+    const eligible = all.filter((sub) => {
       const author = session.participants.get(sub.participantId);
       return sub.status === 'ready' && author && !author.disqualified;
     });
     const order = shuffle(eligible.map((x) => x.id));
+    const first = order.length ? eligible.find((x) => x.id === order[0]) : null;
     return this.setPhase(session, 'diffusion', {
       order,
       cursor: 0,
-      ...(order.length ? this.renditionTiming(session) : { diffusionStartedAt: null, diffusionAdvanceAt: null }),
+      ...(first
+        ? this.renditionTiming(session, first)
+        : { diffusionStartedAt: null, diffusionEndsAt: null, diffusionAdvanceAt: null }),
     });
+  }
+
+  /**
+   * Un rendu a change d'etat — recu, en traitement, pret.
+   *
+   * Appele par l'ouvrier de transcodage : la regie voit son compteur bouger et
+   * l'auteur voit « pret » remplacer « traitement en cours ».
+   */
+  onSubmissionChanged(submission) {
+    const session = [...this.sessions.values()].find((s) => s.id === submission.sessionId);
+    if (!session) return;
+    this.publish(session);
+    const participant = session.participants.get(submission.participantId);
+    if (participant) this.publishYou(session, participant);
   }
 
   /* --------------------------- presence -------------------------- */

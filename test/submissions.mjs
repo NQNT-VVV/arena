@@ -62,6 +62,23 @@ const call = (socket, event, payload = {}) => new Promise((resolve, reject) => {
   socket.emit(event, payload, (res) => { clearTimeout(t); resolve(res); });
 });
 
+/**
+ * Attend que plus aucun rendu ne soit en traitement.
+ *
+ * Le transcodage part en tache de fond des le depot ; la diffusion refuse de
+ * demarrer tant qu'il reste un rendu sans extrait. Les fichiers de ce test
+ * sont factices, ffmpeg les rejette en quelques centaines de millisecondes et
+ * le rendu passe « pret » en mode degrade — mais il faut lui laisser ce temps.
+ */
+async function waitProcessed(h, c, t, tries = 60) {
+  for (let i = 0; i < tries; i++) {
+    const st = (await call(h, 'host:attach', { code: c, hostToken: t })).state;
+    if (st.pendingSubmissions === 0) return st;
+    await sleep(150);
+  }
+  throw new Error('des rendus restent en traitement');
+}
+
 const WAV = Buffer.concat([Buffer.from('RIFF'), Buffer.alloc(4), Buffer.from('WAVE'), Buffer.alloc(400, 7)]);
 const WAV2 = Buffer.concat([Buffer.from('RIFF'), Buffer.alloc(4), Buffer.from('WAVE'), Buffer.alloc(900, 9)]);
 
@@ -211,16 +228,24 @@ test('retrait : par son auteur, tant que les depots sont ouverts', async () => {
   aliceRendition = (await back.json()).submission.url.split('/').pop().split('?')[0];
 });
 
-test('diffusion : le rendu devient lisible, mais reste sans nom', async () => {
+test('diffusion : l’extrait devient lisible, mais reste sans nom', async () => {
   await call(host, 'host:close-creation');
-  await call(host, 'host:start-diffusion');
+  await waitProcessed(host, code, hostToken);
+  const res0 = await call(host, 'host:start-diffusion');
+  assert.equal(res0.ok, true, res0.error);
 
-  const res = await fetch(`${BASE}/api/media/${aliceRendition}`);
+  // C'est l'extrait qui est diffuse. Ici le fichier est factice, le
+  // transcodage a echoue et l'extrait retombe sur l'original — mais toujours
+  // par la route d'extrait, sous un nom neutre.
+  const res = await fetch(`${BASE}/api/media/${aliceRendition}/preview`);
   assert.equal(res.status, 200, 'lisible en diffusion, sans signature');
   assert.equal(res.headers.get('content-type'), 'audio/wav');
-  // Le nom d'origine trahirait l'auteur : il est remplace.
   assert.match(res.headers.get('content-disposition'), /rendu\.wav/);
-  assert.ok(!res.headers.get('content-disposition').includes('final.wav'));
+  assert.ok(!res.headers.get('content-disposition').includes('final'));
+
+  // L'original, lui, porte encore ses metadonnees : introuvable en diffusion.
+  const original = await fetch(`${BASE}/api/media/${aliceRendition}`);
+  assert.equal(original.status, 404, 'l’original ne sort jamais pendant la diffusion');
 });
 
 test('revelation : le nom d’origine revient aux resultats', async () => {

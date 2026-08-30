@@ -178,6 +178,11 @@ function ownSubmissionView(submission) {
     uploadedAt: submission.uploadedAt,
     late: submission.late,
     status: submission.status,
+    /** Un extrait nettoye existe-t-il ? Faux si le transcodage a echoue ou n'a pas lieu d'etre. */
+    transcoded: !!submission.renditions?.files?.preview,
+    durationMs: submission.renditions?.durationMs ?? null,
+    /** Motif d'un transcodage rate, pour que l'auteur sache que son fichier passera tel quel. */
+    error: submission.error,
     replacedCount: submission.replacedCount,
     url: submission.originalKey
       ? `/api/media/${submission.renditionId}?k=${signMedia(config.secret, submission.renditionId)}`
@@ -197,15 +202,25 @@ function ownSubmissionView(submission) {
  * rendu est arrive hors delai. Cela dit qu'il est en retard, pas qui il est.
  */
 function anonymousCard(submission) {
+  const files = submission.renditions?.files ?? {};
+  const rid = submission.renditionId;
   return {
-    renditionId: submission.renditionId,
+    renditionId: rid,
     kind: submission.kind,
-    mime: submission.originalMime,
-    inline: submission.inline,
+    mime: files.preview?.mime ?? submission.originalMime,
+    inline: submission.inline || !!files.preview,
     textBody: submission.textBody,
-    bytes: submission.originalBytes,
+    bytes: files.preview?.bytes ?? submission.originalBytes,
     late: submission.late,
-    url: submission.originalKey ? `/api/media/${submission.renditionId}` : null,
+    /** Duree reelle mesuree par le transcodage, ou null si inconnue. */
+    durationMs: submission.renditions?.durationMs ?? null,
+    /** Vrai quand un extrait nettoye existe ; faux = original servi tel quel. */
+    transcoded: !!files.preview,
+    // L'extrait de diffusion, jamais l'original : c'est lui qui est nettoye
+    // de ses metadonnees et deja coupe a la duree d'ecoute.
+    url: submission.originalKey ? `/api/media/${rid}/preview` : null,
+    peaksUrl: files.peaks ? `/api/media/${rid}/peaks` : null,
+    thumbUrl: files.thumb ? `/api/media/${rid}/thumb` : null,
   };
 }
 
@@ -232,7 +247,7 @@ function diffusionView(session) {
      * a coupe l'automatique.
      */
     startedAt: session.diffusionStartedAt,
-    endsAt: session.renditionEndsAt(),
+    endsAt: session.diffusionEndsAt,
     advanceAt: session.diffusionAdvanceAt,
     autoNext: session.config.autoNext,
     playMaxS: session.config.playMaxS,
@@ -350,6 +365,8 @@ function hostView(session) {
   return {
     ...commonView(session),
     isHost: true,
+    /** Rendus recus mais pas encore prets a diffuser. */
+    pendingSubmissions: repo.countPendingSubmissions(session.id),
     roster: [...session.participants.values()]
       .filter((p) => !p.isHost)
       .map((p) => ({

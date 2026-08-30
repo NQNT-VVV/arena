@@ -180,6 +180,15 @@ export function SubmissionBox({
             <video className={styles.player} src={submission.url} controls preload="metadata" playsInline />
           )}
 
+          {submission.error && submission.status === 'ready' && (
+            <span className="faint" style={{ fontSize: 12 }}>
+              Le fichier n&apos;a pas pu etre converti : il sera diffuse tel quel.
+              {submission.kind === 'audio' || submission.kind === 'video'
+                ? ' Verifie qu’il s’ouvre bien chez toi.'
+                : ''}
+            </span>
+          )}
+
           <div className="row wrap">
             <button className="btn sm" disabled={busy} onClick={() => input.current?.click()}>
               Remplacer
@@ -232,7 +241,18 @@ export function SubmissionBox({
   );
 }
 
+/**
+ * Etat du depot.
+ *
+ * « Traitement » le temps que le serveur re-encode le fichier ; c'est court,
+ * mais un participant qui voit « depose » avant que ce soit vrai relance
+ * parfois son envoi. Un transcodage rate n'est pas un echec du depot : le
+ * fichier concourt tel quel, et on le dit.
+ */
 function Badge({ submission }: { submission: OwnSubmission }) {
+  if (submission.status === 'pending' || submission.status === 'transcoding') {
+    return <span className="pill"><span className="dot" /> Traitement…</span>;
+  }
   if (submission.late) return <span className="pill" style={{ color: '#ffc9dc' }}>Hors delai</span>;
-  return <span className="pill ok"><span className="dot" /> Depose</span>;
+  return <span className="pill ok"><span className="dot" /> {submission.transcoded ? 'Pret' : 'Depose'}</span>;
 }

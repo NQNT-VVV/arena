@@ -478,18 +478,28 @@ export function HostClient() {
             </div>
           </div>
         );
-      case 'upload':
+      case 'upload': {
+        const pending = state!.pendingSubmissions ?? 0;
         return (
           <div className={styles.controls}>
             <p className="muted">
               Fenetre de depot. {state!.counts.submitted} rendu(s) recu(s) sur {state!.counts.participants} inscrit(s).
+              {pending > 0 && <> <b>{pending}</b> en cours de traitement.</>}
             </p>
             <div className="row wrap">
               {btn('+ 2 min', 'host:add-time', { deltaMs: 2 * 60_000 }, 'btn sm')}
-              {btn('Lancer la diffusion', 'host:start-diffusion', {}, 'btn primary lg')}
+              <button
+                className="btn primary lg"
+                disabled={busy || pending > 0}
+                title={pending > 0 ? 'Le serveur prepare encore des extraits' : undefined}
+                onClick={() => act('host:start-diffusion')}
+              >
+                {pending > 0 ? 'Preparation des extraits…' : 'Lancer la diffusion'}
+              </button>
             </div>
           </div>
         );
+      }
       case 'diffusion': {
         const d = state!.diffusion;
         const last = !d || d.index >= d.total - 1;

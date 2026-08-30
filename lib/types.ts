@@ -114,7 +114,19 @@ export interface RenditionCard {
   textBody: string | null;
   bytes: number;
   late: boolean;
+  /** Duree reelle mesuree par le serveur, ou null. */
+  durationMs: number | null;
+  /**
+   * Un extrait re-encode existe : deja coupe a la duree d'ecoute, deja fondu,
+   * sans metadonnee. Faux = l'original est servi tel quel et la page applique
+   * elle-meme la coupure et le fondu.
+   */
+  transcoded: boolean;
+  /** L'extrait de diffusion. Jamais l'original. */
   url: string | null;
+  /** Cretes de la forme d'onde (JSON, ~800 valeurs entre 0 et 1), ou null. */
+  peaksUrl: string | null;
+  thumbUrl: string | null;
 }
 
 export interface DiffusionState {
@@ -184,6 +196,8 @@ export interface BattleState {
   serverNow: number;
   isHost?: boolean;
   isScreen?: boolean;
+  /** Regie seulement : rendus recus mais pas encore prets a diffuser. */
+  pendingSubmissions?: number;
 }
 
 export type SubmissionStatus = 'pending' | 'transcoding' | 'ready' | 'failed';
@@ -208,6 +222,10 @@ export interface OwnSubmission {
   /** Depose apres la fenetre de grace : le sort depend de la politique reglee. */
   late: boolean;
   status: SubmissionStatus;
+  transcoded: boolean;
+  durationMs: number | null;
+  /** Motif d'un transcodage rate : le fichier passera tel quel. */
+  error: string | null;
   replacedCount: number;
   /** Lien signe, valable pour ce rendu et pour son auteur. Null pour un texte. */
   url: string | null;

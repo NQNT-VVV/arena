@@ -18,6 +18,7 @@ const api = require('./api');
 const config = require('./config');
 const metrics = require('./metrics');
 const storage = require('./storage');
+const transcode = require('./transcode');
 const { BattleServer } = require('./battle');
 
 const ROOT_DIR = path.join(__dirname, '..');
@@ -40,6 +41,8 @@ const io = new Server(server, {
 
 const battle = new BattleServer(io);
 metrics.bind(battle);
+// Reprend les transcodages interrompus et lance les ouvriers.
+transcode.start(battle);
 
 /* ------------------------------------------------------------------ */
 /* Garde-fous                                                          */
@@ -265,6 +268,7 @@ nextApp.prepare().then(() => {
 for (const signal of ['SIGTERM', 'SIGINT']) {
   process.on(signal, () => {
     console.log(`[arena] ${signal} recu, fermeture`);
+    transcode.stop();
     io.close();
     server.close(() => process.exit(0));
     setTimeout(() => process.exit(0), 5000).unref();

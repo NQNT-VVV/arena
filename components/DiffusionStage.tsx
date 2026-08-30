@@ -2,6 +2,7 @@
 
 import { Rating } from './Rating';
 import { SyncedMedia } from './SyncedMedia';
+import { Waveform } from './Waveform';
 import { humanBytes } from '@/lib/format';
 import type { DiffusionState, SessionConfig } from '@/lib/types';
 import { useDiffusionClock } from '@/lib/useDiffusionClock';
@@ -108,13 +109,24 @@ export function DiffusionStage({
           <a className="btn" href={`${card.url}?dl=1`}>⬇ Telecharger pour ouvrir</a>
         )}
 
+        {card.inline && card.kind === 'audio' && card.peaksUrl && diffusion.startedAt && diffusion.endsAt && (
+          <Waveform
+            peaksUrl={card.peaksUrl}
+            progress={Math.min(1, (tick.elapsedS * 1000) / Math.max(1, diffusion.endsAt - diffusion.startedAt))}
+            large={large}
+          />
+        )}
+
         {card.inline && timed && card.url && diffusion.startedAt && diffusion.endsAt && (
           <SyncedMedia
             src={card.url}
             kind={card.kind === 'video' ? 'video' : 'audio'}
             startedAt={diffusion.startedAt}
             endsAt={diffusion.endsAt}
-            fadeSeconds={config.fadeOutS}
+            // Un extrait transcode porte deja son fondu : en rajouter un
+            // dans la page le doublerait. Le fondu de la page ne sert que
+            // quand l'original est servi tel quel.
+            fadeSeconds={card.transcoded ? 0 : config.fadeOutS}
             enabled={audio}
             large={large}
           />
@@ -132,7 +144,13 @@ export function DiffusionStage({
       </div>
 
       <div className={styles.meta}>
-        {timed && <span>Ecoute limitee a {diffusion.playMaxS} s</span>}
+        {timed && (
+          <span>
+            {card.durationMs && card.durationMs <= diffusion.playMaxS * 1000
+              ? `${Math.round(card.durationMs / 1000)} s`
+              : `Ecoute limitee a ${diffusion.playMaxS} s`}
+          </span>
+        )}
         {card.bytes > 0 && <span>{humanBytes(card.bytes)}</span>}
         <span className="grow" />
         <span className={`${styles.tally} ${everyone ? styles.tallyDone : ''}`}>
