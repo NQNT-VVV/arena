@@ -12,6 +12,7 @@ import { Chrono } from '@/components/Chrono';
 import { JoinForm } from '@/components/JoinForm';
 import { PhaseRail } from '@/components/PhaseRail';
 import { SubmissionBox } from '@/components/SubmissionBox';
+import { audioPref } from '@/lib/audioPref';
 import { identity } from '@/lib/identity';
 import { humanDuration, humanThreshold, PHASE_LABELS } from '@/lib/format';
 import { sfx } from '@/lib/sfx';
@@ -31,6 +32,14 @@ export function PlayClient() {
   const [joined, setJoined] = useState(false);
   /** Identite courante, pour signer les depots. */
   const [me, setMe] = useState<SavedIdentity | null>(null);
+  /**
+   * Le son sur ce telephone. Null tant que la personne n'a rien choisi : on
+   * applique alors le reglage de la session — l'animateur sait si une
+   * enceinte joue deja dans la piece.
+   */
+  const [audioChoice, setAudioChoice] = useState<boolean | null>(null);
+  useEffect(() => { setAudioChoice(audioPref.get()); }, []);
+  const chooseAudio = (on: boolean) => { audioPref.set(on); setAudioChoice(on); };
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -346,6 +355,8 @@ export function PlayClient() {
             isMine={!!current && you?.submission?.renditionId === current.renditionId}
             canVote={!you?.disqualified}
             onVote={vote}
+            audio={audioChoice ?? d.playerAudio}
+            onToggleAudio={chooseAudio}
           />
         );
       }

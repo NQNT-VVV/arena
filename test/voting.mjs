@@ -84,7 +84,9 @@ await waitForHealth();
 
 const host = open(); await ready(host);
 const { code, hostToken } = await call(host, 'host:create', {
-  name: 'Battle notee', mediaType: 'audio', config: { scale: 5, defaultVote: 3 },
+  // Avancement manuel : ce parcours pilote le curseur a la main, et un
+  // passage automatique en plein test fausserait ce qu'on mesure.
+  name: 'Battle notee', mediaType: 'audio', config: { scale: 5, defaultVote: 3, autoNext: false },
 });
 await call(host, 'host:publish');
 
@@ -318,6 +320,106 @@ test('export : refuse tant que le classement n’est pas etabli', async () => {
   const { code: c2, hostToken: t2 } = await call(s2, 'host:create', { name: 'En cours' });
   const res = await fetch(`${BASE}/api/session/${c2}/results.json`, { headers: { 'X-Arena-Token': t2 } });
   assert.equal(res.status, 409);
+});
+
+/* ---------------------- ecoute synchronisee ----------------------- */
+
+/** Session prete a diffuser, avec `n` rendus, et les reglages voulus. */
+async function readyToDiffuse(config, n = 3) {
+  const h = open(); await ready(h);
+  const created = await call(h, 'host:create', { name: 'Auto', mediaType: 'audio', config });
+  await call(h, 'host:publish');
+  const crew = [];
+  for (let i = 0; i < n; i++) {
+    const sock = open(); await ready(sock);
+    const joined = await call(sock, 'play:join', { code: created.code, pseudo: `P${i}` });
+    crew.push({ sock, ident: { participantId: joined.participantId, token: joined.token } });
+  }
+  await call(h, 'host:start');
+  for (let i = 0; i < n; i++) await submit(created.code, crew[i], 10 + i, `p${i}.wav`);
+  await call(h, 'host:close-creation');
+  return { h, code: created.code, hostToken: created.hostToken, crew };
+}
+
+const stateOf = (h, c, t) => call(h, 'host:attach', { code: c, hostToken: t }).then((r) => r.state);
+
+test('ecoute : ouverte a un instant serveur, le meme pour tous', async () => {
+  const { h, code: c, hostToken: t, crew } = await readyToDiffuse({ playMaxS: 45, voteWindowS: 15, autoNext: true });
+  const before = Date.now();
+  const st = (await call(h, 'host:start-diffusion')).state;
+  const d = st.diffusion;
+  assert.ok(d.startedAt >= before - 50 && d.startedAt <= Date.now() + 50, 'ouverture a l’instant du passage');
+  assert.equal(d.endsAt - d.startedAt, 45_000, 'fin d’ecoute = ouverture + duree maximale');
+  assert.equal(d.advanceAt - d.endsAt, 15_000, 'passage au suivant = fin d’ecoute + fenetre de vote');
+  assert.equal(d.autoNext, true);
+
+  const chezP0 = (await call(crew[0].sock, 'play:join', { code: c, pseudo: 'P0', ...crew[0].ident })).state;
+  assert.equal(chezP0.diffusion.startedAt, d.startedAt, 'le participant recoit le meme instant');
+  assert.equal(chezP0.diffusion.endsAt, d.endsAt);
+});
+
+test('auto : le serveur passe seul au rendu suivant', async () => {
+  // Duree d'ecoute minimale et fenetre nulle : le passage a lieu a ~5 s.
+  const { h, code: c, hostToken: t } = await readyToDiffuse({ playMaxS: 5, voteWindowS: 0, autoNext: true });
+  const st = (await call(h, 'host:start-diffusion')).state;
+  assert.equal(st.diffusion.index, 0);
+  assert.equal(st.diffusion.advanceAt, st.diffusion.endsAt, 'fenetre nulle : on avance a la fin de l’ecoute');
+
+  await sleep(5600);
+  const after = await stateOf(h, c, t);
+  assert.equal(after.diffusion.index, 1, 'le curseur a avance sans intervention');
+  assert.ok(after.diffusion.startedAt > st.diffusion.startedAt, 'le rendu suivant a sa propre ouverture');
+});
+
+test('auto : quand tout le monde a note, on n’attend pas la fenetre de vote', async () => {
+  const { h, code: c, hostToken: t, crew } = await readyToDiffuse({ playMaxS: 5, voteWindowS: 60, autoNext: true });
+  const st = (await call(h, 'host:start-diffusion')).state;
+  const target = st.diffusion.current.renditionId;
+  assert.equal(st.diffusion.advanceAt - st.diffusion.endsAt, 60_000);
+
+  // Les deux votants eligibles notent tout de suite.
+  let last;
+  for (const p of crew) {
+    const res = await call(p.sock, 'play:vote', { renditionId: target, value: 4 });
+    if (res.ok) last = res;
+  }
+  assert.ok(last, 'au moins un vote accepte');
+
+  const now = await stateOf(h, c, t);
+  assert.equal(now.diffusion.voted, 2);
+  assert.equal(now.diffusion.eligible, 2);
+  // L'ecoute n'est jamais coupee : le passage est ramene a la fin de l'ecoute,
+  // pas a l'instant du dernier vote.
+  assert.equal(now.diffusion.advanceAt, now.diffusion.endsAt, 'passage cale sur la fin de l’ecoute');
+
+  await sleep(5600);
+  assert.equal((await stateOf(h, c, t)).diffusion.index, 1, 'et il a bien eu lieu');
+});
+
+test('relancer : le rendu repart de zero, a la meme position', async () => {
+  const { h, code: c, hostToken: t } = await readyToDiffuse({ playMaxS: 45, voteWindowS: 15, autoNext: false });
+  const st = (await call(h, 'host:start-diffusion')).state;
+  await sleep(120);
+  const again = (await call(h, 'host:diffusion-replay')).state;
+  assert.equal(again.diffusion.index, st.diffusion.index);
+  assert.equal(again.diffusion.current.renditionId, st.diffusion.current.renditionId);
+  assert.ok(again.diffusion.startedAt > st.diffusion.startedAt, 'nouvelle ouverture');
+  assert.equal(again.diffusion.advanceAt, null, 'en manuel, aucun passage programme');
+});
+
+test('bascule : couper l’automatique retire l’echeance, le remettre la recalcule', async () => {
+  const { h, code: c, hostToken: t } = await readyToDiffuse({ playMaxS: 45, voteWindowS: 15, autoNext: true });
+  const st = (await call(h, 'host:start-diffusion')).state;
+  assert.ok(st.diffusion.advanceAt);
+
+  const off = (await call(h, 'host:auto-next', { on: false })).state;
+  assert.equal(off.diffusion.autoNext, false);
+  assert.equal(off.diffusion.advanceAt, null);
+  assert.equal(off.diffusion.startedAt, st.diffusion.startedAt, 'le rendu en cours n’est pas relance');
+
+  const on = (await call(h, 'host:auto-next', { on: true })).state;
+  assert.equal(on.diffusion.autoNext, true);
+  assert.equal(on.diffusion.advanceAt, st.diffusion.endsAt + 15_000, 'echeance recalculee depuis l’ouverture');
 });
 
 /* ------------------------------------------------------------------ */

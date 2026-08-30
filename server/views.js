@@ -76,6 +76,9 @@ function configView(config) {
     latePenalty: config.latePenalty,
     hostVotes: config.hostVotes,
     autoAdvance: config.autoAdvance,
+    autoNext: config.autoNext,
+    voteWindowS: config.voteWindowS,
+    playerAudio: config.playerAudio,
     allowedExt: config.allowedExt,
     maxFileBytes: config.maxFileBytes,
   };
@@ -213,20 +216,28 @@ function diffusionView(session) {
   const currentId = order[session.cursor] ?? null;
   const submission = currentId ? repo.submission(currentId) : null;
 
-  const voters = [...session.participants.values()].filter((p) => !p.isHost && !p.disqualified);
-  // Tout le monde sauf l'auteur. Le nombre attendu ne dit pas qui est l'auteur,
-  // seulement qu'il y en a un parmi les presents.
-  const eligible = submission
-    ? Math.max(0, voters.length - (voters.some((p) => p.id === submission.participantId) ? 1 : 0))
-    : 0;
-
   return {
     index: session.cursor,
     total: order.length,
     current: submission ? anonymousCard(submission) : null,
     voted: submission ? repo.countVoters(submission.id) : 0,
-    eligible,
+    // Tout le monde sauf l'auteur. Le nombre attendu ne dit pas qui est
+    // l'auteur, seulement qu'il y en a un parmi les presents.
+    eligible: submission ? session.eligibleVoters(submission) : 0,
+    /**
+     * Horloge du rendu : des instants absolus, comme pour le chrono.
+     *
+     * `startedAt` cale l'ecoute de tous a la meme seconde, `endsAt` l'arrete,
+     * `advanceAt` dit quand le serveur passera au suivant — ou null si la regie
+     * a coupe l'automatique.
+     */
+    startedAt: session.diffusionStartedAt,
+    endsAt: session.renditionEndsAt(),
+    advanceAt: session.diffusionAdvanceAt,
+    autoNext: session.config.autoNext,
     playMaxS: session.config.playMaxS,
+    voteWindowS: session.config.voteWindowS,
+    playerAudio: session.config.playerAudio,
   };
 }
 

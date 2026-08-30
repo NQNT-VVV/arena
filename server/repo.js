@@ -44,6 +44,8 @@ function toSession(row) {
     endedAt: row.ended_at,
     order: json(row.diffusion_order, []),
     cursor: row.cursor,
+    diffusionStartedAt: row.diffusion_started_at,
+    diffusionAdvanceAt: row.diffusion_advance_at,
     revealedRank: row.revealed_rank,
     touchedAt: row.touched_at,
   };
@@ -85,6 +87,8 @@ const SESSION_COLUMNS = {
   endedAt: 'ended_at',
   order: 'diffusion_order',
   cursor: 'cursor',
+  diffusionStartedAt: 'diffusion_started_at',
+  diffusionAdvanceAt: 'diffusion_advance_at',
   revealedRank: 'revealed_rank',
 };
 

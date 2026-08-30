@@ -1,9 +1,10 @@
 'use client';
 
-import { CappedPlayer } from './CappedPlayer';
 import { Rating } from './Rating';
+import { SyncedMedia } from './SyncedMedia';
 import { humanBytes } from '@/lib/format';
 import type { DiffusionState, SessionConfig } from '@/lib/types';
+import { useDiffusionClock } from '@/lib/useDiffusionClock';
 import styles from './DiffusionStage.module.css';
 
 const SINGLE = [{ id: '_', label: '', weight: 1 }];
@@ -15,6 +16,10 @@ const SINGLE = [{ id: '_', label: '', weight: 1 }];
  * il n'y a donc rien a masquer ici. Le seul cas particulier est le sien —
  * signale par `isMine`, que le participant deduit de son propre canal, jamais
  * de l'etat partage.
+ *
+ * L'ecoute demarre seule, calee sur l'instant d'ouverture du serveur, et le
+ * passage au suivant est lui aussi decide par le serveur : la page affiche ou
+ * on en est, elle ne decide de rien.
  */
 export function DiffusionStage({
   diffusion,
@@ -24,6 +29,8 @@ export function DiffusionStage({
   onVote,
   canVote = true,
   large = false,
+  audio,
+  onToggleAudio,
 }: {
   diffusion: DiffusionState;
   config: SessionConfig;
@@ -34,8 +41,12 @@ export function DiffusionStage({
   canVote?: boolean;
   /** Mise en page du grand ecran : pas de controle, tout plus gros. */
   large?: boolean;
+  /** Le son sort-il de cet appareil ? */
+  audio: boolean;
+  onToggleAudio?: (on: boolean) => void;
 }) {
   const card = diffusion.current;
+  const tick = useDiffusionClock(diffusion);
 
   if (!card) {
     return (
@@ -48,6 +59,17 @@ export function DiffusionStage({
   }
 
   const criteria = config.criteria.length ? config.criteria : SINGLE;
+  const timed = card.kind === 'audio' || card.kind === 'video';
+  const everyone = diffusion.eligible > 0 && diffusion.voted >= diffusion.eligible;
+
+  const stageLabel = (() => {
+    switch (tick.stage) {
+      case 'play': return timed ? 'Ecoute' : 'Decouverte';
+      case 'vote': return diffusion.advanceAt === null ? 'Votez — l’animateur passera au suivant' : 'Votez';
+      case 'over': return diffusion.index >= diffusion.total - 1 ? 'Diffusion terminee' : 'Rendu suivant…';
+      default: return '';
+    }
+  })();
 
   return (
     <div className={`${styles.stage} ${large ? styles.large : ''}`}>
@@ -55,30 +77,46 @@ export function DiffusionStage({
         <span className={styles.position}>{diffusion.index + 1}</span>
         <span className="faint">/ {diffusion.total}</span>
         {card.late && <span className="pill" style={{ color: '#ffc9dc' }}>Hors delai</span>}
+        <span className="grow" />
+        {onToggleAudio && (
+          <button
+            className="btn xs ghost"
+            aria-pressed={audio}
+            title={audio ? 'Couper le son sur cet appareil' : 'Jouer le son sur cet appareil'}
+            onClick={() => onToggleAudio(!audio)}
+          >
+            {audio ? '🔊 Son' : '🔇 Muet'}
+          </button>
+        )}
       </div>
+
+      {/* Ou en est-on : ecoute, vote, ou passage au suivant. */}
+      {tick.stage && diffusion.startedAt && diffusion.endsAt && (
+        <div className={`${styles.timeline} ${styles[tick.stage]}`}>
+          <div className={styles.timelineHead}>
+            <span className={styles.stageLabel}>{stageLabel}</span>
+            {tick.stage !== 'over' && (tick.seconds > 0 || tick.stage === 'play') && (
+              <span className={`${styles.stageTime} tnum`}>{tick.seconds}s</span>
+            )}
+          </div>
+          <div className={styles.bar}><i style={{ transform: `scaleX(${tick.stage === 'over' ? 0 : tick.ratio})` }} /></div>
+        </div>
+      )}
 
       <div className={styles.media}>
         {!card.inline && card.url && (
           <a className="btn" href={`${card.url}?dl=1`}>⬇ Telecharger pour ouvrir</a>
         )}
 
-        {card.inline && card.kind === 'audio' && card.url && (
-          <CappedPlayer
-            className={styles.audio}
+        {card.inline && timed && card.url && diffusion.startedAt && diffusion.endsAt && (
+          <SyncedMedia
             src={card.url}
-            kind="audio"
-            maxSeconds={diffusion.playMaxS}
+            kind={card.kind === 'video' ? 'video' : 'audio'}
+            startedAt={diffusion.startedAt}
+            endsAt={diffusion.endsAt}
             fadeSeconds={config.fadeOutS}
-          />
-        )}
-
-        {card.inline && card.kind === 'video' && card.url && (
-          <CappedPlayer
-            className={styles.video}
-            src={card.url}
-            kind="video"
-            maxSeconds={diffusion.playMaxS}
-            fadeSeconds={config.fadeOutS}
+            enabled={audio}
+            large={large}
           />
         )}
 
@@ -94,12 +132,12 @@ export function DiffusionStage({
       </div>
 
       <div className={styles.meta}>
-        {(card.kind === 'audio' || card.kind === 'video') && (
-          <span>Ecoute limitee a {diffusion.playMaxS} s</span>
-        )}
+        {timed && <span>Ecoute limitee a {diffusion.playMaxS} s</span>}
         {card.bytes > 0 && <span>{humanBytes(card.bytes)}</span>}
         <span className="grow" />
-        <span className={styles.tally}>{diffusion.voted} / {diffusion.eligible} ont note</span>
+        <span className={`${styles.tally} ${everyone ? styles.tallyDone : ''}`}>
+          {diffusion.voted} / {diffusion.eligible} ont note{everyone ? ' ✓' : ''}
+        </span>
       </div>
 
       {onVote && (

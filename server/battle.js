@@ -87,9 +87,15 @@ const MAX_CRITERIA = 6;
  * qu'on attendait, et une duree de creation de neuf ans arme un `setTimeout`
  * que Node tronque silencieusement.
  */
+/** Nombre venu du reseau, ou repli si ce n'en est pas un. */
+const num = (value, fallback) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+};
+
 function sanitizeConfig(raw = {}, base = config.defaults) {
   const merged = { ...base, ...raw };
-  const scale = clamp(Math.round(Number(merged.scale) || base.scale), 2, 100);
+  const scale = clamp(Math.round(num(merged.scale, base.scale)), 2, 100);
 
   const alerts = [...new Set(
     (Array.isArray(merged.alerts) ? merged.alerts : base.alerts)
@@ -105,29 +111,32 @@ function sanitizeConfig(raw = {}, base = config.defaults) {
       weight: clamp(Number(c?.weight) || 1, 0.1, 10),
     }));
 
-  const playMaxS = clamp(Math.round(Number(merged.playMaxS) || base.playMaxS), 5, 600);
+  const playMaxS = clamp(Math.round(num(merged.playMaxS, base.playMaxS)), 5, 600);
 
   return {
-    durationMs: clamp(Math.round(Number(merged.durationMs) || base.durationMs), MIN_DURATION_MS, MAX_DURATION_MS),
-    graceMs: clamp(Math.round(Number(merged.graceMs) ?? base.graceMs), 0, MAX_GRACE_MS),
+    durationMs: clamp(Math.round(num(merged.durationMs, base.durationMs)), MIN_DURATION_MS, MAX_DURATION_MS),
+    graceMs: clamp(Math.round(num(merged.graceMs, base.graceMs)), 0, MAX_GRACE_MS),
     alerts,
     endSound: merged.endSound !== false,
     playMaxS,
     // Un fondu plus long que l'extrait ne veut rien dire.
-    fadeOutS: clamp(Math.round(Number(merged.fadeOutS) ?? base.fadeOutS), 0, Math.min(10, playMaxS)),
+    fadeOutS: clamp(Math.round(num(merged.fadeOutS, base.fadeOutS)), 0, Math.min(10, playMaxS)),
     scale,
-    defaultVote: clamp(Number(merged.defaultVote) ?? base.defaultVote, 0, scale),
+    defaultVote: clamp(num(merged.defaultVote, base.defaultVote), 0, scale),
     criteria,
     latePolicy: LATE_POLICIES.has(merged.latePolicy) ? merged.latePolicy : base.latePolicy,
-    latePenalty: clamp(Number(merged.latePenalty) ?? base.latePenalty, 0, scale),
+    latePenalty: clamp(num(merged.latePenalty, base.latePenalty), 0, scale),
     hostVotes: merged.hostVotes === true,
     autoAdvance: merged.autoAdvance === true,
+    autoNext: merged.autoNext !== false,
+    voteWindowS: clamp(Math.round(num(merged.voteWindowS, base.voteWindowS)), 0, 300),
+    playerAudio: merged.playerAudio !== false,
     allowedExt: (Array.isArray(merged.allowedExt) ? merged.allowedExt : [])
       .map((e) => String(e).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8))
       .filter(Boolean)
       .slice(0, 30),
     maxFileBytes: clamp(
-      Math.round(Number(merged.maxFileBytes) || config.limits.maxFileBytes),
+      Math.round(num(merged.maxFileBytes, config.limits.maxFileBytes)),
       1024 * 1024,
       config.limits.maxFileBytes,
     ),
@@ -168,6 +177,23 @@ class LiveSession {
 
   get hostOnline() {
     return this.hostSockets.size > 0;
+  }
+
+  /**
+   * Nombre de personnes qui doivent noter un rendu : tout le monde, sauf son
+   * auteur et les mis hors classement. C'est le denominateur du compteur
+   * « X / Y ont note » et le seuil de l'avancement anticipe.
+   */
+  eligibleVoters(submission) {
+    const voters = [...this.participants.values()].filter((p) => !p.isHost && !p.disqualified);
+    const authorVotes = submission && voters.some((p) => p.id === submission.participantId);
+    return Math.max(0, voters.length - (authorVotes ? 1 : 0));
+  }
+
+  /** Instant ou l'ecoute du rendu en cours s'arrete, ou null hors diffusion. */
+  renditionEndsAt() {
+    if (!this.diffusionStartedAt) return null;
+    return this.diffusionStartedAt + this.config.playMaxS * 1000;
   }
 
   /** Duree restante de creation, en millisecondes. Fait autorite. */
@@ -628,27 +654,88 @@ class BattleServer {
    * different sur le grand ecran et sur les telephones.
    */
   startDiffusion(code, token) {
-    const s = this.requireHost(code, token);
-    const eligible = repo.submissions(s.id).filter((sub) => {
-      const author = s.participants.get(sub.participantId);
-      return sub.status === 'ready' && author && !author.disqualified;
-    });
-    return this.setPhase(s, 'diffusion', { order: shuffle(eligible.map((x) => x.id)), cursor: 0 });
+    return this.startDiffusionInternal(this.requireHost(code, token));
   }
 
-  /** Deplacement dans la file de diffusion, pilote par la regie. */
-  moveCursor(code, token, { delta, index } = {}) {
+  /**
+   * Fenetre du rendu qui s'ouvre maintenant.
+   *
+   * L'ecoute demarre a cet instant pour tout le monde — un retardataire
+   * reprend a la bonne seconde, pas au debut. Puis vient une fenetre de vote,
+   * et enfin le passage au suivant, si la regie l'a laisse en automatique.
+   * Deux instants absolus suffisent ; le client compte tout seul.
+   */
+  renditionTiming(session, now = Date.now()) {
+    const endsAt = now + session.config.playMaxS * 1000;
+    return {
+      diffusionStartedAt: now,
+      diffusionAdvanceAt: session.config.autoNext ? endsAt + session.config.voteWindowS * 1000 : null,
+    };
+  }
+
+  /**
+   * Positionne la diffusion sur un rendu et rouvre sa fenetre.
+   *
+   * Sert aussi bien au clic de la regie qu'a l'avancement automatique : une
+   * seule facon de changer de rendu, un seul point de journal, un seul
+   * rearmement du chrono.
+   */
+  seek(session, index, { restart = false } = {}) {
+    const total = (session.order ?? []).length;
+    if (!total) throw new BattleError('Aucun rendu a diffuser.');
+    const next = clamp(Math.trunc(index), 0, total - 1);
+    if (next === session.cursor && !restart) return session;
+
+    session.patch({ cursor: next, ...this.renditionTiming(session) });
+    repo.logEvent(session.id, restart ? 'diffusion:replay' : 'diffusion:cursor', { index: next });
+    this.arm(session);
+    this.publish(session);
+    return session;
+  }
+
+  requireDiffusion(code, token) {
     const s = this.requireHost(code, token);
     if (s.phase !== 'diffusion') throw new BattleError('La diffusion n’est pas en cours.');
-    const total = (s.order ?? []).length;
-    if (!total) throw new BattleError('Aucun rendu a diffuser.');
+    return s;
+  }
 
+  /** Deplacement dans la file, pilote par la regie. */
+  moveCursor(code, token, { delta, index } = {}) {
+    const s = this.requireDiffusion(code, token);
     const target = Number.isFinite(index) ? Math.trunc(index) : s.cursor + Math.trunc(delta ?? 0);
-    const next = clamp(target, 0, total - 1);
-    if (next === s.cursor) return s;
+    return this.seek(s, target);
+  }
 
-    s.patch({ cursor: next });
-    repo.logEvent(s.id, 'diffusion:cursor', { index: next });
+  /** Relance le rendu en cours depuis le debut, pour tout le monde. */
+  replayRendition(code, token) {
+    const s = this.requireDiffusion(code, token);
+    return this.seek(s, s.cursor, { restart: true });
+  }
+
+  /**
+   * Bascule entre avancement automatique et manuel, en pleine diffusion.
+   *
+   * L'animateur qui veut commenter un rendu coupe l'automatique ; quand il le
+   * remet, la fenetre du rendu en cours est recalculee depuis son ouverture —
+   * avec trois secondes de battement si elle est deja depassee, pour que la
+   * bascule ne fasse pas sauter le rendu sous les yeux de la salle.
+   */
+  setAutoNext(code, token, on) {
+    const s = this.requireHost(code, token);
+    if (s.phase !== 'upload' && s.phase !== 'diffusion') {
+      throw new BattleError('Ce reglage se change pendant la diffusion.');
+    }
+    const enabled = on !== false;
+    const patch = { config: { ...s.config, autoNext: enabled } };
+    if (s.phase === 'diffusion' && s.diffusionStartedAt) {
+      const endsAt = s.renditionEndsAt();
+      patch.diffusionAdvanceAt = enabled
+        ? Math.max(Date.now() + 3000, endsAt + s.config.voteWindowS * 1000)
+        : null;
+    }
+    s.patch(patch);
+    repo.logEvent(s.id, 'diffusion:auto', { on: enabled });
+    this.arm(s);
     this.publish(s);
     return s;
   }
@@ -708,9 +795,32 @@ class BattleServer {
       value: bounded,
     });
 
+    this.maybeAdvanceEarly(session, submission, position);
     this.publish(session);
     this.publishYou(session, participant);
     return { session, participant, value: bounded, criterionId: criterion };
+  }
+
+  /**
+   * Quand tout le monde a note, la fenetre de vote n'a plus de raison d'etre.
+   *
+   * On ne coupe jamais l'ecoute elle-meme — avancer a la vingtieme seconde
+   * d'un morceau parce que les votes sont rentres serait brutal pour l'auteur.
+   * On ramene seulement le passage au suivant a la fin de l'ecoute, ou a trois
+   * secondes si l'ecoute est deja finie : le temps de voir le compteur
+   * atteindre son total.
+   */
+  maybeAdvanceEarly(session, submission, position) {
+    if (!session.config.autoNext || !session.diffusionAdvanceAt) return;
+    if (position !== session.cursor) return;
+    const eligible = session.eligibleVoters(submission);
+    if (eligible === 0 || repo.countVoters(submission.id) < eligible) return;
+
+    const soon = Math.max(session.renditionEndsAt(), Date.now() + 3000);
+    if (soon >= session.diffusionAdvanceAt) return;
+    session.patch({ diffusionAdvanceAt: soon });
+    repo.logEvent(session.id, 'diffusion:all-voted', { index: position });
+    this.arm(session);
   }
 
   /**
@@ -756,6 +866,13 @@ class BattleServer {
   nextDeadline(session) {
     if (session.phase === 'creation' && !session.pausedAt) return session.createEndAt ?? null;
     if (session.phase === 'upload') return session.graceEndAt ?? null;
+    if (session.phase === 'diffusion' && session.config.autoNext && session.diffusionAdvanceAt) {
+      // Sur le dernier rendu, une echeance deja passee n'a plus rien a
+      // declencher : la regie garde la main sur le passage aux resultats.
+      const last = session.cursor >= (session.order ?? []).length - 1;
+      if (last && session.diffusionAdvanceAt <= Date.now()) return null;
+      return session.diffusionAdvanceAt;
+    }
     return null;
   }
 
@@ -801,9 +918,36 @@ class BattleServer {
       this.disarm(code);
       // La regie garde la main sur le depart de la diffusion, sauf si elle a
       // demande l'enchainement automatique.
-      if (s.config.autoAdvance) this.setPhase(s, 'diffusion', { order: [], cursor: 0 });
+      if (s.config.autoAdvance) this.startDiffusionInternal(s);
       else this.publish(s);
+      return;
     }
+    if (s.phase === 'diffusion') {
+      const total = (s.order ?? []).length;
+      if (s.cursor < total - 1) {
+        this.seek(s, s.cursor + 1);
+      } else {
+        // Dernier rendu ecoule : on le signale, sans passer aux resultats. Le
+        // suspense de la revelation appartient a l'animateur.
+        repo.logEvent(s.id, 'diffusion:complete', null);
+        this.disarm(code);
+        this.publish(s);
+      }
+    }
+  }
+
+  /** Depart de la diffusion sans jeton : appele par l'echeance de grace. */
+  startDiffusionInternal(session) {
+    const eligible = repo.submissions(session.id).filter((sub) => {
+      const author = session.participants.get(sub.participantId);
+      return sub.status === 'ready' && author && !author.disqualified;
+    });
+    const order = shuffle(eligible.map((x) => x.id));
+    return this.setPhase(session, 'diffusion', {
+      order,
+      cursor: 0,
+      ...(order.length ? this.renditionTiming(session) : { diffusionStartedAt: null, diffusionAdvanceAt: null }),
+    });
   }
 
   /* --------------------------- presence -------------------------- */

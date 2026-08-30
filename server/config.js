@@ -116,8 +116,14 @@ const config = {
     latePolicy: str('DEFAULT_LATE_POLICY', 'reject'),
     latePenalty: Number(str('DEFAULT_LATE_PENALTY', '1')),
     hostVotes: bool('DEFAULT_HOST_VOTES', false),
-    /** L'animateur avance-t-il seul, ou la diffusion enchaine-t-elle quand tous ont vote ? */
+    /** La diffusion demarre-t-elle seule a la fin de la fenetre de grace ? */
     autoAdvance: bool('DEFAULT_AUTO_ADVANCE', false),
+    /** Pendant la diffusion, passe-t-on seul au rendu suivant ? */
+    autoNext: bool('DEFAULT_AUTO_NEXT', true),
+    /** Apres l'ecoute, secondes laissees pour finir de noter avant le rendu suivant. */
+    voteWindowS: int('DEFAULT_VOTE_WINDOW_S', 15),
+    /** Les telephones des participants jouent-ils aussi le son ? Faux si une enceinte suffit. */
+    playerAudio: bool('DEFAULT_PLAYER_AUDIO', true),
     allowedExt: [],
   },
 

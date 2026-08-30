@@ -3,9 +3,22 @@
 .counter { display: flex; align-items: baseline; gap: 8px; }
 .position { font-family: var(--display); font-weight: 700; font-size: 30px; line-height: 1; font-variant-numeric: tabular-nums; }
 
+/* Frise : ecoute, puis vote, puis passage au suivant. La couleur suit l'etape. */
+.timeline { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.timelineHead { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.stageLabel { font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); }
+.stageTime { font-family: var(--display); font-weight: 700; font-size: 15px; color: var(--muted); }
+.bar { width: 100%; height: 5px; border-radius: 99px; background: rgba(255,255,255,.09); overflow: hidden; }
+.bar > i {
+  display: block; height: 100%; border-radius: 99px;
+  background: linear-gradient(90deg, var(--violet), var(--cyan));
+  transform-origin: left center; transition: transform .95s linear, background .4s;
+}
+.vote .bar > i { background: linear-gradient(90deg, var(--amber), var(--pink)); }
+.vote .stageLabel { color: var(--amber); }
+.over .stageLabel { color: var(--faint); }
+
 .media { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
-.audio { width: 100%; }
-.video { width: 100%; max-height: 50vh; border-radius: var(--r-md); background: #000; }
 .imageLink { display: block; width: 100%; border-radius: var(--r-md); overflow: hidden; background: rgba(0,0,0,.35); }
 .image { width: 100%; max-height: 50vh; object-fit: contain; }
 .text {
@@ -18,7 +31,8 @@
 }
 
 .meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--faint); }
-.tally { font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 600; }
+.tally { font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 600; transition: color .3s; }
+.tallyDone { color: #86efc7; }
 
 .votes { display: flex; flex-direction: column; gap: 14px; padding-top: 4px; }
 .mine {
@@ -32,6 +46,9 @@
 
 /* Grand ecran : tout doit rester lisible a cinq metres. */
 .large .position { font-size: clamp(38px, 6vw, 72px); }
-.large .video, .large .image { max-height: 62vh; }
+.large .image { max-height: 62vh; }
+.large .stageLabel { font-size: clamp(13px, 1.4vw, 18px); }
+.large .stageTime { font-size: clamp(18px, 2.2vw, 30px); }
+.large .bar { height: 8px; }
 .large .text { font-size: clamp(17px, 2vw, 26px); max-height: 58vh; }
 .large .meta { font-size: clamp(13px, 1.4vw, 18px); }

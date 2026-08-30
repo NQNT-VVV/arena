@@ -258,6 +258,34 @@ test('redemarrage : les sessions et leurs echeances reviennent', () => {
   assert.ok(reborn.nextDeadline(back) !== null, 'l’echeance est rearmee');
 });
 
+test('redemarrage en diffusion : l’ecoute et l’avancement reprennent', () => {
+  const srv = new BattleServer(fakeIo());
+  const { session, hostToken } = srv.createSession({ name: 'X', config: { playMaxS: 45, voteWindowS: 15, autoNext: true } });
+  srv.publishSession(session.code, hostToken);
+  const a = srv.join(session.code, { pseudo: 'Alex' });
+  const b = srv.join(session.code, { pseudo: 'Bea' });
+  srv.start(session.code, hostToken);
+  for (const p of [a, b]) {
+    repo.addSubmission({
+      id: `sub-${p.participant.id}`, sessionId: session.id, participantId: p.participant.id,
+      renditionId: `r-${p.participant.id}`, originalKey: 'k', originalBytes: 1, originalMime: 'audio/wav',
+      filename: 'x.wav', kind: 'audio', inline: true, uploadedAt: Date.now(), late: false, status: 'ready',
+    });
+  }
+  srv.forceCloseCreation(session.code, hostToken);
+  srv.startDiffusion(session.code, hostToken);
+  assert.equal(session.order.length, 2);
+  assert.ok(session.diffusionStartedAt, 'le premier rendu est ouvert');
+  assert.equal(session.diffusionAdvanceAt, session.diffusionStartedAt + 60_000);
+
+  const reborn = new BattleServer(fakeIo());
+  const back = reborn.get(session.code);
+  assert.equal(back.phase, 'diffusion');
+  assert.equal(back.cursor, 0);
+  assert.equal(back.diffusionStartedAt, session.diffusionStartedAt, 'meme instant d’ouverture : l’ecoute reprend a la bonne seconde');
+  assert.equal(reborn.nextDeadline(back), session.diffusionAdvanceAt, 'l’avancement automatique est rearme');
+});
+
 test('diffusion : les trois surfaces recoivent des etats distincts', () => {
   const io = fakeIo();
   const srv = new BattleServer(io);

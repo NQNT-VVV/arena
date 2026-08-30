@@ -159,6 +159,8 @@ io.on('connection', (socket) => {
     'host:diffusion-next': (s) => battle.moveCursor(s, socket.data.hostToken, { delta: 1 }),
     'host:diffusion-prev': (s) => battle.moveCursor(s, socket.data.hostToken, { delta: -1 }),
     'host:diffusion-goto': (s, p) => battle.moveCursor(s, socket.data.hostToken, { index: p?.index }),
+    'host:diffusion-replay': (s) => battle.replayRendition(s, socket.data.hostToken),
+    'host:auto-next': (s, p) => battle.setAutoNext(s, socket.data.hostToken, p?.on),
     'host:results': (s) => battle.showResults(s, socket.data.hostToken),
     'host:reveal': (s, p) => battle.reveal(s, socket.data.hostToken, { all: p?.all === true }),
     'host:archive': (s) => battle.archive(s, socket.data.hostToken),

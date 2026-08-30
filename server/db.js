@@ -158,6 +158,16 @@ const MIGRATIONS = [
     // premiere chose qui trahit un auteur.
     d.exec("ALTER TABLE submission ADD COLUMN filename TEXT;");
   },
+
+  function diffusionTiming(d) {
+    // L'instant d'ouverture du rendu en cours et l'instant du passage au
+    // suivant. Persistes : un redemarrage en pleine diffusion doit reprendre
+    // l'ecoute a la bonne seconde et rearmer l'avancement automatique.
+    d.exec(`
+      ALTER TABLE session ADD COLUMN diffusion_started_at INTEGER;
+      ALTER TABLE session ADD COLUMN diffusion_advance_at INTEGER;
+    `);
+  },
 ];
 
 const applied = db.pragma('user_version', { simple: true });

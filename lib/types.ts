@@ -30,6 +30,12 @@ export interface SessionConfig {
   latePenalty: number;
   hostVotes: boolean;
   autoAdvance: boolean;
+  /** Pendant la diffusion, le serveur passe-t-il seul au rendu suivant ? */
+  autoNext: boolean;
+  /** Secondes laissees pour noter apres la fin de l'ecoute. */
+  voteWindowS: number;
+  /** Les telephones jouent-ils le son ? Faux quand une enceinte suffit. */
+  playerAudio: boolean;
   allowedExt: string[];
   maxFileBytes: number;
 }
@@ -119,7 +125,20 @@ export interface DiffusionState {
   voted: number;
   /** Combien devaient le noter : tout le monde sauf son auteur. */
   eligible: number;
+  /**
+   * Horloge du rendu, en instants absolus serveur.
+   *
+   * L'ecoute a demarre a `startedAt` pour tout le monde : un client qui arrive
+   * en cours se cale a la bonne seconde. Elle s'arrete a `endsAt`. Le serveur
+   * passe au suivant a `advanceAt` — null quand la regie a coupe l'automatique.
+   */
+  startedAt: number | null;
+  endsAt: number | null;
+  advanceAt: number | null;
+  autoNext: boolean;
   playMaxS: number;
+  voteWindowS: number;
+  playerAudio: boolean;
 }
 
 export interface PodiumRow {

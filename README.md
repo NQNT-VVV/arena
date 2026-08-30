@@ -23,7 +23,7 @@ Le projet avance par increments. Ce qui suit est **fait et teste** :
 | 1 | **Le coeur** : sessions, machine a etats, chrono serveur, lobby, temps reel, trois surfaces | ✅ |
 | 2 | **Elements imposes** : depot animateur, consultation dans la page, pack ZIP | ✅ |
 | 3 | **Rendus** : depot participant, relecture, remplacement, retrait, hors delai | ✅ |
-| 4 | **Diffusion et vote** : ordre tire, anonymat, auto-vote bloque, ecoute bornee | ✅ |
+| 4 | **Diffusion et vote** : ordre tire, anonymat, auto-vote bloque, ecoute synchronisee et enchainement automatique | ✅ |
 | 5 | **Resultats** : classement, revelation progressive, export JSON/CSV | ✅ |
 | 6 | Transcodage ffmpeg/sharp, forme d'onde, fondu serveur, nettoyage des metadonnees | ⏳ |
 | 7 | Duplication de session, module Discord optionnel | ⏳ |
@@ -145,6 +145,56 @@ traversee, ce qui est bien le comportement attendu.
 
 ---
 
+## L'ecoute est synchronisee, et l'enchainement automatique
+
+Pendant la diffusion, le lecteur demarre seul et le serveur passe seul au
+rendu suivant. Le principe est celui du chrono : **le « suivant » ne peut pas
+etre decide par chaque telephone**, sinon quinze appareils avancent a quinze
+instants differents.
+
+Quand un rendu s'ouvre, le serveur fixe trois instants et les publie :
+
+```
+startedAt ──── ecoute (playMaxS, 45 s) ────▶ endsAt ──── vote (voteWindowS, 15 s) ────▶ advanceAt
+```
+
+- Chaque lecteur se cale sur `startedAt` : quelqu'un qui arrive avec quatre
+  secondes de retard entend la cinquieme seconde, comme tout le monde. Un
+  telephone qui sort de veille se recale s'il a derive de plus d'une seconde.
+- A `endsAt` l'extrait s'arrete, avec un fondu sur les dernieres secondes.
+- A `advanceAt` le serveur ouvre le rendu suivant. Sur le dernier, il s'arrete
+  et attend l'animateur : le passage aux resultats est un moment, pas une
+  echeance.
+
+**Quand tout le monde a note, la fenetre de vote saute** — mais jamais
+l'ecoute. Avancer a la vingtieme seconde d'un morceau parce que les votes sont
+rentres serait brutal pour l'auteur. Le passage est ramene a la fin de
+l'ecoute, ou a trois secondes si elle est deja finie : le temps de voir le
+compteur atteindre son total.
+
+L'animateur garde la main : « Suivant » et « Precedent » a tout moment,
+« Relancer » pour rejouer le rendu depuis le debut chez tout le monde, et une
+bascule **auto / manuel** en pleine diffusion — on coupe pour commenter un
+rendu, on remet, et la fenetre est recalculee sans faire sauter le rendu sous
+les yeux de la salle.
+
+### Le son : sur quel appareil ?
+
+Chaque appareil choisit s'il joue le son, et s'en souvient. Les defauts suivent
+l'usage : le grand ecran joue (c'est lui qui est branche sur l'enceinte ou
+capture dans le partage d'ecran), la regie est muette (l'animateur a presque
+toujours le grand ecran ouvert a cote — deux lecteurs decales d'un dixieme font
+un echo), et les telephones suivent le reglage de session **« jouer le son sur
+les telephones »**, a couper quand une enceinte diffuse deja pour tout le monde.
+
+Les navigateurs refusent de demarrer un son sans geste prealable. Quand cela
+arrive, un bouton « Lancer l'ecoute » apparait ; un seul clic suffit pour toute
+la soiree. Le lecteur est un element unique dont on change la source, jamais
+remplace : sur iOS, un element lance a la main garde le droit de jouer seul
+ensuite, un element neuf le perd.
+
+---
+
 ## L'anonymat
 
 C'est le point le plus fragile du produit, donc celui qui a le moins de code.
@@ -212,8 +262,9 @@ autorise a lire `process.env` : une valeur de reglage ecrite en dur dans un
 module metier devient invisible depuis le manifeste de deploiement.
 
 Ce que l'animateur choisit par session : nom, type de rendu, consigne, duree,
-fenetre de grace, seuils d'alerte, bareme, note par defaut, criteres, politique
-des depots hors delai, enchainement automatique.
+fenetre de grace, seuils d'alerte, duree d'ecoute par rendu, fenetre de vote,
+enchainement automatique, son sur les telephones, bareme, note par defaut,
+criteres, politique des depots hors delai.
 
 Tout ce qui vient du reseau est borne dans `sanitizeConfig()`, y compris ce que
 seul l'animateur peut envoyer : un champ laisse a un humain finit toujours par
@@ -284,11 +335,11 @@ npm run build              # necessaire aux suites qui suivent
 npm run test:assets        # elements imposes, par le reseau         (13)
 npm run test:scoring       # classement : abstentions, retards, egalites (9)
 npm run test:submissions   # depot des rendus, par le reseau         (16)
-npm run test:voting        # diffusion, notation, revelation, export (16)
+npm run test:voting        # diffusion, notation, ecoute synchronisee, revelation, export (21)
 npm test                   # parcours complet, vraies sockets        (15)
 ```
 
-Cent quatre verifications au total.
+Cent dix verifications au total.
 
 `test/state.mjs` attaque les objets directement : transitions interdites,
 pause qui ne perd pas de secondes, echeance qui se declenche seule, reprise

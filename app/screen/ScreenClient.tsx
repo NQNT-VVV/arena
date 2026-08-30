@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Socket } from 'socket.io-client';
 
+import { audioPref } from '@/lib/audioPref';
 import { Brand } from '@/components/Brand';
 import { DiffusionStage } from '@/components/DiffusionStage';
 import { Podium } from '@/components/Podium';
@@ -29,6 +30,11 @@ export function ScreenClient() {
   const params = useSearchParams();
   const code = (params.get('code') || '').toUpperCase();
   const [error, setError] = useState<string | null>(null);
+  // Le grand ecran joue le son par defaut : c'est souvent lui qui est branche
+  // sur l'enceinte, ou capture dans le partage d'ecran.
+  const [audio, setAudio] = useState(true);
+  useEffect(() => { const saved = audioPref.get(); if (saved !== null) setAudio(saved); }, []);
+  const chooseAudio = (on: boolean) => { audioPref.set(on); setAudio(on); };
 
   const attach = useCallback(async (socket: Socket) => {
     if (!code) return;
@@ -143,7 +149,15 @@ export function ScreenClient() {
       {state.phase === 'diffusion' && state.diffusion && (
         <div className={styles.wide}>
           {/* Aucun controle et aucun vote : cet ecran est regarde, pas touche. */}
-          <DiffusionStage diffusion={state.diffusion} config={state.config} votes={{}} isMine={false} large />
+          <DiffusionStage
+            diffusion={state.diffusion}
+            config={state.config}
+            votes={{}}
+            isMine={false}
+            large
+            audio={audio}
+            onToggleAudio={chooseAudio}
+          />
         </div>
       )}
 

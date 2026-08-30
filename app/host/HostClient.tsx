@@ -12,6 +12,7 @@ import { Chrono } from '@/components/Chrono';
 import { PhaseRail } from '@/components/PhaseRail';
 import { QrCode } from '@/components/QrCode';
 import { humanBytes, humanDuration, humanThreshold, PHASE_LABELS } from '@/lib/format';
+import { audioPref } from '@/lib/audioPref';
 import { hostKeys } from '@/lib/identity';
 import { sfx } from '@/lib/sfx';
 import { call } from '@/lib/socket';
@@ -46,6 +47,10 @@ interface Draft {
   brief: string;
   durationMin: number;
   graceMin: number;
+  playMaxS: number;
+  voteWindowS: number;
+  autoNext: boolean;
+  playerAudio: boolean;
   alerts: number[];
   scale: number;
   defaultVote: number;
@@ -60,6 +65,10 @@ const EMPTY_DRAFT: Draft = {
   brief: '',
   durationMin: 60,
   graceMin: 2,
+  playMaxS: 45,
+  voteWindowS: 15,
+  autoNext: true,
+  playerAudio: true,
   alerts: [600, 120, 60, 30],
   scale: 5,
   defaultVote: 3,
@@ -73,6 +82,11 @@ export function HostClient() {
   const [booted, setBooted] = useState(false);
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [busy, setBusy] = useState(false);
+  // La regie est muette par defaut : l'animateur a presque toujours le grand
+  // ecran ouvert a cote, et deux lecteurs decales d'un dixieme font un echo.
+  const [audio, setAudio] = useState(false);
+  useEffect(() => { const saved = audioPref.get(); if (saved !== null) setAudio(saved); }, []);
+  const chooseAudio = (on: boolean) => { audioPref.set(on); setAudio(on); };
 
   /**
    * Reprise de la regie.
@@ -128,6 +142,10 @@ export function HostClient() {
       brief: state.brief,
       durationMin: Math.round(state.config.durationMs / 60000),
       graceMin: Math.round(state.config.graceMs / 60000),
+      playMaxS: state.config.playMaxS,
+      voteWindowS: state.config.voteWindowS,
+      autoNext: state.config.autoNext,
+      playerAudio: state.config.playerAudio,
       alerts: state.config.alerts,
       scale: state.config.scale,
       defaultVote: state.config.defaultVote,
@@ -154,6 +172,10 @@ export function HostClient() {
   const draftToConfig = (d: Draft) => ({
     durationMs: d.durationMin * 60_000,
     graceMs: d.graceMin * 60_000,
+    playMaxS: d.playMaxS,
+    voteWindowS: d.voteWindowS,
+    autoNext: d.autoNext,
+    playerAudio: d.playerAudio,
     alerts: d.alerts,
     scale: d.scale,
     defaultVote: d.defaultVote,
@@ -309,7 +331,14 @@ export function HostClient() {
             <h2 className="section-title">Rendu diffuse</h2>
             {/* La regie voit exactement ce que voit la salle : aucun auteur,
                 aucun nom de fichier. Elle partage souvent son ecran. */}
-            <DiffusionStage diffusion={state.diffusion} config={state.config} votes={{}} isMine={false} />
+            <DiffusionStage
+              diffusion={state.diffusion}
+              config={state.config}
+              votes={{}}
+              isMine={false}
+              audio={audio}
+              onToggleAudio={chooseAudio}
+            />
           </section>
         )}
 
@@ -476,6 +505,9 @@ export function HostClient() {
               <button className="btn sm" disabled={busy || !d || d.index === 0} onClick={() => act('host:diffusion-prev')}>
                 ← Precedent
               </button>
+              <button className="btn sm" disabled={busy || !d?.current} title="Relancer ce rendu depuis le debut, pour tout le monde" onClick={() => act('host:diffusion-replay')}>
+                🔁 Relancer
+              </button>
               <button
                 className={`btn ${everyone ? 'good' : ''}`}
                 disabled={busy || last}
@@ -484,6 +516,18 @@ export function HostClient() {
                 Suivant →
               </button>
             </div>
+            <label className="switch" title="Le serveur passe seul au rendu suivant apres l’ecoute et la fenetre de vote">
+              <input
+                type="checkbox"
+                checked={!!d?.autoNext}
+                disabled={busy}
+                onChange={(e) => act('host:auto-next', { on: e.target.checked })}
+              />
+              <span className="track" />
+              <span style={{ fontSize: 13.5 }}>
+                {d?.autoNext ? 'Enchainement automatique' : 'Enchainement manuel — coupe pour commenter'}
+              </span>
+            </label>
             {btn('Afficher les resultats', 'host:results', {}, `btn ${last ? 'primary' : ''}`)}
             {!last && (
               <span className="faint" style={{ fontSize: 12 }}>
@@ -600,6 +644,40 @@ export function HostClient() {
             />
           </div>
         </div>
+
+        <div className={styles.two}>
+          <div className="field">
+            <label htmlFor="playMax">Duree d&apos;ecoute par rendu (secondes)</label>
+            <input
+              id="playMax" className="input" type="number" min={5} max={600} value={draft.playMaxS}
+              onChange={(e) => set('playMaxS', Number(e.target.value))}
+            />
+            <span className="faint" style={{ fontSize: 12 }}>Au-dela, l&apos;extrait est coupe en fondu.</span>
+          </div>
+          <div className="field">
+            <label htmlFor="voteWindow">Fenetre de vote apres l&apos;ecoute (secondes)</label>
+            <input
+              id="voteWindow" className="input" type="number" min={0} max={300} value={draft.voteWindowS}
+              onChange={(e) => set('voteWindowS', Number(e.target.value))}
+            />
+            <span className="faint" style={{ fontSize: 12 }}>Sautee des que tout le monde a note.</span>
+          </div>
+        </div>
+
+        <label className="switch">
+          <input type="checkbox" checked={draft.autoNext} onChange={(e) => set('autoNext', e.target.checked)} />
+          <span className="track" />
+          <span>Passer seul au rendu suivant apres l&apos;ecoute et la fenetre de vote</span>
+        </label>
+
+        <label className="switch">
+          <input type="checkbox" checked={draft.playerAudio} onChange={(e) => set('playerAudio', e.target.checked)} />
+          <span className="track" />
+          <span>Jouer le son sur les telephones des participants</span>
+        </label>
+        <span className="faint" style={{ fontSize: 12, marginTop: -6 }}>
+          A couper si une enceinte ou le partage d&apos;ecran diffuse deja pour tout le monde.
+        </span>
 
         <div className="field">
           <label>Alertes sonores</label>
