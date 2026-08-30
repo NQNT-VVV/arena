@@ -1,0 +1,2 @@
+# Ce fichier n'existe que pour que git versionne le dossier : le Dockerfile
+# copie public/ dans l'image, et git ne connait pas les dossiers vides.
