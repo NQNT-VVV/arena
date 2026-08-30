@@ -15,8 +15,11 @@
  *    survie au redemarrage dont deux heures de travail televerse ont besoin.
  */
 
+const { EventEmitter } = require('events');
+
 const config = require('./config');
 const repo = require('./repo');
+const storage = require('./storage');
 const views = require('./views');
 const {
   uuid, uniqueCode, newToken, hashToken, tokenMatches,
@@ -220,6 +223,14 @@ const roomScreen = (code) => `s:${code}:screen`;
 class BattleServer {
   constructor(io) {
     this.io = io;
+    /**
+     * Evenements de session, pour les modules optionnels.
+     *
+     * Le coeur ne sait pas qu'un module Discord existe : il annonce ce qui se
+     * passe, et qui veut ecoute. C'est ce qui permet d'ajouter une integration
+     * sans toucher a une seule ligne de la machine a etats.
+     */
+    this.events = new EventEmitter();
     /** code -> LiveSession */
     this.sessions = new Map();
     /** code -> Timeout */
@@ -558,6 +569,7 @@ class BattleServer {
     repo.logEvent(session.id, 'phase', { from, to });
     this.arm(session);
     this.publish(session);
+    this.events.emit('phase', { session, from, to });
     return session;
   }
 
@@ -851,14 +863,73 @@ class BattleServer {
     s.patch({ revealedRank: all ? total : Math.min(total, current + 1) });
     repo.logEvent(s.id, 'results:reveal', { revealed: s.revealedRank });
     this.publish(s);
+    // Le classement complet n'est annonce a l'exterieur qu'une fois devoile
+    // a la salle : une annonce Discord qui precederait le podium gacherait
+    // la revelation.
+    if (total > 0 && current < total && s.revealedRank >= total) {
+      this.events.emit('results:complete', { session: s });
+    }
     return s;
+  }
+
+  /* -------------------------- duplication ------------------------ */
+
+  /**
+   * Nouvelle edition d'une session.
+   *
+   * Reglages, type de rendu et consigne sont repris ; les participants, les
+   * rendus et les votes ne le sont pas. Les elements imposes sont copies si on
+   * le demande — c'est souvent le meme pack d'une edition a l'autre, et les
+   * retirer coute un clic chacun la ou les redeposer coute un televersement.
+   */
+  async duplicate(code, token, { name, brief, copyAssets = true } = {}) {
+    const src = this.requireHost(code, token);
+    if (this.sessions.size >= config.limits.maxSessions) {
+      throw new BattleError('Le serveur heberge deja trop de sessions ouvertes.');
+    }
+
+    const hostToken = newToken();
+    const now = Date.now();
+    const row = repo.createSession({
+      id: uuid(),
+      code: uniqueCode((c) => repo.codeTaken(c)),
+      name: cleanPseudo(name, 60) || nextEditionName(src.name),
+      hostTokenHash: hashToken(hostToken),
+      phase: 'config',
+      mediaType: src.mediaType,
+      brief: brief !== undefined ? cleanText(brief, config.limits.maxBriefChars) : src.brief,
+      config: { ...src.config },
+      duplicatedFrom: src.id,
+      createdAt: now,
+    });
+    const live = new LiveSession(row, []);
+    this.sessions.set(live.code, live);
+
+    if (copyAssets) {
+      for (const asset of repo.assets(src.id)) {
+        const id = uuid();
+        const ext = asset.storageKey.match(/\.[a-z0-9]{1,8}$/i)?.[0] ?? '';
+        const key = `sessions/${live.id}/assets/${id}${ext}`;
+        // Copie physique : les deux sessions ont des durees de vie differentes,
+        // et purger l'ancienne ne doit pas trouer le pack de la nouvelle.
+        await storage.put(key, storage.createReadStream(asset.storageKey));
+        repo.addAsset({ ...asset, id, sessionId: live.id, storageKey: key, createdAt: now });
+      }
+    }
+
+    repo.logEvent(live.id, 'session:duplicated', { from: src.code, assets: copyAssets });
+    return { session: live, hostToken };
   }
 
   /** DIFFUSION -> RESULTATS. */
   showResults(code, token) {
     const s = this.requireHost(code, token);
     // Rien n'est devoile a l'arrivee : l'animateur declenche chaque cran.
-    return this.setPhase(s, 'results', { endedAt: Date.now(), revealedRank: 0 });
+    this.setPhase(s, 'results', { endedAt: Date.now(), revealedRank: 0 });
+    // Sans aucun rendu, il n'y a rien a devoiler : le classement est complet
+    // des l'affichage, et les modules qui l'attendent doivent le savoir.
+    if (!(s.order ?? []).length) this.events.emit('results:complete', { session: s });
+    return s;
   }
 
   archive(code, token) {
@@ -991,6 +1062,15 @@ class BattleServer {
   /* --------------------------- presence -------------------------- */
 
   attachHost(socket, session) {
+    // Une regie qui change de session — nouvelle edition — quitte l'ancienne :
+    // sinon elle recevrait deux etats contradictoires.
+    if (socket.data.code && socket.data.code !== session.code) {
+      const previous = this.get(socket.data.code);
+      if (previous) {
+        previous.hostSockets.delete(socket.id);
+        socket.leave(roomHost(previous.code));
+      }
+    }
     socket.join(roomHost(session.code));
     session.hostSockets.add(socket.id);
     socket.data.code = session.code;
@@ -1096,4 +1176,11 @@ class BattleServer {
   }
 }
 
-module.exports = { BattleServer, BattleError, LiveSession, PHASES, TRANSITIONS, sanitizeConfig };
+/** « Beat Battle #12 » devient « Beat Battle #13 » ; sinon on numerote. */
+function nextEditionName(name) {
+  const numbered = /^(.*?)(\d+)\s*$/.exec(name);
+  if (numbered) return `${numbered[1]}${Number(numbered[2]) + 1}`.slice(0, 60);
+  return `${name} #2`.slice(0, 60);
+}
+
+module.exports = { BattleServer, BattleError, LiveSession, PHASES, TRANSITIONS, sanitizeConfig, nextEditionName };

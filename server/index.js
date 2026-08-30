@@ -19,6 +19,7 @@ const config = require('./config');
 const metrics = require('./metrics');
 const storage = require('./storage');
 const transcode = require('./transcode');
+const discord = require('./integrations/discord');
 const { BattleServer } = require('./battle');
 
 const ROOT_DIR = path.join(__dirname, '..');
@@ -43,6 +44,8 @@ const battle = new BattleServer(io);
 metrics.bind(battle);
 // Reprend les transcodages interrompus et lance les ouvriers.
 transcode.start(battle);
+// Modules optionnels : chacun decide seul, selon sa configuration, s'il s'attache.
+if (discord.attach(battle)) console.log('[arena] annonces Discord actives');
 
 /* ------------------------------------------------------------------ */
 /* Garde-fous                                                          */
@@ -133,6 +136,32 @@ io.on('connection', (socket) => {
     battle.attachHost(socket, session);
     return { code: session.code, hostToken, state: views.hostView(session) };
   }));
+
+  /**
+   * Nouvelle edition.
+   *
+   * La socket bascule sur la nouvelle session dans le meme mouvement : la regie
+   * n'a pas a se reconnecter, elle se retrouve simplement devant ses reglages
+   * repris, prete a changer la consigne.
+   */
+  socket.on('host:duplicate', (payload = {}, cb) => {
+    (async () => {
+      if (socket.data.role !== 'host' || !socket.data.code) {
+        throw Object.assign(new Error('Cette socket ne pilote aucune session.'), { expected: true, status: 403 });
+      }
+      const { session, hostToken } = await battle.duplicate(socket.data.code, socket.data.hostToken, payload);
+      socket.data.hostToken = hostToken;
+      battle.attachHost(socket, session);
+      return { code: session.code, hostToken, state: views.hostView(session) };
+    })()
+      .then((result) => ok(cb, result))
+      .catch((err) => {
+        if (err && err.expected) { metrics.socketErrors.inc({ kind: 'refuse' }); fail(cb, err.message); return; }
+        console.error('[arena] duplication :', err);
+        metrics.socketErrors.inc({ kind: 'interne' });
+        fail(cb, 'Erreur interne du serveur.');
+      });
+  });
 
   /** Reprise de la regie apres un rafraichissement : le jeton vient du navigateur. */
   socket.on('host:attach', ({ code, hostToken } = {}, cb) => guard(cb, () => {

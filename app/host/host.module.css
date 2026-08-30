@@ -19,3 +19,9 @@
 /* Un rendu recu se voit d'un coup d'oeil : c'est l'information que l'animateur
    scrute en boucle dans les dernieres minutes. */
 .submitted { border-color: rgba(52, 211, 153, .42); background: rgba(52, 211, 153, .07); }
+
+.nextEdition {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  width: 100%; padding-top: 14px; margin-top: 6px; border-top: 1px solid var(--stroke);
+}
+.nextEdition .section-title { width: 100%; }

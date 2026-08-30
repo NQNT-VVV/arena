@@ -279,6 +279,54 @@ test('refus : au-dela du nombre autorise', async () => {
   assert.match(body.error, /Pas plus de/);
 });
 
+test('nouvelle edition : reglages et pack repris, le reste repart de zero', async () => {
+  const h = open(); await ready(h);
+  const src = await call(h, 'host:create', {
+    name: 'Beat Battle #12', mediaType: 'audio', brief: 'Cinq samples imposes.',
+    config: { durationMs: 45 * 60_000, scale: 10, voteWindowS: 20 },
+  });
+  await upload(src.code, src.hostToken, [['01-kick.wav', WAV, 'audio/wav'], ['02-snare.wav', WAV, 'audio/wav']]);
+  await call(h, 'host:publish');
+  const p = open(); await ready(p);
+  await call(p, 'play:join', { code: src.code, pseudo: 'Ancien' });
+
+  const dup = await call(h, 'host:duplicate', { copyAssets: true });
+  assert.equal(dup.ok, true, dup.error);
+  assert.notEqual(dup.code, src.code);
+  assert.ok(dup.hostToken && dup.hostToken !== src.hostToken, 'un jeton neuf pour une session neuve');
+
+  const st = dup.state;
+  assert.equal(st.phase, 'config', 'prete a etre reglee');
+  assert.equal(st.name, 'Beat Battle #13', 'le numero d’edition avance');
+  assert.equal(st.brief, 'Cinq samples imposes.');
+  assert.equal(st.mediaType, 'audio');
+  assert.equal(st.config.durationMs, 45 * 60_000);
+  assert.equal(st.config.scale, 10);
+  assert.equal(st.config.voteWindowS, 20);
+  assert.equal(st.roster.length, 0, 'aucun participant repris');
+  assert.equal(st.counts.submitted, 0);
+  assert.equal(st.assets.length, 2, 'le pack est copie');
+  assert.deepEqual(st.assets.map((a) => a.filename), ['01-kick.wav', '02-snare.wav']);
+
+  // Copie physique : l'element de la nouvelle session vit ailleurs.
+  const srcAssets = (await (await fetch(`${BASE}/api/session/${src.code}`)).json());
+  assert.ok(srcAssets.exists);
+  const copied = await fetch(`${BASE}${st.assets[0].url}`);
+  assert.equal(copied.status, 200);
+  assert.equal((await copied.arrayBuffer()).byteLength, WAV.length);
+
+  // La socket a bascule : elle pilote la nouvelle session.
+  const pub = await call(h, 'host:publish');
+  assert.equal(pub.ok, true, pub.error);
+  assert.equal(pub.state.code, dup.code);
+
+  // Sans le pack, depuis la nouvelle session cette fois.
+  const bare = await call(h, 'host:duplicate', { copyAssets: false, name: 'Edition speciale' });
+  assert.equal(bare.ok, true, bare.error);
+  assert.equal(bare.state.name, 'Edition speciale');
+  assert.equal(bare.state.assets.length, 0);
+});
+
 /* ------------------------------------------------------------------ */
 
 for (const [name, fn] of checks) {

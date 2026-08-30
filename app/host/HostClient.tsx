@@ -223,6 +223,27 @@ export function HostClient() {
   };
 
   /**
+   * Nouvelle edition.
+   *
+   * Les reglages et la consigne sont repris, la socket bascule sur la nouvelle
+   * session : on se retrouve devant le formulaire, pret a changer ce qui doit
+   * l'etre. Trente secondes pour relancer, c'etait le cahier des charges.
+   */
+  const duplicate = async (copyAssets: boolean) => {
+    if (!socket || !code) return;
+    setBusy(true);
+    const res = await call<{ code: string; hostToken: string }>(socket, 'host:duplicate', { copyAssets });
+    setBusy(false);
+    if (!res.ok) { toast(res.error, 'err'); return; }
+    hostKeys.save(res.code, res.hostToken);
+    hostKeys.setLast(res.code);
+    setCode(res.code);
+    sfx.phase();
+    toast(`Nouvelle edition ${res.code} creee`, 'ok');
+    window.scrollTo({ top: 0 });
+  };
+
+  /**
    * Telechargement de l'archive.
    *
    * Passe par une requete et un blob, pas par un lien : un `<a href>` ne sait
@@ -443,7 +464,10 @@ export function HostClient() {
       case 'config':
         return (
           <div className={styles.controls}>
-            <p className="muted">Regle la session ci-dessous, puis ouvre le lobby pour que les participants puissent entrer.</p>
+            <p className="muted">
+              Regle la session ci-dessous, puis ouvre le lobby pour que les participants puissent entrer.
+              {' '}Pense a mettre la consigne a jour si c&apos;est une nouvelle edition.
+            </p>
             {btn('Ouvrir le lobby', 'host:publish', {}, 'btn primary lg')}
           </div>
         );
@@ -569,12 +593,45 @@ export function HostClient() {
               <button className="btn sm ghost" onClick={() => download('json')}>⬇ JSON</button>
               {btn('Archiver la session', 'host:archive', {}, 'btn sm ghost')}
             </div>
+            {renderNextEdition()}
           </div>
         );
       }
       default:
-        return <p className="muted">Session archivee.</p>;
+        return (
+          <div className={styles.controls}>
+            <p className="muted">Session archivee.</p>
+            <div className="row wrap">
+              <button className="btn sm ghost" onClick={() => download('csv')}>⬇ CSV</button>
+              <button className="btn sm ghost" onClick={() => download('json')}>⬇ JSON</button>
+            </div>
+            {renderNextEdition()}
+          </div>
+        );
     }
+  }
+
+  /** Relancer : memes reglages, meme consigne, pack repris ou non. */
+  function renderNextEdition() {
+    const hasAssets = (state?.assets.length ?? 0) > 0;
+    return (
+      <div className={styles.nextEdition}>
+        <span className="section-title">Nouvelle edition</span>
+        <div className="row wrap">
+          <button className="btn good" disabled={busy} onClick={() => duplicate(true)}>
+            🔁 Relancer{hasAssets ? ' avec le meme pack' : ''}
+          </button>
+          {hasAssets && (
+            <button className="btn sm ghost" disabled={busy} onClick={() => duplicate(false)}>
+              Relancer sans les elements
+            </button>
+          )}
+        </div>
+        <span className="faint" style={{ fontSize: 12 }}>
+          Reglages et consigne repris ; participants, rendus et votes repartent de zero.
+        </span>
+      </div>
+    );
   }
 
   function renderCreate() {

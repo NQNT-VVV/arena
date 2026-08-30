@@ -26,12 +26,12 @@ Le projet avance par increments. Ce qui suit est **fait et teste** :
 | 4 | **Diffusion et vote** : ordre tire, anonymat, auto-vote bloque, ecoute synchronisee et enchainement automatique | ✅ |
 | 5 | **Resultats** : classement, revelation progressive, export JSON/CSV | ✅ |
 | 6 | **Transcodage** ffmpeg/sharp : format unique, extrait coupe et fondu, metadonnees supprimees, forme d'onde | ✅ |
-| 7 | Duplication de session, module Discord optionnel | ⏳ |
+| 7 | **Nouvelle edition** en un clic, **annonces Discord** optionnelles par webhook | ✅ |
 
-**La boucle complete tourne** : contraintes deposees, creation chronometree,
-rendus televerses et re-encodes, diffusion en aveugle avec ecoute synchronisee,
-notation, classement revele, archive exportee. Il reste la duplication d'une
-session et le module Discord.
+**Le brief est couvert de bout en bout** : contraintes deposees, creation
+chronometree, rendus televerses et re-encodes, diffusion en aveugle avec ecoute
+synchronisee, notation, classement revele, archive exportee, nouvelle edition
+en un clic, annonces Discord. Ce qui vient ensuite viendra de l'usage.
 
 ---
 
@@ -336,6 +336,7 @@ server/
   api.js        routes HTTP : fichiers, extraits, pack, export, sante, QR
   transcode.js  ouvriers ffmpeg/sharp, file en base
   scoring.js    calcul du classement, fonction pure
+  integrations/ modules optionnels : discord.js
   upload.js     reception en flux, plafonds appliques pendant le transfert
   files.js      service des fichiers : entetes, requetes partielles
   mime.js       reconnaissance par les octets, et refus d'affichage
@@ -377,15 +378,16 @@ npm run typecheck          # types partages front/serveur
 npm run test:state         # machine a etats et chrono, en memoire   (13)
 npm run test:mime          # reconnaissance de type et refus d'affichage (22)
 npm run build              # necessaire aux suites qui suivent
-npm run test:assets        # elements imposes, par le reseau         (13)
+npm run test:assets        # elements imposes, nouvelle edition       (14)
 npm run test:scoring       # classement : abstentions, retards, egalites (9)
 npm run test:submissions   # depot des rendus, par le reseau         (16)
 npm run test:voting        # diffusion, notation, ecoute synchronisee, revelation, export (21)
 npm run test:transcode     # vrai ffmpeg : metadonnees, coupure, fondu, duree, cretes, image (11)
+npm run test:discord       # faux webhook : trois annonces, et rien avant la revelation (6)
 npm test                   # parcours complet, vraies sockets        (15)
 ```
 
-Cent vingt-et-une verifications au total. La suite de transcodage s'ignore
+Cent vingt-huit verifications au total. La suite de transcodage s'ignore
 d'elle-meme quand ffmpeg manque sur la machine.
 
 `test/state.mjs` attaque les objets directement : transitions interdites,
@@ -504,8 +506,37 @@ comme superflu tout en l'installant. Rien a corriger.
 
 ---
 
-## Module Discord
+## Nouvelle edition
 
-Prevu, pas developpe. L'idee est un module optionnel qui s'abonne aux evenements
-de session (`session:published`, `session:results`) et reste inerte tant que
-`DISCORD_WEBHOOK_URL` est vide. Aucun couplage avec le coeur.
+Depuis les resultats ou l'archive, « Relancer » cree une session neuve avec les
+memes reglages, le meme type de rendu et la meme consigne — le nom avance tout
+seul, « Beat Battle #12 » devient « #13 ». Le pack d'elements est copie
+physiquement si on le demande : c'est souvent le meme d'une edition a l'autre,
+et le retirer coute un clic la ou le redeposer coute un televersement.
+Participants, rendus et votes repartent de zero, et la regie bascule sur la
+nouvelle session sans se reconnecter.
+
+---
+
+## Annonces Discord
+
+Module optionnel. Sans `DISCORD_WEBHOOK_URL`, il ne s'attache a rien et ne
+coute rien. Avec, il poste trois messages dans la soiree :
+
+| Moment | Message |
+|---|---|
+| le lobby s'ouvre | nom, type de rendu, duree, lien d'invitation (`PUBLIC_URL/j/CODE`) |
+| la creation demarre | nombre de participants, temps imparti |
+| le classement est **entierement devoile** | le podium, avec les notes |
+
+Le troisieme n'est envoye qu'une fois la derniere place annoncee a la salle :
+une annonce qui precederait la revelation gacherait le moment.
+
+Un webhook, pas un bot : pas de jeton a garder, pas de connexion permanente,
+aucun droit sur le serveur Discord au-dela d'ecrire dans un salon. Le coeur
+ignore que ce module existe — il emet des evenements (`phase`,
+`results:complete`), et qui veut ecoute. Un Discord injoignable est un message
+perdu, jamais une soiree arretee.
+
+> Brancher un service tiers est une decision d'exploitation : l'URL de webhook
+> se renseigne dans l'environnement de deploiement, pas dans le code.

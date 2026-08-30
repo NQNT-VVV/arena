@@ -31,6 +31,8 @@
     "test:voting": "node test/voting.mjs",
     "pretest:transcode": "node scripts/check-node.js",
     "test:transcode": "node test/transcode.mjs",
+    "pretest:discord": "node scripts/check-node.js",
+    "test:discord": "node test/discord.mjs",
     "pretest": "node scripts/check-node.js",
     "test": "node test/e2e.mjs"
   },
