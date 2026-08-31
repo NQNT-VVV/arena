@@ -360,6 +360,14 @@ input[type="range"]::-moz-range-thumb { border: 0; width: 20px; height: 20px; bo
 .phase-rail .step.now .num { background: linear-gradient(135deg, var(--violet), var(--cyan)); border-color: transparent; color: #fff; }
 .phase-rail .link { width: 18px; height: 1px; background: var(--stroke); flex: none; }
 
+/* Sur telephone, les six etapes se serrent pour en couper le moins possible :
+   le recentrage automatique fait le reste. */
+@media (max-width: 600px) {
+  .phase-rail .step { padding: 6px 10px; font-size: 11.5px; gap: 6px; }
+  .phase-rail .step .num { width: 17px; height: 17px; font-size: 10px; }
+  .phase-rail .link { width: 9px; }
+}
+
 /* --------------------------------------------------------------------------
    Chrono
    -------------------------------------------------------------------------- */

@@ -1,31 +1,91 @@
-.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-
-.item {
-  padding: 12px 14px; border-radius: var(--r-md);
-  background: var(--surface); border: 1px solid var(--stroke);
-  display: flex; flex-direction: column; gap: 10px;
+/* --------------------------------------------------------------------------
+   Lignes compactes — le meme langage visuel que le classement
+   -------------------------------------------------------------------------- */
+.grid {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px;
 }
+.stack { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.stackItem { display: flex; flex-direction: column; gap: 8px; }
 
-.head { display: flex; align-items: center; gap: 10px; }
-.icon { font-size: 20px; line-height: 1; flex: none; }
-.name { display: block; font-weight: 600; font-size: 14px; overflow-wrap: anywhere; }
-.meta { display: block; font-size: 11.5px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.row {
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: var(--r-md);
+  background: var(--surface); border: 1px solid var(--stroke);
+  transition: border-color .2s;
+}
+/* L'avancement de l'ecoute remplit doucement le fond de la ligne. */
+.row::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(90deg, rgba(139, 92, 246, .16) calc(var(--p, 0) * 100%), transparent 0);
+  transition: background .25s linear;
+}
+.active { border-color: rgba(139, 92, 246, .55); }
 
-/* Le lecteur natif : moins joli qu'un lecteur maison, mais il connait deja les
-   raccourcis clavier, la sortie audio choisie et la lecture en arriere-plan. */
-.audio { width: 100%; height: 36px; }
+.play {
+  position: relative; width: 38px; height: 38px; flex: none;
+  display: grid; place-items: center; font-size: 15px;
+  border-radius: 11px; cursor: pointer;
+  background: var(--surface-2); border: 1px solid var(--stroke); color: var(--text);
+  transition: background .16s, transform .16s var(--ease);
+  -webkit-tap-highlight-color: transparent;
+}
+.play:hover { background: var(--surface-3); }
+.play:active { transform: scale(.93); }
+.play[aria-pressed='true'] {
+  background: linear-gradient(135deg, var(--violet), var(--cyan));
+  border-color: transparent; color: #fff;
+}
+.inert { cursor: default; }
+.inert:hover { background: var(--surface-2); }
+.inert:active { transform: none; }
 
-.imageLink { display: block; border-radius: var(--r-sm); overflow: hidden; background: rgba(0,0,0,.3); }
-.image { width: 100%; max-height: 320px; object-fit: contain; }
+.info { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.name { font-weight: 600; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.meta { font-size: 11px; color: var(--faint); font-variant-numeric: tabular-nums; }
+
+.action {
+  position: relative; width: 30px; height: 30px; flex: none;
+  display: grid; place-items: center; font-size: 13px;
+  border-radius: 9px; color: var(--muted);
+  border: 1px solid transparent;
+  transition: background .16s, border-color .16s;
+}
+.action:hover { background: var(--surface-2); border-color: var(--stroke); }
+
+/* --------------------------------------------------------------------------
+   Images : des vignettes, l'original au clic
+   -------------------------------------------------------------------------- */
+.thumbs {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px;
+}
+.thumb {
+  border-radius: var(--r-md); overflow: hidden;
+  background: var(--surface); border: 1px solid var(--stroke);
+  display: flex; flex-direction: column;
+}
+.thumb a { display: block; background: rgba(0, 0, 0, .3); }
+.thumb img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; }
+.thumbBar { display: flex; align-items: center; gap: 4px; padding: 5px 7px; }
+.thumbName { flex: 1; min-width: 0; font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.thumbAction {
+  flex: none; width: 22px; height: 22px; display: grid; place-items: center;
+  font-size: 11px; border-radius: 6px; color: var(--muted);
+  background: transparent; border: 0; cursor: pointer; padding: 0;
+}
+.thumbAction:hover { background: var(--surface-2); color: var(--text); }
+
+/* --------------------------------------------------------------------------
+   Contenus deplies
+   -------------------------------------------------------------------------- */
 .video { width: 100%; max-height: 320px; border-radius: var(--r-sm); background: #000; }
-
-.textWrap { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
 .text {
-  margin: 0; width: 100%; padding: 11px 13px;
-  background: rgba(0,0,0,.28); border: 1px solid var(--stroke); border-radius: var(--r-sm);
+  margin: 0; width: 100%; max-height: 300px; overflow: auto;
+  padding: 11px 13px;
+  background: rgba(0, 0, 0, .28); border: 1px solid var(--stroke); border-radius: var(--r-sm);
   font-size: 13px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
-.clamped { max-height: 7.5em; overflow: hidden; mask-image: linear-gradient(180deg, #000 60%, transparent); }
-
-.noPreview { font-size: 12.5px; color: var(--faint); font-style: italic; }
+.loading { font-size: 12.5px; color: var(--faint); font-style: italic; }
