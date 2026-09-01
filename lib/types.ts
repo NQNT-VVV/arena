@@ -281,3 +281,21 @@ export const PHASE_STEPS: { phase: Phase; label: string }[] = [
   { phase: 'diffusion', label: 'Diffusion' },
   { phase: 'results', label: 'Resultats' },
 ];
+
+/** Ce que `GET /api/podium/me` rend : le hub, et qui y est connecte. */
+export interface PodiumIdentity {
+  hubUrl: string | null;
+  pid?: string;
+  pseudo?: string;
+  avatar?: string;
+}
+
+/** Variation d'Elo renvoyee par le hub apres le classement, par participant. */
+export interface PodiumRating {
+  participantId: string;
+  pseudo: string;
+  before: number;
+  after: number;
+  delta: number;
+  tier: string | null;
+}

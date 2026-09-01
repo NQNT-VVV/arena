@@ -1,7 +1,7 @@
 'use client';
 
 import { humanBytes } from '@/lib/format';
-import type { PodiumState } from '@/lib/types';
+import type { PodiumRating, PodiumState } from '@/lib/types';
 import styles from './Podium.module.css';
 
 const MEDALS = ['🥇', '🥈', '🥉'];
@@ -12,9 +12,21 @@ const MEDALS = ['🥇', '🥈', '🥉'];
  * Les lignes non encore annoncees arrivent vides du serveur : il n'y a rien a
  * cacher ici, seulement une place a tenir pour que la liste ne saute pas quand
  * la ligne se remplit.
+ *
+ * `ratings` : variations d'Elo annoncees par Podium une fois le classement
+ * transmis au hub. Absentes quand le jeu n'y est pas branche, ou tant que le
+ * hub n'a pas repondu — la ligne s'affiche alors comme avant.
  */
-export function Podium({ podium, meId, large = false }: { podium: PodiumState; meId?: string | null; large?: boolean }) {
+export function Podium({
+  podium, meId, large = false, ratings = null,
+}: {
+  podium: PodiumState;
+  meId?: string | null;
+  large?: boolean;
+  ratings?: PodiumRating[] | null;
+}) {
   if (!podium.total) return <p className="empty">Aucun rendu n&apos;a ete depose.</p>;
+  const ratingOf = new Map((ratings ?? []).map((r) => [r.participantId, r]));
 
   return (
     <ol className={`${styles.list} ${large ? styles.large : ''}`}>
@@ -30,6 +42,7 @@ export function Podium({ podium, meId, large = false }: { podium: PodiumState; m
 
         const top = row.rank !== null && row.rank !== undefined && row.rank <= 3;
         const mine = meId && row.author?.id === meId;
+        const rating = row.author ? ratingOf.get(row.author.id) : undefined;
 
         return (
           <li
@@ -41,7 +54,17 @@ export function Podium({ podium, meId, large = false }: { podium: PodiumState; m
             </span>
             <span className="avatar lg" aria-hidden="true">{row.author?.avatar}</span>
             <span className={styles.who}>
-              <span className={styles.pseudo}>{row.author?.pseudo}{mine ? ' (toi)' : ''}</span>
+              <span className={styles.pseudo}>
+                {row.author?.pseudo}{mine ? ' (toi)' : ''}
+                {rating && (
+                  <span
+                    className={`${styles.rating} ${rating.delta > 0 ? styles.up : rating.delta < 0 ? styles.down : ''}`}
+                    title={`Elo Podium : ${rating.before} → ${rating.after}`}
+                  >
+                    {rating.delta > 0 ? '+' : ''}{rating.delta}{rating.tier ? ` · ${rating.tier}` : ''}
+                  </span>
+                )}
+              </span>
               <span className={styles.detail}>
                 {row.voters} vote{(row.voters ?? 0) > 1 ? 's' : ''} sur {row.expected}
                 {row.late && ' • hors delai'}

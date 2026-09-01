@@ -337,7 +337,11 @@ class BattleServer {
    */
   static JOINABLE = new Set(['config', 'lobby', 'creation', 'upload']);
 
-  join(code, { pseudo, participantId, token } = {}) {
+  /**
+   * `podiumPid` vient du serveur, jamais du client : c'est le compte Podium lu
+   * dans le cookie signe du handshake. Null pour qui joue sans compte.
+   */
+  join(code, { pseudo, participantId, token, podiumPid = null } = {}) {
     const s = this.require(code);
 
     // Retour d'un participant connu : un rafraichissement de page, un tunnel.
@@ -347,6 +351,8 @@ class BattleServer {
         const now = Date.now();
         known.lastSeenAt = now;
         repo.touchParticipant(known.id, now);
+        // Connecte au hub entre-temps : le lien se fait a la reprise, une fois.
+        if (podiumPid && !known.podiumPid && repo.setPodiumPid(known.id, podiumPid)) known.podiumPid = podiumPid;
         return { session: s, participant: known, token, resumed: true };
       }
     }
@@ -375,6 +381,7 @@ class BattleServer {
       tokenHash: hashToken(fresh),
       isHost: false,
       joinedAt: now,
+      podiumPid: podiumPid || null,
     });
 
     s.participants.set(participant.id, participant);
@@ -1183,4 +1190,8 @@ function nextEditionName(name) {
   return `${name} #2`.slice(0, 60);
 }
 
-module.exports = { BattleServer, BattleError, LiveSession, PHASES, TRANSITIONS, sanitizeConfig, nextEditionName };
+module.exports = {
+  BattleServer, BattleError, LiveSession, PHASES, TRANSITIONS, sanitizeConfig, nextEditionName,
+  // Noms des salons Socket.IO, pour les modules qui parlent aux ecrans.
+  roomAll, roomHost, roomScreen,
+};

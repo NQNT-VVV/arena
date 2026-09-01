@@ -42,7 +42,7 @@ export function ScreenClient() {
     setError(res.ok ? null : res.error);
   }, [code]);
 
-  const { state, connected } = useBattleSocket(attach);
+  const { state, connected, ratings } = useBattleSocket(attach);
   const chrono = usePhaseClock(state);
 
   const inviteUrl = useMemo(
@@ -164,7 +164,7 @@ export function ScreenClient() {
       {(state.phase === 'results' || state.phase === 'archived') && state.podium && (
         <div className={styles.wide}>
           <span className={styles.bigIcon} aria-hidden="true">🏆</span>
-          <Podium podium={state.podium} large />
+          <Podium podium={state.podium} large ratings={ratings} />
         </div>
       )}
     </div>

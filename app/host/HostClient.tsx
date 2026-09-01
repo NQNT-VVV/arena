@@ -113,7 +113,7 @@ export function HostClient() {
     setBooted(true);
   }, [code]);
 
-  const { socket, state, connected } = useBattleSocket(attach);
+  const { socket, state, connected, ratings } = useBattleSocket(attach);
 
   const chrono = usePhaseClock(state, {
     onAlert: (s) => { sfx.alert(s); toast(`Plus que ${humanThreshold(s)}`, 'info'); },
@@ -366,7 +366,7 @@ export function HostClient() {
         {phase === 'results' && state.podium && (
           <section className="card pad col">
             <h2 className="section-title">Classement</h2>
-            <Podium podium={state.podium} />
+            <Podium podium={state.podium} ratings={ratings} />
           </section>
         )}
 

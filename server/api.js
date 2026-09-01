@@ -18,6 +18,7 @@ const repo = require('./repo');
 const storage = require('./storage');
 const transcode = require('./transcode');
 const views = require('./views');
+const hub = require('./integrations/podium');
 const { receiveFiles, UploadError } = require('./upload');
 const { uuid, safeFilename, cleanText, verifyMedia } = require('./util');
 const { BattleServer } = require('./battle');
@@ -77,6 +78,19 @@ function mount(app, battle) {
       open: BattleServer.JOINABLE.has(s.phase),
       participants: s.participants.size,
     });
+  });
+
+  /**
+   * Qui est connecte a Podium, vu par ce navigateur.
+   *
+   * Le formulaire d'entree s'en sert pour pre-remplir le pseudo. Sans hub
+   * configure, ou sans cookie valide, seule l'URL du hub (ou null) est rendue :
+   * le jeu fonctionne exactement comme avant.
+   */
+  app.get('/api/podium/me', (req, res) => {
+    const me = hub.identityOf(req.headers);
+    res.set('Cache-Control', 'no-store');
+    res.json({ hubUrl: config.podium.url || null, ...(me ?? {}) });
   });
 
   app.get('/api/qr', guard(async (req, res) => {

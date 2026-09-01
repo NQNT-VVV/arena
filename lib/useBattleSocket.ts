@@ -5,7 +5,7 @@ import type { Socket } from 'socket.io-client';
 
 import { clock } from './clock';
 import { connect } from './socket';
-import type { BattleState, You } from './types';
+import type { BattleState, PodiumRating, You } from './types';
 
 export interface BattleSocket {
   socket: Socket | null;
@@ -14,6 +14,8 @@ export interface BattleSocket {
   connected: boolean;
   /** Faux tant que l'horloge n'a pas ete recalee : le chrono attend. */
   synced: boolean;
+  /** Variations d'Elo annoncees par Podium apres le classement, s'il y en a. */
+  ratings: PodiumRating[] | null;
 }
 
 /**
@@ -30,7 +32,11 @@ export function useBattleSocket(attach: (socket: Socket) => void | Promise<void>
   const [you, setYou] = useState<You | null>(null);
   const [connected, setConnected] = useState(false);
   const [synced, setSynced] = useState(false);
+  const [ratings, setRatings] = useState<PodiumRating[] | null>(null);
   const socketRef = useRef<Socket | null>(null);
+  // Les variations d'Elo appartiennent a une session : une nouvelle edition
+  // les efface, sinon le podium suivant afficherait celles de la veille.
+  const codeRef = useRef<string | null>(null);
 
   // `attach` est une closure recreee a chaque rendu ; la garder dans une
   // reference evite de fermer et rouvrir la socket a chaque frappe clavier.
@@ -50,8 +56,14 @@ export function useBattleSocket(attach: (socket: Socket) => void | Promise<void>
 
     socket.on('connect', onConnect);
     socket.on('disconnect', () => setConnected(false));
-    socket.on('state', (payload: BattleState) => setState(payload));
+    socket.on('state', (payload: BattleState) => {
+      if (codeRef.current !== payload.code) { codeRef.current = payload.code; setRatings(null); }
+      setState(payload);
+    });
     socket.on('you', (payload: You) => setYou(payload));
+    socket.on('podium:ratings', (payload: { ratings?: PodiumRating[] }) => {
+      setRatings(Array.isArray(payload?.ratings) ? payload.ratings : null);
+    });
 
     return () => {
       socket.removeAllListeners();
@@ -60,5 +72,5 @@ export function useBattleSocket(attach: (socket: Socket) => void | Promise<void>
     };
   }, []);
 
-  return { socket: socketRef.current, state, you, connected, synced };
+  return { socket: socketRef.current, state, you, connected, synced, ratings };
 }

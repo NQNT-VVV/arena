@@ -14,11 +14,12 @@ import { PhaseRail } from '@/components/PhaseRail';
 import { SubmissionBox } from '@/components/SubmissionBox';
 import { audioPref } from '@/lib/audioPref';
 import { identity } from '@/lib/identity';
+import { fetchPodiumIdentity } from '@/lib/podium';
 import { humanDuration, humanThreshold, PHASE_LABELS } from '@/lib/format';
 import { sfx } from '@/lib/sfx';
 import { call } from '@/lib/socket';
 import { toast } from '@/lib/toast';
-import { MEDIA_LABELS, type SavedIdentity, type SessionCard } from '@/lib/types';
+import { MEDIA_LABELS, type PodiumIdentity, type SavedIdentity, type SessionCard } from '@/lib/types';
 import { useBattleSocket } from '@/lib/useBattleSocket';
 import { usePhaseClock } from '@/lib/usePhaseClock';
 import styles from './play.module.css';
@@ -79,7 +80,7 @@ export function PlayClient() {
     setJoined(true);
   }, [code]);
 
-  const { socket, state, you, connected } = useBattleSocket((s) => enter(s));
+  const { socket, state, you, connected, ratings } = useBattleSocket((s) => enter(s));
 
   const chrono = usePhaseClock(state, {
     onAlert: (s) => {
@@ -104,9 +105,25 @@ export function PlayClient() {
     return () => { cancelled = true; };
   }, [code]);
 
+  /**
+   * Pseudo propose a l'entree.
+   *
+   * L'identite gardee pour cette session passe d'abord : c'est la personne qui
+   * revient. Sinon, le compte Podium connecte dans ce navigateur, si le jeu y
+   * est branche. Le champ reste modifiable : le pseudo en jeu n'est qu'un
+   * affichage, le rattachement au compte se fait par le cookie, cote serveur.
+   */
+  const [hub, setHub] = useState<PodiumIdentity | null>(null);
   useEffect(() => {
     const saved = code ? identity.get(code) : null;
     if (saved) setPseudo(saved.pseudo);
+    let cancelled = false;
+    void fetchPodiumIdentity().then((me) => {
+      if (cancelled || !me) return;
+      setHub(me);
+      if (!saved && me.pseudo) setPseudo((current) => current || me.pseudo!);
+    });
+    return () => { cancelled = true; };
   }, [code]);
 
   const join = async () => {
@@ -189,6 +206,11 @@ export function PlayClient() {
             onChange={(e) => setPseudo(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') void join(); }}
           />
+          {hub?.pid && (
+            <span className="pill ok" style={{ alignSelf: 'flex-start' }}>
+              <span aria-hidden="true">{hub.avatar || '🏆'}</span> Connecte via Podium — ta partie comptera au classement
+            </span>
+          )}
         </div>
         {error && <p className={styles.error}>{error}</p>}
         <button
@@ -367,7 +389,7 @@ export function PlayClient() {
             {state!.podium.complete
               ? null
               : <p className="muted" style={{ fontSize: 13.5 }}>L&apos;animateur devoile les places une par une.</p>}
-            <Podium podium={state!.podium} meId={you?.id} />
+            <Podium podium={state!.podium} meId={you?.id} ratings={ratings} />
           </div>
         ) : null;
       default:
