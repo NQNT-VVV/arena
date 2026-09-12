@@ -190,6 +190,33 @@ test('le classement porte de quoi reecouter sans telecharger', () => {
   }
 });
 
+/*
+ * Le canal personnel part des l'arrivee.
+ *
+ * C'est la garde qui manquait. L'etat personnel n'etait pousse qu'apres un vote
+ * ou un depot : quelqu'un qui venait d'entrer restait sans, et la page ne
+ * pouvait pas savoir s'il creait ou s'il regardait. Elle supposait qu'il
+ * creait, et ouvrait le depot a un spectateur.
+ */
+test('a l’arrivee, chacun recoit son etat personnel avec son role', () => {
+  const io = fakeIo();
+  const srv = new BattleServer(io);
+  const { session } = srv.createSession({ name: 'Battle', mediaType: 'text' });
+  srv.setPhase(session, 'lobby');
+
+  for (const [pseudo, spectator] of [['CREATEUR1', false], ['JUGE1', true]]) {
+    const { participant } = srv.join(session.code, { pseudo, spectator });
+    const socket = { id: `sock-${participant.id}`, data: {}, join() {} };
+    io.sent.length = 0;
+    srv.attachParticipant(socket, session, participant);
+
+    const perso = io.sent.filter((m) => m.ev === 'you');
+    assert.equal(perso.length, 1, `${pseudo} doit recevoir un etat personnel en entrant`);
+    assert.equal(perso[0].room, socket.id, 'et sur sa seule socket');
+    assert.equal(perso[0].p.spectator, spectator, 'qui porte son role, sans avoir a le deviner');
+  }
+});
+
 /* ------------------------------------------------------------------ */
 
 for (const [name, fn] of checks) {

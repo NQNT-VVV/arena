@@ -495,6 +495,12 @@ class BattleServer {
 
   /** Enregistre ou remplace le rendu d'un participant. */
   saveSubmission(session, participant, data, existing) {
+    // Le role est deja verifie a l'ouverture du creneau. On le revoit ici :
+    // cette methode est exposee sur l'objet, et une garde unique en amont est
+    // une garde qu'un futur appelant contournera sans le vouloir.
+    if (participant && participant.spectator) {
+      throw new BattleError('Vous suivez la session comme spectateur : le depot vous est ferme.', 403);
+    }
     const now = Date.now();
     const payload = {
       id: existing?.id ?? uuid(),
@@ -1122,6 +1128,16 @@ class BattleServer {
     participant.lastSeenAt = now;
     repo.touchParticipant(participant.id, now);
     this.publish(session);
+    /*
+     * L'etat personnel part avec l'etat commun, pas plus tard.
+     *
+     * Il ne partait jusqu'ici qu'apres un vote ou un depot : quelqu'un qui
+     * venait d'entrer et n'avait encore rien fait restait sans canal propre
+     * pendant toute la phase de creation. La page ne savait donc ni son role,
+     * ni son rendu, ni ses notes, et devait deviner — un spectateur passait
+     * pour un createur. On ne fait plus deviner personne.
+     */
+    this.publishYou(session, participant);
   }
 
   detach(socket) {

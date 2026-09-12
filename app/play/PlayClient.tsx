@@ -92,7 +92,15 @@ export function PlayClient() {
     setJoined(true);
   }, [code]);
 
-  const { socket, state, you, connected, ratings } = useBattleSocket((s) => enter(s));
+  /*
+   * La reconnexion automatique repasse le role de l'invitation.
+   *
+   * Le serveur retrouve le role d'un participant qu'il connait encore. Mais si
+   * sa ligne a disparu — depart pendant le lobby, purge — il recree, et sans
+   * cette valeur il recreait un createur. Un spectateur se retrouvait alors
+   * avec une zone de depot parfaitement legitime.
+   */
+  const { socket, state, you, connected, ratings } = useBattleSocket((s) => enter(s, undefined, inviteAsSpectator));
 
   const chrono = usePhaseClock(state, {
     onAlert: (s) => {
