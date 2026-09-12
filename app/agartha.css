@@ -262,7 +262,13 @@ code { font: var(--t-meta); padding: 0 var(--sp-1); border: var(--border); }
 .btn.lg { height: 56px; padding: 0 var(--sp-6); font: var(--t-ui-l); font-size: clamp(var(--fs-2), 2.4vw, var(--fs-3)); }
 .btn.lg.block { justify-content: center; }
 .btn { flex-wrap: nowrap; }
-.btn.block { width: 100%; }
+/*
+ * `flex-direction` est declare explicitement : Podium utilise aussi une classe
+ * `.block` pour ses sections de page, qui empile en colonne. Sur un bouton
+ * `.btn.block`, elle faisait passer le pictogramme au-dessus du libelle — sur la
+ * seule porte d'entree du hub, le bouton de connexion Discord.
+ */
+.btn.block { width: 100%; flex-direction: row; }
 .btn.icon { width: 40px; height: 40px; padding: 0; }
 .btn.danger.sm::before, .btn.danger.xs::before { width: 4px; }
 
