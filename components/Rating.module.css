@@ -15,7 +15,7 @@
 .pip:hover:not(:disabled) { background: var(--ink-12); color: var(--ink); }
 .pip:active:not(:disabled) { animation: flash var(--dur-flash) var(--ease-hold); transform: none; }
 .pip[aria-pressed='true'] { background: var(--ink); background-image: none; color: var(--bg); }
-.pip:disabled { cursor: not-allowed; color: var(--ink-55); background-image: var(--dither-12); background-size: var(--dither-size); }
+.pip:disabled { cursor: not-allowed; color: var(--ink-55); border-style: dashed; }
 
 .slider { display: flex; align-items: center; gap: var(--sp-4); }
 .slider input { flex: 1; }

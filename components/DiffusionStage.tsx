@@ -164,7 +164,7 @@ export function DiffusionStage({
         <div className={styles.votes}>
           {isMine ? (
             <p className={styles.mine}>
-              🪞 C&apos;est ta creation. Tu ne peux pas la noter — les autres s&apos;en chargent.
+              C&apos;est ta creation : tu ne peux pas la noter, les autres s&apos;en chargent.
             </p>
           ) : !canVote ? (
             <p className={styles.mine}>Tu es hors classement : la notation t&apos;est fermee.</p>

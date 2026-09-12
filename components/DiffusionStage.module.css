@@ -34,10 +34,12 @@
 
 .votes { display: grid; gap: var(--sp-4); padding-top: var(--sp-1); }
 .mine {
-  padding: var(--sp-3) var(--sp-4); font: var(--t-meta); letter-spacing: var(--ls-mono);
-  background-image: var(--dither-12); background-size: var(--dither-size);
-  border: var(--border-ui); color: var(--ink-60);
+  position: relative; padding: var(--sp-3) var(--sp-4) var(--sp-3) var(--sp-6);
+  font: var(--t-prose); letter-spacing: var(--ls-prose); text-transform: none;
+  border: var(--border-ui); color: var(--ink-90);
 }
+/* La texture dit « ferme » depuis le bord, sans passer sous les lettres. */
+.mine::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 8px; background-image: var(--dither-37); background-size: var(--dither-size); }
 
 .empty { display: grid; gap: var(--sp-3); padding: var(--sp-6) 0; justify-items: start; }
 .empty h2 { font: var(--t-h2); letter-spacing: var(--ls-display); }
