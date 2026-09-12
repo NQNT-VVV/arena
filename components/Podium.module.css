@@ -7,8 +7,9 @@
   padding: var(--sp-3) var(--sp-4); border-bottom: var(--border);
 }
 .row:last-child { border-bottom: 0; }
-.hidden { color: var(--ink-40); background-image: var(--dither-12); background-size: var(--dither-size); }
-.dots { color: var(--ink-40); letter-spacing: .3em; font: var(--t-meta); }
+.hidden { color: var(--ink-55); }
+.hidden .pseudo { background-image: var(--dither-50); background-size: var(--dither-size); color: transparent; }
+.dots { color: var(--ink-55); letter-spacing: .3em; font: var(--t-meta); }
 
 .place {
   font: var(--t-ui); letter-spacing: var(--ls-mono);
@@ -17,20 +18,21 @@
 
 .who { min-width: 0; display: grid; gap: var(--sp-1); }
 .pseudo { font: var(--t-ui); letter-spacing: var(--ls-mono); overflow-wrap: anywhere; }
-.detail { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-40); }
+.detail { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-55); }
 .criteria { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); }
 
 .score {
   font: var(--t-ui-l); letter-spacing: var(--ls-mono);
   font-variant-numeric: tabular-nums; text-align: right;
 }
-.raw { color: var(--ink-40); }
+.raw { color: var(--ink-55); }
 
 /* Le premier : le seul or de l'ecran, en aplat sur le rang. */
 .top .place { background: var(--gold); color: var(--bg); padding: 0 var(--sp-1); }
 .mine { background: var(--ink-06); }
-/* Hors classement : ecarte, mais toujours la. */
-.aside { color: var(--ink-40); background-image: var(--dither-12); background-size: var(--dither-size); }
+/* Hors classement : ecarte, mais toujours la. Une bande le dit sans voiler la ligne. */
+.aside { position: relative; color: var(--ink-55); padding-left: var(--sp-6); }
+.aside::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 8px; background-image: var(--hatch); }
 .aside .pseudo { text-decoration: line-through; }
 
 .large .row { grid-template-columns: 88px minmax(0, 1fr) auto; padding: var(--sp-4) var(--sp-6); gap: var(--sp-6); }
@@ -43,7 +45,7 @@
 .rating {
   display: inline-flex; align-items: center; height: 24px; margin-left: var(--sp-2); padding: 0 var(--sp-2);
   font: var(--t-meta); letter-spacing: var(--ls-mono); font-variant-numeric: tabular-nums; vertical-align: middle;
-  border: 1px solid var(--ink-25); color: var(--ink-60);
+  border: var(--border-ui); color: var(--ink-60);
 }
 .rating.up { color: var(--accent); border-color: var(--accent); }
 .rating.down { color: var(--ink-60); border-color: var(--ink-25); }

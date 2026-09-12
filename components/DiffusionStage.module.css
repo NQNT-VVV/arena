@@ -8,12 +8,12 @@
 .timelineHead { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-3); }
 .stageLabel { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); }
 .stageTime { font: var(--t-ui); letter-spacing: var(--ls-mono); color: var(--ink); font-variant-numeric: tabular-nums; }
-.bar { width: 100%; height: 8px; border: 1px solid var(--ink-25); background: transparent; overflow: hidden; }
+.bar { width: 100%; height: 8px; border: var(--border-ui); background: transparent; overflow: hidden; }
 .bar > i { display: block; height: 100%; background: var(--ink); transform-origin: left center; transition: none; }
 /* La fenetre de vote est le moment ou il faut agir : elle vit, donc elle saigne. */
 .vote .bar > i { background: var(--accent); }
 .vote .stageLabel { color: var(--accent); animation: blink var(--dur-blink) var(--ease-hold) infinite; }
-.over .stageLabel { color: var(--ink-40); }
+.over .stageLabel { color: var(--ink-55); }
 .over .bar { background-image: var(--hatch); }
 .over .bar > i { display: none; }
 
@@ -28,7 +28,7 @@
   text-transform: none; white-space: pre-wrap; overflow-wrap: anywhere;
 }
 
-.meta { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-40); }
+.meta { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-55); }
 .tally { font-variant-numeric: tabular-nums; color: var(--ink-60); transition: none; }
 .tallyDone { color: var(--ink); }
 
@@ -36,12 +36,12 @@
 .mine {
   padding: var(--sp-3) var(--sp-4); font: var(--t-meta); letter-spacing: var(--ls-mono);
   background-image: var(--dither-12); background-size: var(--dither-size);
-  border: 1px solid var(--ink-25); color: var(--ink-60);
+  border: var(--border-ui); color: var(--ink-60);
 }
 
 .empty { display: grid; gap: var(--sp-3); padding: var(--sp-6) 0; justify-items: start; }
 .empty h2 { font: var(--t-h2); letter-spacing: var(--ls-display); }
-.icon { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-40); }
+.icon { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-55); }
 
 /* Grand ecran : tout doit rester lisible a cinq metres. */
 .large .position { font: var(--t-data); letter-spacing: var(--ls-mono); font-size: clamp(40.5px, 6vw, 72px); }

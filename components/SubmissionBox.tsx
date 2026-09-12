@@ -129,7 +129,7 @@ export function SubmissionBox({
           rows={10}
           value={draft}
           maxLength={20000}
-          placeholder="ECRIS ICI. TU PEUX REVENIR DESSUS TANT QUE LA PHASE EST OUVERTE."
+          placeholder="Ecris ici. Tu peux revenir dessus tant que la phase est ouverte."
           onChange={(e) => setDraft(e.target.value)}
         />
         <div className="row wrap">

@@ -407,7 +407,7 @@ export function HostClient() {
             code={state.code}
             token={hostKeys.get(state.code)}
             disabled={!ASSET_ADD_PHASES.has(phase)}
-            hint="OU GLISSE-LES ICI — PLUSIEURS A LA FOIS"
+            hint="Ou glisse-les ici — plusieurs a la fois"
           />
           <AssetPack
             assets={state.assets}
@@ -539,7 +539,7 @@ export function HostClient() {
               <button className="btn sm" disabled={busy || !d || d.index === 0} onClick={() => act('host:diffusion-prev')}>
                 ← Precedent
               </button>
-              <button className="btn sm" disabled={busy || !d?.current} title="RELANCER CE RENDU DEPUIS LE DEBUT, POUR TOUT LE MONDE" onClick={() => act('host:diffusion-replay')}>
+              <button className="btn sm" disabled={busy || !d?.current} title="Relancer ce rendu depuis le debut, pour tout le monde" onClick={() => act('host:diffusion-replay')}>
                 🔁 Relancer
               </button>
               <button
@@ -550,7 +550,7 @@ export function HostClient() {
                 Suivant →
               </button>
             </div>
-            <label className="switch" title="LE SERVEUR PASSE SEUL AU RENDU SUIVANT APRES L’ECOUTE ET LA FENETRE DE VOTE">
+            <label className="switch" title="Le serveur passe seul au rendu suivant apres l’ecoute et la fenetre de vote">
               <input
                 type="checkbox"
                 checked={!!d?.autoNext}
@@ -692,7 +692,7 @@ export function HostClient() {
             placeholder={'Les 5 samples du pack sont obligatoires.\nAucun autre son externe.\nDuree libre.'}
             onChange={(e) => set('brief', e.target.value)}
           />
-          <span className="meta">AFFICHEE EN PERMANENCE AUX PARTICIPANTS.</span>
+          <span className="meta">Affichee en permanence aux participants.</span>
         </div>
 
         <div className={styles.two}>
@@ -727,7 +727,7 @@ export function HostClient() {
               id="voteWindow" className="input" type="number" min={0} max={300} value={draft.voteWindowS}
               onChange={(e) => set('voteWindowS', Number(e.target.value))}
             />
-            <span className="meta">SAUTEE DES QUE TOUT LE MONDE A NOTE.</span>
+            <span className="meta">Sautee des que tout le monde a note.</span>
           </div>
         </div>
 
@@ -740,7 +740,7 @@ export function HostClient() {
         <label className="switch">
           <input type="checkbox" checked={draft.playerAudio} onChange={(e) => set('playerAudio', e.target.checked)} />
           <span className="track" />
-          <span>JOUER LE SON SUR LES TELEPHONES DES PARTICIPANTS</span>
+          <span>Jouer le son sur les telephones des participants</span>
         </label>
         <span className="faint" style={{ marginTop: 'calc(-1 * var(--sp-2))' }}>
           A couper si une enceinte ou le partage d&apos;ecran diffuse deja pour tout le monde.
@@ -782,7 +782,7 @@ export function HostClient() {
               id="defaultVote" className="input" type="number" min={0} max={draft.scale} step={0.5} value={draft.defaultVote}
               onChange={(e) => set('defaultVote', Number(e.target.value))}
             />
-            <span className="meta">APPLIQUEE QUAND UN VOTANT SAUTE UN RENDU.</span>
+            <span className="meta">Appliquee quand un votant saute un rendu.</span>
           </div>
         </div>
 
@@ -810,7 +810,7 @@ export function HostClient() {
             onChange={(e) => set('autoAdvance', e.target.checked)}
           />
           <span className="track" />
-          <span>ENCHAINER SUR LA DIFFUSION DES LA FIN DE LA FENETRE DE GRACE</span>
+          <span>Enchainer sur la diffusion des la fin de la fenetre de grace</span>
         </label>
 
         {existing

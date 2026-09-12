@@ -166,7 +166,7 @@ export function PlayClient() {
       <div className={styles.gate}>
         <Brand />
         <h1>REJOINDRE UNE BATTLE</h1>
-        <p className="muted">SAISIS LE CODE ANNONCE PAR L&apos;ANIMATEUR.</p>
+        <p className="muted">Saisis le code annonce par l&apos;animateur.</p>
         <JoinForm className="col" inputClassName={styles.codeInput} />
       </div>
     );
@@ -177,7 +177,7 @@ export function PlayClient() {
       <div className={styles.gate}>
         <Brand />
         <h1>CODE INCONNU</h1>
-        <p className="muted">LA SESSION <b>{code}</b> N&apos;EXISTE PAS, OU ELLE EST TERMINEE.</p>
+        <p className="muted">La session <b>{code}</b> n&apos;existe pas, ou elle est terminee.</p>
         <JoinForm className="col" inputClassName={styles.codeInput} />
       </div>
     );
@@ -208,7 +208,7 @@ export function PlayClient() {
           />
           {hub?.pid && (
             <span className="pill ok" style={{ alignSelf: 'flex-start' }}>
-              CONNECTE VIA PODIUM · TA PARTIE COMPTERA AU CLASSEMENT
+              Connecte via PODIUM · ta partie comptera au classement
             </span>
           )}
         </div>
@@ -248,7 +248,7 @@ export function PlayClient() {
 
         {you?.disqualified && (
           <p className={styles.error}>
-            <span>HORS CLASSEMENT · DECISION DE L&apos;ANIMATEUR. TU PEUX CONTINUER A SUIVRE LA SESSION.</span>
+            <span>Hors classement, decision de l&apos;animateur. Tu peux continuer a suivre la session.</span>
           </p>
         )}
 
@@ -271,7 +271,7 @@ export function PlayClient() {
           <AssetPack
             assets={state.assets}
             zipUrl={state.assets.length ? state.assetsZipUrl : undefined}
-            emptyLabel="AUCUN ELEMENT IMPOSE · LA CONSIGNE SEULE FAIT FOI"
+            emptyLabel="Aucun element impose · la consigne seule fait foi"
           />
         </section>
 
@@ -350,7 +350,7 @@ export function PlayClient() {
             <p className="muted" style={{ textAlign: 'center' }}>
               {chrono.paused
                 ? 'L’animateur a mis le chrono en pause.'
-                : 'DEPOT POSSIBLE DES QUE LE RENDU EST PRET, SANS ATTENDRE LA FIN.'}
+                : 'Depot possible des que le rendu est pret, sans attendre la fin.'}
             </p>
             {renderSubmission()}
           </>
@@ -397,7 +397,7 @@ export function PlayClient() {
           <div className={styles.waiting}>
             <span className={styles.bigIcon} aria-hidden="true">📦</span>
             <h2>SESSION TERMINEE</h2>
-            <p className="muted">SESSION ARCHIVEE · MERCI D&apos;AVOIR JOUE</p>
+            <p className="muted">Session archivee. Merci d&apos;avoir joue.</p>
           </div>
         );
     }

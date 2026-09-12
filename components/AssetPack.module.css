@@ -24,10 +24,10 @@
 .play {
   position: relative; width: 40px; height: 40px; flex: none;
   display: grid; place-items: center; font: var(--t-meta); letter-spacing: var(--ls-mono);
-  cursor: pointer; background: transparent; border: 1px solid var(--ink-25); color: var(--ink);
+  cursor: pointer; background: transparent; border: var(--border-ui); color: var(--ink);
   transition: none; -webkit-tap-highlight-color: transparent;
 }
-.play:hover { border-color: var(--ink); background-image: var(--dither-12); background-size: var(--dither-size); }
+.play:hover { border-color: var(--ink); background: var(--ink-12); }
 .play:active { animation: flash var(--dur-flash) var(--ease-hold); transform: none; }
 .play[aria-pressed='true'] { background: var(--ink); background-image: none; border-color: var(--ink); color: var(--bg); }
 .inert { cursor: default; }
@@ -36,7 +36,7 @@
 
 .info { position: relative; flex: 1; min-width: 0; display: grid; gap: var(--sp-1); }
 .name { font: var(--t-ui); letter-spacing: var(--ls-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.meta { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-40); font-variant-numeric: tabular-nums; }
+.meta { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-55); font-variant-numeric: tabular-nums; }
 
 .action {
   position: relative; width: 28px; height: 28px; flex: none;
@@ -74,4 +74,4 @@
   font-family: var(--font-mono); font-size: var(--fs-1); line-height: 1.6; letter-spacing: 0;
   text-transform: none; white-space: pre-wrap; overflow-wrap: anywhere;
 }
-.loading { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-40); }
+.loading { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-55); }

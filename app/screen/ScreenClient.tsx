@@ -85,7 +85,7 @@ export function ScreenClient() {
       <div className="screen-stage">
         <Brand href={null} />
         <h1 className="title">ECRAN DE PROJECTION</h1>
-        <p className="muted">SAISIS LE CODE DE LA SESSION A AFFICHER.</p>
+        <p className="muted">Saisis le code de la session a afficher.</p>
         <div style={{ width: 'min(340px, 90vw)' }}>
           <JoinForm className="col" inputClassName={styles.codeInput} />
         </div>

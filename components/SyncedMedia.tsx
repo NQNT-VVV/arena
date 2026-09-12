@@ -165,7 +165,7 @@ export function SyncedMedia({
         </button>
       )}
       {!enabled && (
-        <span className={styles.note}>SON COUPE SUR CET APPAREIL.</span>
+        <span className={styles.note}>Son coupe sur cet appareil.</span>
       )}
       {over && enabled && (
         <span className={styles.note}>ECOUTE TERMINEE.</span>

@@ -7,27 +7,27 @@ import styles from './page.module.css';
 const FEATURES = [
   {
     title: 'N’IMPORTE QUEL MEDIA',
-    text: 'BEAT, MONTAGE VIDEO, COVER, AFFICHE, TEXTE, OU FICHIER LIBRE. LE TYPE DE RENDU EST UN REGLAGE DE SESSION, PAS UNE VERSION DIFFERENTE DE L’OUTIL.',
+    text: 'Beat, montage video, cover, affiche, texte, ou fichier libre. Le type de rendu est un reglage de session, pas une version differente de l’outil.',
   },
   {
     title: 'CHRONO QUI FAIT AUTORITE',
-    text: 'LE TEMPS EST COMPTE PAR LE SERVEUR. TOUS LES ECRANS AFFICHENT LA MEME SECONDE, ET AVANCER L’HORLOGE DE SON TELEPHONE NE DONNE RIEN.',
+    text: 'Le temps est compte par le serveur. Tous les ecrans affichent la meme seconde, et avancer l’horloge de son telephone ne donne rien.',
   },
   {
     title: 'VOTE REELLEMENT ANONYME',
-    text: 'NI PSEUDO, NI NOM DE FICHIER, NI METADONNEE. LES AUTEURS N’APPARAISSENT QU’AU CLASSEMENT — Y COMPRIS POUR L’ANIMATEUR.',
+    text: 'Ni pseudo, ni nom de fichier, ni metadonnee. Les auteurs n’apparaissent qu’au classement — y compris pour l’animateur.',
   },
   {
     title: 'ECRAN DE PROJECTION',
-    text: 'UNE PAGE PLEIN ECRAN A PARTAGER EN VISIO OU A CAPTURER DANS OBS, SANS AUCUN CONTROLE DESSUS.',
+    text: 'Une page plein ecran a partager en visio ou a capturer dans OBS, sans aucun controle dessus.',
   },
 ];
 
 const EXAMPLES = [
-  { icon: '0x01', title: 'BEAT BATTLE', text: '5 SAMPLES IMPOSES, UNE HEURE, UN MORCEAU.' },
-  { icon: '0x02', title: 'GRAPHISME', text: '5 CAPTURES, TOUT DOIT VENIR DE LA.' },
-  { icon: '0x03', title: 'MONTAGE', text: 'UN PACK DE RUSHES, 90 MINUTES.' },
-  { icon: '0x04', title: 'ECRITURE', text: 'UN THEME ET 5 MOTS OBLIGATOIRES.' },
+  { icon: '0x01', title: 'BEAT BATTLE', text: '5 samples imposes, une heure, un morceau.' },
+  { icon: '0x02', title: 'GRAPHISME', text: '5 captures, tout doit venir de la.' },
+  { icon: '0x03', title: 'MONTAGE', text: 'Un pack de rushes, 90 minutes.' },
+  { icon: '0x04', title: 'ECRITURE', text: 'Un theme et 5 mots obligatoires.' },
 ];
 
 export default function HomePage() {
@@ -41,12 +41,12 @@ export default function HomePage() {
 
       <header className={styles.hero}>
         <span className={`pill ${styles.badge}`}>
-          <span className="dot" /> AUCUN COMPTE REQUIS · UN PSEUDO SUFFIT
+          <span className="dot" /> Aucun compte requis · un pseudo suffit
         </span>
         <h1>ARENA</h1>
         <p>
-          DES CONTRAINTES, UN CHRONO, ET TOUT LE MONDE CREE. A LA FIN, LES RENDUS DEFILENT EN
-          AVEUGLE, CHACUN NOTE, ET LE CLASSEMENT REVELE LES AUTEURS.
+          Des contraintes, un chrono, et tout le monde cree. A la fin, les rendus defilent en
+          aveugle, chacun note, et le classement revele les auteurs.
         </p>
       </header>
 
@@ -55,8 +55,8 @@ export default function HomePage() {
           <div className={styles.icon}>PROCEDURE 0x01</div>
           <h2>J&apos;ANIME LA BATTLE</h2>
           <p className={styles.lead}>
-            CHOISIS LE TYPE DE RENDU, ECRIS TA CONSIGNE, DEPOSE TES ELEMENTS, REGLE LE CHRONO. TU
-            GARDES LA MAIN SUR CHAQUE PHASE — Y COMPRIS POUR AJOUTER DU TEMPS QUAND IL LE FAUT.
+            Choisis le type de rendu, ecris ta consigne, depose tes elements, regle le chrono. Tu
+            gardes la main sur chaque phase — y compris pour ajouter du temps quand il le faut.
           </p>
           <Link className="btn primary lg block" href="/host">CREER UNE SESSION</Link>
         </section>
@@ -65,7 +65,7 @@ export default function HomePage() {
           <div className={styles.icon}>PROCEDURE 0x02</div>
           <h2>JE PARTICIPE</h2>
           <p className={styles.lead}>
-            SAISIS LE CODE ANNONCE, CHOISIS TON PSEUDO, RECUPERE LES ELEMENTS ET LANCE-TOI.
+            Saisis le code annonce, choisis ton pseudo, recupere les elements et lance-toi.
           </p>
           <JoinForm className="col" inputClassName={styles.codeInput} />
         </section>
@@ -94,8 +94,8 @@ export default function HomePage() {
       </section>
 
       <footer className={styles.footer}>
-        <span>DEJA ANIME UNE SESSION ? <Link href="/host">REPRENDRE LA REGIE</Link> — LE LIEN RETROUVE TA SESSION EN COURS.</span>
-        <span>NODE AG-EU-03 · SESSION CONSIGNEE</span>
+        <span>DEJA ANIME UNE SESSION ? <Link href="/host">REPRENDRE LA REGIE</Link> — le lien retrouve ta session en cours.</span>
+        <span>Node ag-eu-03 · session consignee</span>
       </footer>
     </div>
   );

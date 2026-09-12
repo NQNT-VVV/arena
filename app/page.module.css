@@ -7,16 +7,16 @@
 .badge { justify-self: start; }
 .hero h1 {
   font: var(--t-display); letter-spacing: var(--ls-display); white-space: nowrap;
-  padding: var(--sp-4) 0 var(--sp-3); background-image: var(--rule); background-size: 4px 4px;
+  padding: var(--sp-4) 0 var(--sp-3); border-bottom: var(--border);
   color: var(--ink);
 }
-.hero p { font: var(--t-ui-l); letter-spacing: var(--ls-mono); max-width: 38ch; margin: var(--sp-2) 0 0; }
+.hero p { font: var(--fs-3)/1.35 var(--font-mono); letter-spacing: var(--ls-prose); text-transform: none; color: var(--ink-90); max-width: 46ch; margin: var(--sp-2) 0 0; }
 
 .choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: var(--gutter); }
 
 .choice { padding: var(--sp-6); display: grid; gap: var(--sp-4); align-content: start; position: relative; }
 .choice h2 { font: var(--t-h2); letter-spacing: var(--ls-display); }
-.lead { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); line-height: 1.6; max-width: 44ch; }
+.lead { font: var(--t-prose); letter-spacing: var(--ls-prose); color: var(--ink-90); max-width: 48ch; }
 .icon { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); }
 
 /* Code de session : quatre a six caracteres, gros, centres, curseur en sang. */
@@ -31,14 +31,28 @@
   padding: var(--sp-4); border-right: var(--border); border-bottom: var(--border);
   display: grid; gap: var(--sp-2); align-content: start;
 }
-.exampleIcon { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-40); }
+.exampleIcon { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-55); }
 .example b { font: var(--t-ui); letter-spacing: var(--ls-mono); font-weight: 400; }
 .example span:last-child { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); line-height: 1.5; }
 
 .feats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); border-top: var(--border); border-left: var(--border); }
 .feat { padding: var(--sp-4); border-right: var(--border); border-bottom: var(--border); display: grid; gap: var(--sp-2); align-content: start; }
 .feat b { font: var(--t-ui); letter-spacing: var(--ls-mono); font-weight: 400; }
-.feat span { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); line-height: 1.55; }
+.feat span { font: var(--t-prose); letter-spacing: var(--ls-prose); color: var(--ink-90); }
 
 .footer { border-top: var(--border); padding-top: var(--sp-4); font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); display: flex; flex-wrap: wrap; gap: var(--sp-3) var(--sp-8); justify-content: space-between; }
 .footer a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+
+
+/* --------------------------------------------------------------------------
+   Ecrans etroits — les classes de ce module sont hachees, la media query du
+   socle ne les atteint pas : elle est reprise ici.
+   -------------------------------------------------------------------------- */
+@media (max-width: 640px) {
+  .wrap { gap: var(--sp-8); padding: var(--sp-6) var(--sp-3) var(--sp-12); }
+  .topbar { flex-wrap: wrap; gap: var(--sp-2); }
+  .topbar .spacer { display: none; }
+  .hero h1 { white-space: normal; overflow-wrap: anywhere; font-size: clamp(44px, 15vw, 92px); }
+  .hero p { font: var(--t-prose); letter-spacing: var(--ls-prose); max-width: none; }
+  .choice { padding: var(--sp-4); }
+}

@@ -28,7 +28,7 @@
   border-left: var(--border-strong); padding-left: var(--sp-4);
 }
 
-.bigIcon { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-40); }
+.bigIcon { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-55); }
 
 /* La scene et le podium occupent la largeur : eux ont besoin de place. */
 .wide { width: min(1100px, 94vw); display: grid; gap: var(--sp-6); }

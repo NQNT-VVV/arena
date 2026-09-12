@@ -9,8 +9,16 @@
 /* --- COULEUR : fond, os, sang, or. Les gris sont des opacités de l'os. --- */
 --bg:#060505;--ink:#D9D2C3;--accent:#E8362C;--accent-deep:#8E1B1B;--gold:#C99A2E;
 --ink-90:rgba(217,210,195,.9);--ink-60:rgba(217,210,195,.6);--ink-40:rgba(217,210,195,.4);--ink-25:rgba(217,210,195,.25);--ink-12:rgba(217,210,195,.12);--ink-06:rgba(217,210,195,.06);
+/* Deux paliers ajoutes a l'echelle d'origine, imposes par la perception et non par le gout :
+   .55 est le premier a atteindre 4.5:1 sur le fond (texte lisible), .45 le premier a atteindre
+   3:1 (element d'interface percevable). Sans eux, .40 sert de texte a 2.83:1 et .25 de bordure
+   a 1.75:1 : les filets disparaissent et l'interface perd toute structure. */
+--ink-55:rgba(217,210,195,.55);--ink-45:rgba(217,210,195,.45);
 /* --- BORDURE · RADIUS : une épaisseur, zéro arrondi --- */
---border:1px solid var(--ink-25);--border-strong:1px solid var(--ink);--border-live:1px solid var(--accent);--border-gold:1px solid var(--gold);--radius:0;
+/* --border sert de separateur interne (2.42:1, assume : il ordonne sans crier).
+   --border-ui habille tout ce qui se clique ou se saisit et tient le seuil de 3:1. */
+--border:1px solid var(--ink-35);--border-ui:1px solid var(--ink-45);--border-strong:1px solid var(--ink);--border-live:1px solid var(--accent);--border-gold:1px solid var(--gold);--radius:0;
+--ink-35:rgba(217,210,195,.35);
 /* --- TYPO : 2 polices, 6 niveaux, ratio 1.5 --- */
 --font-display:var(--font-archivo),'Archivo',ui-sans-serif,sans-serif;--font-mono:var(--font-departure),'Departure Mono','Courier New',ui-monospace,monospace;
 --fs-1:12px;--fs-2:18px;--fs-3:27px;--fs-4:40.5px;--fs-5:60.75px;--fs-6:clamp(60.75px,12vw,205.03px);
@@ -22,6 +30,11 @@
 --t-ui-l:var(--fs-3)/1.2 var(--font-mono);
 --t-ui:var(--fs-2)/1.2 var(--font-mono);
 --t-meta:var(--fs-1)/1.4 var(--font-mono);
+/* Niveau de lecture continue. Le systeme d'origine est une vitrine : ses six niveaux servent
+   des libelles courts, aucun ne porte un paragraphe. --t-prose comble ce manque, dans la meme
+   police et la meme famille de tailles, avec l'interlignage et la casse qu'exige un texte suivi. */
+--t-prose:14px/1.65 var(--font-mono);
+--ls-prose:.02em;
 /* --- ESPACEMENT : base 4, 10 pas --- */
 --sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-6:24px;--sp-8:32px;--sp-12:48px;--sp-16:64px;--sp-24:96px;--sp-32:128px;
 --gutter:var(--sp-4);--margin:clamp(var(--sp-4),4vw,var(--sp-16));
@@ -52,12 +65,31 @@
 *, *::before, *::after { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html, body { height: 100%; overflow-x: hidden; }
+/*
+ * La casse est le reglage le plus lourd de tout le theme.
+ *
+ * Le systeme d'origine ecrit ses exemples en capitales, mais ce sont des libelles de trois mots.
+ * Forcer `text-transform: uppercase` sur le document entier supprime la silhouette des mots — ce
+ * qui permet de lire vite — et s'applique aussi au contenu qu'on ne maitrise pas : pseudos, titres
+ * de morceaux, consignes ecrites par un animateur. Les capitales restent donc la ou elles sont un
+ * signal (libelles, badges, boutons, en-tetes, metadonnees) et quittent tout ce qui est une phrase.
+ */
 body {
   margin: 0; background: var(--bg); color: var(--ink);
-  font: var(--t-ui); letter-spacing: var(--ls-mono); text-transform: uppercase;
+  font: var(--t-prose); letter-spacing: var(--ls-prose);
   -webkit-font-smoothing: antialiased;
 }
-h1, h2, h3, h4, .display { font: var(--t-h1); letter-spacing: var(--ls-display); margin: 0; text-wrap: balance; }
+/* Ce qui porte un libelle : capitales et chasse large. */
+button, label, th, legend, summary, .meta, .pill, .badge, .tier, .section-title, .nav-links a,
+.brand, .brand-beta, .kicker, .block-head, .table thead, .stat .k, .chrono-label, .phase-rail,
+.gamechip, .you, .btn, .seg, .tabs, .admin-row, .log, .footer, .toast time, .empty {
+  text-transform: uppercase; letter-spacing: var(--ls-mono);
+}
+/* Ce qui porte une phrase : casse d'origine, interlignage de lecture. */
+p, li, .desc, .tagline, .lead, .hint, .prose, .legal-section p, .legal-section li, textarea, input {
+  text-transform: none; letter-spacing: var(--ls-prose);
+}
+h1, h2, h3, h4, .display { font: var(--t-h1); letter-spacing: var(--ls-display); margin: 0; text-wrap: balance; text-transform: uppercase; overflow-wrap: anywhere; }
 h1 { font: var(--t-h1); }
 h2 { font: var(--t-h2); }
 h3 { font: var(--t-ui-l); letter-spacing: var(--ls-mono); font-family: var(--font-mono); }
@@ -65,7 +97,7 @@ p { margin: 0; text-wrap: pretty; }
 a { color: var(--ink); text-decoration: none; }
 a:hover { color: var(--accent); }
 button, input, select, textarea { font: inherit; letter-spacing: inherit; color: inherit; border-radius: 0; margin: 0; text-transform: inherit; }
-input::placeholder, textarea::placeholder { color: var(--ink-40); opacity: 1; }
+input::placeholder, textarea::placeholder { color: var(--ink-55); opacity: 1; }
 :focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
 ::selection { background: var(--accent); color: var(--bg); }
 ::-webkit-scrollbar { width: 8px; height: 8px; background: var(--bg); }
@@ -82,7 +114,7 @@ code { font: var(--t-meta); padding: 0 var(--sp-1); border: var(--border); }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; } }
 
 /* --- TEXTURE GLOBALE : grain fixe .08. L'aurore des anciens ecrans n'existe plus. ---- */
-.grain { position: fixed; inset: 0; z-index: 100; pointer-events: none; opacity: .08; background-image: var(--grain); background-size: 256px 256px; }
+.grain { position: fixed; inset: 0; z-index: 100; pointer-events: none; opacity: .06; background-image: var(--grain); background-size: 256px 256px; }
 .aurora { display: none !important; }
 
 /* --------------------------------------------------------------------------
@@ -99,7 +131,7 @@ code { font: var(--t-meta); padding: 0 var(--sp-1); border: var(--border); }
 .section-title::after { content: ''; flex: 1; height: 1px; background: var(--ink-25); }
 
 .muted { color: var(--ink-60); }
-.faint { color: var(--ink-40); }
+.faint { color: var(--ink-55); }
 .tnum { font-variant-numeric: tabular-nums; }
 
 /* --------------------------------------------------------------------------
@@ -109,17 +141,19 @@ code { font: var(--t-meta); padding: 0 var(--sp-1); border: var(--border); }
   display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2);
   height: 40px; padding: 0 var(--sp-4);
   font: var(--t-ui); letter-spacing: var(--ls-mono); white-space: nowrap; cursor: pointer;
-  border: 1px solid var(--ink-25); background: transparent; color: var(--ink);
+  border: var(--border-ui); background: transparent; color: var(--ink);
   border-radius: 0; box-shadow: none; transition: none; user-select: none; -webkit-tap-highlight-color: transparent;
 }
-.btn:hover:not(:disabled) { border-color: var(--ink); background-image: var(--dither-12); background-size: var(--dither-size); animation: flash var(--dur-flash) var(--ease-hold); }
+/* Sans cela, un pictogramme en flex se fait ecraser a quelques pixels par le libelle. */
+.btn svg, .btn img { flex: none; }
+.btn:hover:not(:disabled) { border-color: var(--ink); background: var(--ink-12); animation: flash var(--dur-flash) var(--ease-hold); }
 .btn:active:not(:disabled) { border-color: var(--accent); color: var(--accent); background-image: none; }
-.btn:disabled { cursor: not-allowed; border-color: var(--ink-12); background-image: var(--dither-12); background-size: var(--dither-size); color: var(--ink-40); animation: none; }
+.btn:disabled { cursor: not-allowed; border-color: var(--ink-25); background: transparent; background-image: none; color: var(--ink-55); animation: none; }
 
 .btn.primary, .btn.good, .btn.discord { border-color: var(--ink); background: var(--ink); color: var(--bg); }
 .btn.primary:hover:not(:disabled), .btn.good:hover:not(:disabled), .btn.discord:hover:not(:disabled) { background: var(--bg); background-image: none; color: var(--ink); animation: flash var(--dur-flash) var(--ease-hold); }
 .btn.primary:active:not(:disabled), .btn.good:active:not(:disabled), .btn.discord:active:not(:disabled) { border-color: var(--accent); background: var(--accent-deep); color: var(--ink); }
-.btn.primary:disabled, .btn.good:disabled, .btn.discord:disabled { background-color: transparent; background-image: var(--dither-25); background-size: var(--dither-size); border-color: var(--ink-12); color: var(--ink-40); }
+.btn.primary:disabled, .btn.good:disabled, .btn.discord:disabled { background: transparent; background-image: none; border-color: var(--ink-25); color: var(--ink-55); }
 
 .btn.ghost { border-color: transparent; color: var(--ink-60); }
 .btn.ghost:hover:not(:disabled) { border-color: transparent; background-image: none; color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
@@ -150,13 +184,13 @@ code { font: var(--t-meta); padding: 0 var(--sp-1); border: var(--border); }
 .field > label, .field > span:first-child { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); }
 .input {
   width: 100%; height: 40px; padding: 0 var(--sp-3);
-  background: transparent; border: 1px solid var(--ink-25); border-radius: 0;
+  background: transparent; border: var(--border-ui); border-radius: 0;
   font: var(--t-ui); letter-spacing: var(--ls-mono); color: var(--ink); caret-color: var(--accent);
   transition: none; box-shadow: none;
 }
 .input:hover { border-color: var(--ink); }
 .input:focus { outline: none; border-color: var(--accent); }
-.input:disabled { border-color: var(--ink-12); background-image: var(--dither-12); background-size: var(--dither-size); color: var(--ink-40); cursor: not-allowed; }
+.input:disabled { border-color: var(--ink-25); background-image: none; color: var(--ink-55); cursor: not-allowed; }
 .input.ok { border-color: var(--ink); }
 .input.ko { border-color: var(--ink); background-image: var(--hatch); background-repeat: repeat-x; background-position: bottom; background-size: 8px 4px; }
 textarea.input { height: auto; min-height: 96px; padding: var(--sp-2) var(--sp-3); resize: vertical; }
@@ -169,23 +203,23 @@ input[type="color"].input { padding: 0; height: 40px; }
 /* Interrupteur : un carre qui change de cote. */
 .switch { display: inline-flex; align-items: center; gap: var(--sp-3); cursor: pointer; user-select: none; font: var(--t-meta); letter-spacing: var(--ls-mono); }
 .switch input { position: absolute; opacity: 0; width: 0; height: 0; }
-.switch .track { width: 40px; height: 20px; border: 1px solid var(--ink-25); position: relative; flex: none; background: transparent; border-radius: 0; transition: none; }
+.switch .track { width: 40px; height: 20px; border: var(--border-ui); position: relative; flex: none; background: transparent; border-radius: 0; transition: none; }
 .switch .track::after { content: ''; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; background: var(--ink-60); transition: none; border-radius: 0; box-shadow: none; }
 .switch input:checked + .track { border-color: var(--ink); background: var(--ink); }
 .switch input:checked + .track::after { left: 23px; background: var(--bg); }
 .switch input:focus-visible + .track { outline: 1px solid var(--accent); outline-offset: 2px; }
 
 /* Segments : des cases, la choisie inversee. */
-.seg { display: inline-flex; border: 1px solid var(--ink-25); padding: 0; gap: 0; background: transparent; border-radius: 0; }
-.seg button, .seg a { border: 0; border-right: 1px solid var(--ink-25); background: transparent; color: var(--ink-60); cursor: pointer; height: 28px; padding: 0 var(--sp-3); font: var(--t-meta); letter-spacing: var(--ls-mono); border-radius: 0; transition: none; display: inline-flex; align-items: center; }
+.seg { display: inline-flex; border: var(--border-ui); padding: 0; gap: 0; background: transparent; border-radius: 0; }
+.seg button, .seg a { border: 0; border-right: var(--border-ui); background: transparent; color: var(--ink-60); cursor: pointer; height: 28px; padding: 0 var(--sp-3); font: var(--t-meta); letter-spacing: var(--ls-mono); border-radius: 0; transition: none; display: inline-flex; align-items: center; }
 .seg button:last-child, .seg a:last-child { border-right: 0; }
-.seg button:hover, .seg a:hover { color: var(--ink); background-image: var(--dither-12); background-size: var(--dither-size); }
+.seg button:hover, .seg a:hover { color: var(--ink); background: var(--ink-12); }
 .seg button[aria-pressed="true"], .seg a[aria-pressed="true"] { background: var(--ink); background-image: none; color: var(--bg); box-shadow: none; }
 
 input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 24px; background: transparent; cursor: pointer; touch-action: none; }
-input[type="range"]::-webkit-slider-runnable-track { height: 8px; border: 1px solid var(--ink-25); background: transparent; border-radius: 0; }
+input[type="range"]::-webkit-slider-runnable-track { height: 8px; border: var(--border-ui); background: transparent; border-radius: 0; }
 input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; margin-top: -5px; width: 16px; height: 16px; background: var(--ink); border-radius: 0; box-shadow: none; border: 0; }
-input[type="range"]::-moz-range-track { height: 8px; border: 1px solid var(--ink-25); background: transparent; border-radius: 0; }
+input[type="range"]::-moz-range-track { height: 8px; border: var(--border-ui); background: transparent; border-radius: 0; }
 input[type="range"]::-moz-range-thumb { border: 0; width: 16px; height: 16px; background: var(--ink); border-radius: 0; }
 
 /* --------------------------------------------------------------------------
@@ -193,27 +227,34 @@ input[type="range"]::-moz-range-thumb { border: 0; width: 16px; height: 16px; ba
    -------------------------------------------------------------------------- */
 .pill {
   display: inline-flex; align-items: center; gap: var(--sp-2); height: 24px; padding: 0 var(--sp-2);
-  border: 1px solid var(--ink-25); background: transparent; border-radius: 0;
+  border: var(--border-ui); background: transparent; border-radius: 0;
   font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); white-space: nowrap;
 }
 .pill.ok { border-color: var(--ink); color: var(--ink); }
 .pill.live { border-color: var(--accent); color: var(--accent); }
 .pill.gold { border-color: var(--gold); color: var(--gold); }
-.pill.off { border-color: var(--ink-12); color: var(--ink-40); }
-.pill.dead { border-color: var(--ink-25); color: var(--ink-40); text-decoration: line-through; background-image: var(--dither-12); background-size: var(--dither-size); }
+.pill.off { border-color: var(--ink-25); color: var(--ink-55); }
+.pill.dead { border-color: var(--ink-25); color: var(--ink-55); text-decoration: line-through; }
 .pill.err { border-color: var(--ink); color: var(--ink); background-image: var(--hatch); padding: 0 var(--sp-1); }
 .pill.err > * { background: var(--bg); padding: 0 var(--sp-1); }
 .dot { width: 8px; height: 8px; background: currentColor; border-radius: 0; box-shadow: none; animation: blink var(--dur-blink) var(--ease-hold) infinite; flex: none; }
 
-/* Avatar : carre 48 en dither, le glyphe pose sur un aplat de fond. Le systeme
-   est monochrome : l'emoji choisi par le joueur est rendu en niveaux d'os. */
+/*
+ * Avatar : carre de 48, filet, fond uni.
+ *
+ * Le systeme d'origine pose des initiales sur une trame de dithering. Ici le glyphe est choisi par
+ * le joueur : sur une trame, et desature, il devenait une tache indistincte. Le fond redevient un
+ * aplat et le glyphe garde ses couleurs — c'est du contenu, comme une pochette ou un rendu, et le
+ * theme ne s'applique qu'a l'interface.
+ */
 .avatar {
   width: 48px; height: 48px; flex: none; border-radius: 0;
-  border: 1px solid var(--ink-25); background-image: var(--dither-50); background-size: var(--dither-size);
-  display: grid; place-items: center; font-size: 20px; line-height: 1;
+  border: var(--border-ui); background: var(--ink-06);
+  display: grid; place-items: center; font-size: 22px; line-height: 1;
+  /* Sans cette pile, le glyphe retombe sur la police mono, qui n'a pas d'emoji. */
+  font-family: var(--emoji);
 }
-.avatar > span, .avatar::first-letter { background: var(--bg); padding: 0 2px; }
-.avatar { filter: grayscale(1) contrast(1.1); }
+.avatar > span { background: none; padding: 0; }
 .avatar.sm { width: 28px; height: 28px; font-size: 14px; }
 .avatar.lg { width: 80px; height: 80px; font-size: 40px; }
 
@@ -225,7 +266,7 @@ input[type="range"]::-moz-range-thumb { border: 0; width: 16px; height: 16px; ba
 #toasts { position: fixed; z-index: 999; right: var(--sp-4); bottom: var(--sp-4); left: auto; transform: none; display: flex; flex-direction: column; gap: var(--sp-2); align-items: stretch; pointer-events: none; width: min(440px, calc(100vw - 2 * var(--sp-4))); padding: 0; }
 .toast {
   display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--sp-3); align-items: start;
-  padding: var(--sp-3) var(--sp-4); border: 1px solid var(--ink-25); background: var(--bg); color: var(--ink);
+  padding: var(--sp-3) var(--sp-4); border: var(--border-ui); background: var(--bg); color: var(--ink);
   font: var(--t-ui); letter-spacing: var(--ls-mono); text-align: left; border-radius: 0; box-shadow: none; animation: none; max-width: none;
 }
 .toast time { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); padding-top: 3px; }
@@ -244,7 +285,7 @@ input[type="range"]::-moz-range-thumb { border: 0; width: 16px; height: 16px; ba
 .brand:hover { color: var(--ink); }
 .brand-mark { display: none; }
 .brand-name { background: none; -webkit-text-fill-color: currentColor; color: inherit; }
-.brand-beta { font: var(--t-meta); letter-spacing: var(--ls-mono); height: 24px; display: inline-flex; align-items: center; padding: 0 var(--sp-2); border: 1px solid var(--ink-25); color: var(--ink-60); background: none; border-radius: 0; align-self: center; }
+.brand-beta { font: var(--t-meta); letter-spacing: var(--ls-mono); height: 24px; display: inline-flex; align-items: center; padding: 0 var(--sp-2); border: var(--border-ui); color: var(--ink-60); background: none; border-radius: 0; align-self: center; }
 
 .support-note { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); text-align: center; }
 .support-note b { color: var(--ink); font-weight: 400; }
@@ -286,6 +327,27 @@ input[type="range"]::-moz-range-thumb { border: 0; width: 16px; height: 16px; ba
 .topbar .session-name { font: var(--t-ui); letter-spacing: var(--ls-mono); color: var(--ink); }
 .shell { max-width: 1180px; margin: 0 auto; padding: var(--sp-8) var(--margin) var(--sp-16); display: flex; flex-direction: column; gap: var(--sp-8); }
 .shell.narrow { max-width: 720px; }
+/* Une page courte ne doit pas laisser un tiers d'ecran noir sous le pied de page. */
+body { display: flex; flex-direction: column; min-height: 100vh; }
+.shell { flex: 1 0 auto; width: 100%; }
+
+/* --------------------------------------------------------------------------
+   Ecrans etroits — ces jeux se jouent au telephone
+   -------------------------------------------------------------------------- */
+@media (max-width: 640px) {
+  /* Une phrase en capitales monospace de 27 px demande 900 px de large : elle debordait. */
+  .hero p, .lead { font: var(--t-prose); letter-spacing: var(--ls-prose); }
+  .hero h1, .game-hero h1, .profile-head h1 { white-space: normal; overflow-wrap: anywhere; }
+  .btn.lg { height: 48px; padding: 0 var(--sp-4); font: var(--t-ui); letter-spacing: var(--ls-mono); }
+  .btn { max-width: 100%; }
+  .btn span, .btn { overflow-wrap: anywhere; white-space: normal; text-align: center; }
+  .row.wrap > .btn, .hero .cta > .btn { flex: 1 1 auto; }
+  .shell { gap: var(--sp-6); }
+}
+@media (max-width: 420px) {
+  .btn.lg, .btn { font: var(--t-meta); letter-spacing: var(--ls-mono); }
+  .btn.lg { height: 44px; }
+}
 
 /* --------------------------------------------------------------------------
    Tuiles de mesure — donnees en mono, libelle en meta.
@@ -301,11 +363,11 @@ input[type="range"]::-moz-range-thumb { border: 0; width: 16px; height: 16px; ba
 .chrono { font: var(--t-data); letter-spacing: var(--ls-mono); font-variant-numeric: tabular-nums; font-size: clamp(var(--fs-5), 14vw, 160px); line-height: 1; transition: none; text-shadow: none; }
 .chrono.calm, .chrono.warn { color: var(--ink); }
 .chrono.danger { color: var(--accent); animation: none; }
-.chrono.over, .chrono.paused { color: var(--ink-40); }
+.chrono.over, .chrono.paused { color: var(--ink-55); }
 .chrono-wrap { display: grid; gap: var(--sp-2); text-align: left; justify-items: stretch; }
 .chrono-label { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); }
 .chrono.danger ~ .chrono-label, .chrono-label.danger { color: var(--accent); animation: blink var(--dur-blink) var(--ease-hold) infinite; }
-.chrono-bar { width: 100%; height: 8px; border: 1px solid var(--ink-25); background: transparent; overflow: hidden; border-radius: 0; }
+.chrono-bar { width: 100%; height: 8px; border: var(--border-ui); background: transparent; overflow: hidden; border-radius: 0; }
 .chrono-bar > i { display: block; height: 100%; background: var(--ink); transform-origin: left center; transition: none; }
 .chrono-bar.warn > i { background: var(--ink); }
 .chrono-bar.danger > i { background: var(--accent); }
@@ -318,9 +380,9 @@ input[type="range"]::-moz-range-thumb { border: 0; width: 16px; height: 16px; ba
 .phase-rail { display: flex; align-items: stretch; gap: 0; overflow-x: auto; padding: 0; scrollbar-width: none; border: var(--border); }
 .phase-rail::-webkit-scrollbar { display: none; }
 .phase-rail li { list-style: none; display: flex; align-items: stretch; flex: 1 0 auto; }
-.phase-rail .step { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-40); border-right: var(--border); border-radius: 0; background: transparent; white-space: nowrap; transition: none; flex: 1; }
+.phase-rail .step { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-55); border-right: var(--border); border-radius: 0; background: transparent; white-space: nowrap; transition: none; flex: 1; }
 .phase-rail li:last-child .step { border-right: 0; }
-.phase-rail .step .num { width: 8px; height: 8px; border: 1px solid var(--ink-25); border-radius: 0; font-size: 0; background: transparent; flex: none; }
+.phase-rail .step .num { width: 8px; height: 8px; border: var(--border-ui); border-radius: 0; font-size: 0; background: transparent; flex: none; }
 .phase-rail .step.done { color: var(--ink-60); }
 .phase-rail .step.done .num { background: var(--ink); border-color: var(--ink); }
 .phase-rail .step.now { color: var(--ink); background: transparent; border-color: var(--ink-25); }
@@ -334,5 +396,5 @@ input[type="range"]::-moz-range-thumb { border: 0; width: 16px; height: 16px; ba
 .roster-row { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: var(--sp-3); align-items: center; padding: var(--sp-3); border-bottom: var(--border); background: transparent; border-radius: 0; }
 .roster-row:last-child { border-bottom: 0; }
 .roster-row:hover { background: var(--ink-06); }
-.roster-row.dq { color: var(--ink-40); background-image: var(--dither-12); background-size: var(--dither-size); text-decoration: line-through; }
-.roster-row.off { color: var(--ink-40); }
+.roster-row.dq { color: var(--ink-55); text-decoration: line-through; }
+.roster-row.off { color: var(--ink-55); }

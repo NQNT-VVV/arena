@@ -23,7 +23,7 @@
   font: var(--t-ui); letter-spacing: var(--ls-mono); line-height: 1.6; color: var(--ink-90);
   border-left: var(--border-strong); padding-left: var(--sp-3);
 }
-.brief:empty::before { content: 'AUCUNE CONSIGNE DEPOSEE'; color: var(--ink-40); }
+.brief:empty::before { content: 'AUCUNE CONSIGNE DEPOSEE'; color: var(--ink-55); }
 
 /* --------------------------------------------------------------------------
    Trombinoscope : carte joueur du systeme, en grille
@@ -34,14 +34,13 @@
 .roster-row .pseudo { font: var(--t-ui); letter-spacing: var(--ls-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .roster-row .sub { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); }
 .roster-row.dq .pseudo { text-decoration: line-through; }
-.roster-row.dq .sub, .roster-row.off .sub { color: var(--ink-40); }
+.roster-row.dq .sub, .roster-row.off .sub { color: var(--ink-55); }
 
 .empty {
-  padding: var(--sp-6); text-align: left; color: var(--ink-60);
+  position: relative; padding: var(--sp-6) var(--sp-4) var(--sp-6) var(--sp-6); color: var(--ink-60);
   border: var(--border); font: var(--t-meta); letter-spacing: var(--ls-mono);
-  background-image: var(--dither-12); background-size: var(--dither-size);
 }
-.empty > * { background: var(--bg); padding: 0 var(--sp-1); }
+.empty::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 8px; background-image: var(--dither-37); background-size: var(--dither-size); }
 
 /* --------------------------------------------------------------------------
    Type de rendu : des cases, la choisie inversee
@@ -53,8 +52,8 @@
   background: transparent; border: 0; border-right: var(--border); border-bottom: var(--border);
   color: var(--ink-60); font: var(--t-meta); letter-spacing: var(--ls-mono); transition: none;
 }
-.media-choice button .ico { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-40); }
-.media-choice button:hover { background-image: var(--dither-12); background-size: var(--dither-size); color: var(--ink); transform: none; }
+.media-choice button .ico { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-55); }
+.media-choice button:hover { background: var(--ink-12); color: var(--ink); transform: none; }
 .media-choice button[aria-pressed='true'] { background: var(--ink); background-image: none; color: var(--bg); }
 .media-choice button[aria-pressed='true'] .ico { color: var(--bg); }
 
@@ -77,6 +76,23 @@
 /* En-tete de partie 0x0C : code, sujets en carres, phase, compteur. */
 .screen-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--sp-3) var(--sp-8); padding: var(--sp-3) var(--margin); border-bottom: var(--border); font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); }
 .seats { display: flex; gap: var(--sp-1); flex-wrap: wrap; }
-.seats span { width: 12px; height: 12px; box-sizing: border-box; border: 1px solid var(--ink-25); }
+.seats span { width: 12px; height: 12px; box-sizing: border-box; border: var(--border-ui); }
 .seats span.on { background: var(--ink); border-color: var(--ink); }
 .seats span.off { border: 1px solid var(--ink); background-image: var(--hatch); }
+
+/* Une phrase logee dans un emplacement attenue garde sa casse de lecture. */
+p.muted, .muted p, p.meta { text-transform: none; letter-spacing: var(--ls-prose); line-height: 1.6; }
+
+/* --------------------------------------------------------------------------
+   Ecrans etroits — reprise apres les regles propres a Arena, qui gagnent sur
+   la media query du socle du seul fait d'arriver plus tard. Arena se joue au
+   telephone : la regie sur ordinateur, la participation dans la poche.
+   -------------------------------------------------------------------------- */
+@media (max-width: 640px) {
+  .shell { gap: var(--sp-6); }
+  .topbar { gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); }
+  .chrono { font-size: clamp(48px, 18vw, 96px); }
+  .stats { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
+  .roster-row { grid-template-columns: 40px minmax(0, 1fr) auto; padding: var(--sp-2); }
+  .roster-row .avatar { width: 40px; height: 40px; font-size: 18px; }
+}

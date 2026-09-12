@@ -24,9 +24,14 @@
 .waiting { display: grid; gap: var(--sp-3); padding: var(--sp-4) 0; justify-items: start; }
 .waiting h2 { font: var(--t-h2); letter-spacing: var(--ls-display); }
 .waiting p { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); max-width: 42ch; }
-.bigIcon { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-40); }
+.bigIcon { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-55); }
 
 .footer { padding-bottom: var(--sp-6); font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); }
 
 .results { display: grid; gap: var(--sp-3); width: 100%; }
 .results h2 { font: var(--t-h2); letter-spacing: var(--ls-display); }
+
+@media (max-width: 640px) {
+  .wrap { padding: var(--sp-4) var(--sp-3) var(--sp-12); }
+  .head { flex-wrap: wrap; gap: var(--sp-2); }
+}

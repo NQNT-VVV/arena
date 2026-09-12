@@ -2,7 +2,7 @@
 .wrap { display: grid; gap: var(--sp-2); width: 100%; }
 .label { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); }
 
-.row { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; width: 100%; border: 1px solid var(--ink-25); }
+.row { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; width: 100%; border: var(--border-ui); }
 .pip {
   min-width: 0;
   /* Cible large : le vote se fait au pouce, souvent dans le noir. */
@@ -12,13 +12,13 @@
   transition: none; -webkit-tap-highlight-color: transparent;
 }
 .pip:last-child { border-right: 0; }
-.pip:hover:not(:disabled) { background-image: var(--dither-12); background-size: var(--dither-size); color: var(--ink); }
+.pip:hover:not(:disabled) { background: var(--ink-12); color: var(--ink); }
 .pip:active:not(:disabled) { animation: flash var(--dur-flash) var(--ease-hold); transform: none; }
 .pip[aria-pressed='true'] { background: var(--ink); background-image: none; color: var(--bg); }
-.pip:disabled { cursor: not-allowed; color: var(--ink-40); background-image: var(--dither-12); background-size: var(--dither-size); }
+.pip:disabled { cursor: not-allowed; color: var(--ink-55); background-image: var(--dither-12); background-size: var(--dither-size); }
 
 .slider { display: flex; align-items: center; gap: var(--sp-4); }
 .slider input { flex: 1; }
 .value { font: var(--t-ui-l); letter-spacing: var(--ls-mono); font-variant-numeric: tabular-nums; min-width: 4.5em; text-align: right; }
 
-.reason { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-40); }
+.reason { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-55); }
