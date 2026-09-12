@@ -169,6 +169,27 @@ test('le lien spectateur mene au bon role', () => {
   assert.equal(cible(juge), '/play?code=K7X2&role=spectateur');
 });
 
+test('le classement porte de quoi reecouter sans telecharger', () => {
+  const { srv, session, gens } = ouvrir({ createurs: 2, spectateurs: 0 });
+  srv.setPhase(session, 'creation');
+  for (const g of gens) {
+    const prep = srv.openSubmissionSlot(session.code, g.participant.id, g.token);
+    srv.saveSubmission(session, g.participant, { textBody: `TEXTE DE ${g.participant.pseudo}`, kind: 'text', inline: 1, late: 0 }, prep.existing);
+  }
+  srv.setPhase(session, 'upload');
+  srv.setPhase(session, 'diffusion');
+  srv.setPhase(session, 'results');
+  const podium = views.podiumView({ ...srv.get(session.code), revealedRank: Number.MAX_SAFE_INTEGER });
+  for (const row of podium.rows.filter((r) => !r.hidden)) {
+    assert.ok(row.rendition, 'chaque ligne porte son rendu');
+    assert.equal(row.rendition.kind, 'text');
+    // Le classement doit se suffire a lui-meme : de quoi rejouer dans la page,
+    // sans passer par un telechargement.
+    assert.ok(row.rendition.textBody, 'le texte est la, pas seulement un lien');
+    assert.ok(row.author, 'l’auteur est revele a ce stade');
+  }
+});
+
 /* ------------------------------------------------------------------ */
 
 for (const [name, fn] of checks) {

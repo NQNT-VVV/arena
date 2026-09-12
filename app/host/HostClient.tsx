@@ -397,7 +397,7 @@ export function HostClient() {
         {phase === 'results' && state.podium && (
           <section className="card pad col">
             <h2 className="section-title">CLASSEMENT</h2>
-            <Podium podium={state.podium} ratings={ratings} />
+            <Podium replay podium={state.podium} ratings={ratings} />
           </section>
         )}
 

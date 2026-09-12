@@ -50,3 +50,21 @@
 .rating.up { color: var(--accent); border-color: var(--accent); }
 .rating.down { color: var(--ink-60); border-color: var(--ink-25); }
 .large .rating { height: 28px; margin-left: var(--sp-3); }
+
+/* --------------------------------------------------------------------------
+   Reecoute : le rendu rejoue sous sa ligne, sans quitter le classement
+   -------------------------------------------------------------------------- */
+.replay {
+  grid-column: 1 / -1; display: grid; gap: var(--sp-3);
+  margin-top: var(--sp-3); padding: var(--sp-3);
+  border: var(--border-ui);
+}
+.replayHead { display: flex; align-items: center; gap: var(--sp-3); }
+.replayHead .meta { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.player { width: 100%; }
+/* Un rendu reste en couleur : c'est le contenu, pas l'interface. */
+.image { width: 100%; max-height: 60vh; object-fit: contain; border: var(--border); background: var(--bg); }
+.text {
+  font: var(--t-prose); letter-spacing: var(--ls-prose); text-transform: none;
+  white-space: pre-wrap; max-height: 40vh; overflow: auto; color: var(--ink-90);
+}

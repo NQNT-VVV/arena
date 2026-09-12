@@ -431,7 +431,7 @@ export function PlayClient() {
             {state!.podium.complete
               ? null
               : <p className="meta">L&apos;animateur devoile les places une par une.</p>}
-            <Podium podium={state!.podium} meId={you?.id} ratings={ratings} />
+            <Podium replay podium={state!.podium} meId={you?.id} ratings={ratings} />
           </div>
         ) : null;
       default:
