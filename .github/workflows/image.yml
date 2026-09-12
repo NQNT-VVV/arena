@@ -44,6 +44,7 @@ jobs:
           npm run test:state
           npm run test:mime
           npm run test:scoring
+          npm run test:spectators
 
       - name: Build Next
         run: SESSION_SECRET=ci-only npm run build

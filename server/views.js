@@ -121,6 +121,8 @@ function rosterView(session) {
       avatar: p.avatar,
       connected: session.isOnline(p.id),
       disqualified: p.disqualified,
+      /** Vient juger sans creer : on ne l'attend pas au depot. */
+      spectator: p.spectator,
     }));
 }
 
@@ -147,8 +149,12 @@ function assetsView(session) {
 
 function countsView(session, submitted = repo.submittedParticipantIds(session.id)) {
   const roster = [...session.participants.values()].filter((p) => !p.isHost);
+  // « 04/06 ont rendu » ne doit compter que ceux de qui on attend un rendu :
+  // un spectateur ne depose rien, l'inclure ferait croire a un retard.
+  const creators = roster.filter((p) => !p.spectator);
   return {
-    participants: roster.length,
+    participants: creators.length,
+    spectators: roster.length - creators.length,
     connected: roster.filter((p) => session.isOnline(p.id)).length,
     submitted: submitted.length,
     // Renseigne par l'increment vote.
@@ -375,6 +381,8 @@ function hostView(session) {
         avatar: p.avatar,
         connected: session.isOnline(p.id),
         disqualified: p.disqualified,
+        /** Vient juger sans creer : la regie ne l'attend pas au depot. */
+        spectator: p.spectator,
         joinedAt: p.joinedAt,
         lastSeenAt: p.lastSeenAt,
         hasSubmitted: submitted.has(p.id),
@@ -406,6 +414,7 @@ function youView(session, participant) {
     avatar: participant.avatar,
     isHost: participant.isHost,
     disqualified: participant.disqualified,
+    spectator: participant.spectator,
     joinedAt: participant.joinedAt,
     submission: ownSubmissionView(repo.submissionOf(session.id, participant.id)),
     /**

@@ -40,6 +40,7 @@ export type IconName =
   | 'telecharge'
   | 'oeil'
   | 'partage'
+  | 'copier'
 ;
 
 const PATHS: Record<IconName, string> = {
@@ -74,6 +75,7 @@ const PATHS: Record<IconName, string> = {
   'plus': 'M7 3h2v10H7zM3 7h10v2H3z',
   'telecharge': 'M7 1h2v7H7zM4 7h2v2H4zM6 9h4v2H6zM10 7h2v2h-2zM2 12h12v2H2z',
   'oeil': 'M5 4h6v1H5zM3 5h2v1H3zM11 5h2v1h-2zM1 6h2v4H1zM13 6h2v4h-2zM3 10h2v1H3zM11 10h2v1h-2zM5 11h6v1H5zM6 6h4v4H6z',
+  'copier': 'M2 1h8v2H4v8H2zM5 4h9v11H5zm1 1v9h7V5z',
   'partage': 'M10 1h4v4h-4zM10 11h4v4h-4zM2 6h4v4H2zM6 4h2v2H6zM8 5h2v2H8zM6 10h2v2H6zM8 9h2v2H8z',
 };
 

@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import type { Socket } from 'socket.io-client';
 
+import { hexOf } from '@/lib/hex';
 import { Icon } from '@/components/Icon';
 import { AssetPack } from '@/components/AssetPack';
 import { Brand } from '@/components/Brand';
@@ -20,7 +21,7 @@ import { humanDuration, humanThreshold, PHASE_LABELS } from '@/lib/format';
 import { sfx } from '@/lib/sfx';
 import { call } from '@/lib/socket';
 import { toast } from '@/lib/toast';
-import { MEDIA_LABELS, type PodiumIdentity, type SavedIdentity, type SessionCard } from '@/lib/types';
+import { MEDIA_LABELS, type BattleState, type PodiumIdentity, type SavedIdentity, type SessionCard } from '@/lib/types';
 import { useBattleSocket } from '@/lib/useBattleSocket';
 import { usePhaseClock } from '@/lib/usePhaseClock';
 import styles from './play.module.css';
@@ -52,7 +53,7 @@ export function PlayClient() {
    * reprise est automatique : c'est ce qui fait qu'un rafraichissement, un
    * passage en veille ou un tunnel de metro ne coutent pas sa place.
    */
-  const enter = useCallback(async (socket: Socket, withPseudo?: string) => {
+  const enter = useCallback(async (socket: Socket, withPseudo?: string, asSpectator = false) => {
     if (!code) return;
     const saved = identity.get(code);
     const name = withPseudo ?? saved?.pseudo;
@@ -63,6 +64,8 @@ export function PlayClient() {
       pseudo: name,
       participantId: saved?.participantId,
       token: saved?.token,
+      // Ignore a la reprise : le serveur retrouve le role choisi a l'entree.
+      spectator: asSpectator,
     });
 
     if (!res.ok) {
@@ -127,13 +130,21 @@ export function PlayClient() {
     return () => { cancelled = true; };
   }, [code]);
 
-  const join = async () => {
+  /**
+   * Le role se choisit ici, et une seule fois.
+   *
+   * Un spectateur ne depose rien mais note comme les autres : sa voix compte
+   * autant. C'est pour cela qu'il doit etre la avant la diffusion — les votants
+   * absents comptent pour la note par defaut, et des juges arrivant en retard
+   * fausseraient tous les rendus deja passes.
+   */
+  const join = async (asSpectator = false) => {
     if (!socket) return;
     // Le clic sur « Entrer » est le geste qui debloque le son : sans lui, les
     // alertes de fin de temps ne sortiraient jamais du navigateur.
     sfx.unlock();
     setBusy(true);
-    await enter(socket, pseudo.trim());
+    await enter(socket, pseudo.trim(), asSpectator);
     setBusy(false);
   };
 
@@ -205,7 +216,7 @@ export function PlayClient() {
             placeholder="COMMENT ON T’APPELLE ?"
             autoComplete="nickname"
             onChange={(e) => setPseudo(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') void join(); }}
+            onKeyDown={(e) => { if (e.key === 'Enter') void join(false); }}
           />
           {hub?.pid && (
             <span className="pill ok" style={{ alignSelf: 'flex-start' }}>
@@ -214,13 +225,26 @@ export function PlayClient() {
           )}
         </div>
         {error && <p className={styles.error}>{error}</p>}
-        <button
-          className="btn primary lg block"
-          disabled={busy || pseudo.trim().length < 2 || !connected} aria-busy={busy}
-          onClick={join}
-        >
-          {connected ? 'ENTRER' : 'CONNEXION'}
-        </button>
+        <div className={styles.roles}>
+          <button
+            className="btn primary lg block"
+            disabled={busy || pseudo.trim().length < 2 || !connected} aria-busy={busy}
+            onClick={() => void join(false)}
+          >
+            {connected ? 'JE PARTICIPE' : 'CONNEXION'}
+          </button>
+          <button
+            className="btn lg block"
+            disabled={busy || pseudo.trim().length < 2 || !connected} aria-busy={busy}
+            onClick={() => void join(true)}
+          >
+            <Icon name="oeil" />JE REGARDE ET JE NOTE
+          </button>
+          <p className={styles.roleHint}>
+            Spectateur : tu ne deposes rien et tu ne peux pas gagner, mais ta note compte comme
+            celle des autres. A choisir maintenant, ca ne se change plus.
+          </p>
+        </div>
       </div>
     );
   }
@@ -235,6 +259,7 @@ export function PlayClient() {
           <span className="session-name ellipsis">{state.name}</span>
           <span className="meta">{PHASE_LABELS[phase]}</span>
         </span>
+        {you?.spectator && <span className="pill"><Icon name="oeil" />SPECTATEUR</span>}
         {you && (
           <span className="pill">
             <span aria-hidden="true">{you.avatar}</span>
@@ -311,6 +336,9 @@ export function PlayClient() {
    */
   function renderSubmission() {
     if (!me || you?.disqualified) return null;
+    // Un spectateur n'a rien a deposer : on lui dit ou il en est plutot que de
+    // lui montrer une zone de depot qui le refuserait.
+    if (you?.spectator) return <SpectatorWait state={state!} />;
     return (
       <SubmissionBox
         code={state!.code}
@@ -403,4 +431,31 @@ export function PlayClient() {
         );
     }
   }
+}
+
+/**
+ * Ce que voit un spectateur pendant que les autres creent.
+ *
+ * Il n'a rien a deposer et rien a attendre de lui-meme : on lui dit ou en est
+ * la session, ce qu'on attend de lui, et quand son tour viendra.
+ */
+function SpectatorWait({ state }: { state: BattleState }) {
+  const attendus = state.counts.participants;
+  const rendus = state.counts.submitted;
+  return (
+    <section className="card pad" style={{ display: 'grid', gap: 'var(--sp-4)' }}>
+      <div className="meta" style={{ display: 'flex', gap: 'var(--sp-4)', flexWrap: 'wrap' }}>
+        <span>ROLE · SPECTATEUR</span>
+        <span>{hexOf(rendus, attendus)} ONT RENDU</span>
+      </div>
+      <h2 style={{ font: 'var(--t-h2)', letterSpacing: 'var(--ls-display)' }}>TU NE CREES PAS</h2>
+      <p className="muted">
+        Tu suis la session sans y concourir. Quand la diffusion commencera, les rendus defileront en
+        aveugle et tu noteras comme tout le monde : ta voix compte autant que celle des createurs.
+      </p>
+      <div className="meta" style={{ borderTop: 'var(--border)', paddingTop: 'var(--sp-3)' }}>
+        Rien a faire d&apos;ici la. Laisse la page ouverte.
+      </div>
+    </section>
+  );
 }

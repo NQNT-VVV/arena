@@ -225,6 +225,10 @@ io.on('connection', (socket) => {
       participantId: payload.participantId,
       token: payload.token,
       podiumPid: podium.identityOf(socket.handshake.headers)?.pid ?? null,
+      // Le role est choisi a l'entree et ne bouge plus : un spectateur qui
+      // deviendrait createur en cours de route n'aurait plus le temps de creer,
+      // et un createur qui se declarerait spectateur effacerait son rendu.
+      spectator: payload.spectator === true,
     });
     battle.attachParticipant(socket, session, participant);
     return {

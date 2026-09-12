@@ -64,6 +64,8 @@ export interface RosterEntry {
   avatar: string;
   connected: boolean;
   disqualified: boolean;
+  /** Vient juger sans creer : on ne l'attend pas au depot. */
+  spectator: boolean;
   /** Renseignes pour la regie seulement. */
   joinedAt?: number;
   lastSeenAt?: number;
@@ -94,6 +96,8 @@ export interface Asset {
 
 export interface Counts {
   participants: number;
+  /** Ceux qui sont la pour juger, pas pour creer. */
+  spectators: number;
   connected: number;
   submitted: number;
   voted: number;
@@ -238,6 +242,8 @@ export interface You {
   avatar: string;
   isHost: boolean;
   disqualified: boolean;
+  /** Vient juger sans creer : ne depose rien, ne peut pas gagner, mais vote. */
+  spectator: boolean;
   joinedAt: number;
   submission: OwnSubmission | null;
   /** Ses propres notes : { renditionId: { critereId: valeur } }. */

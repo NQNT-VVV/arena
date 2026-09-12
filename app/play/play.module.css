@@ -35,3 +35,12 @@
   .wrap { padding: var(--sp-4) var(--sp-3) var(--sp-12); }
   .head { flex-wrap: wrap; gap: var(--sp-2); }
 }
+
+/* --------------------------------------------------------------------------
+   Choix du role, a l'entree
+   -------------------------------------------------------------------------- */
+.roles { display: grid; gap: var(--sp-2); width: 100%; }
+.roleHint {
+  font: var(--t-prose); letter-spacing: var(--ls-prose); text-transform: none;
+  color: var(--ink-60); max-width: 46ch; margin-top: var(--sp-1);
+}
