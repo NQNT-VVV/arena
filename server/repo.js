@@ -186,6 +186,17 @@ const renameParticipantStmt = db.prepare('UPDATE participant SET pseudo = ?, ava
 const deleteParticipantStmt = db.prepare('DELETE FROM participant WHERE id = ?');
 const setPodiumPidStmt = db.prepare('UPDATE participant SET podium_pid = ? WHERE id = ? AND podium_pid IS NULL');
 
+const insertChainLineStmt = db.prepare(
+  'INSERT INTO chain_line (session_id, participant_id, pseudo, body, at) VALUES (?, ?, ?, ?, ?)',
+);
+const selectChainLine = db.prepare('SELECT * FROM chain_line WHERE id = ?');
+const selectChainLines = db.prepare('SELECT * FROM chain_line WHERE session_id = ? ORDER BY id');
+
+function toChainLine(row) {
+  if (!row) return null;
+  return { id: row.id, participantId: row.participant_id, pseudo: row.pseudo, body: row.body, at: row.at };
+}
+
 Object.assign(repo, {
   addParticipant(p) {
     insertParticipant.run({
@@ -364,6 +375,21 @@ Object.assign(repo, {
     });
     return toSubmission(selectSubmission.get(sub.id));
   },
+
+  /* ------------------------------ chaine ----------------------------- */
+
+  /**
+   * Une ligne de la chaine.
+   *
+   * Le pseudo est recopie a cote de l'identifiant : la personne peut quitter
+   * la session, et une ligne de la chaine doit rester attribuable a la
+   * lecture finale meme si sa ligne de participant a disparu.
+   */
+  addChainLine: (sessionId, participantId, pseudo, body, at) => {
+    const id = insertChainLineStmt.run(sessionId, participantId, pseudo, body, at).lastInsertRowid;
+    return toChainLine(selectChainLine.get(id));
+  },
+  chainLines: (sessionId) => selectChainLines.all(sessionId).map(toChainLine),
 
   submission: (id) => toSubmission(selectSubmission.get(id)),
   submissionByRendition: (renditionId) => toSubmission(selectSubmissionByRendition.get(renditionId)),

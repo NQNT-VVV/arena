@@ -256,6 +256,30 @@ io.on('connection', (socket) => {
     return { value: done.value, criterionId: done.criterionId, you: views.youView(session, participant) };
   }));
 
+  /**
+   * La chaine : une ligne, ou son tour passe.
+   *
+   * Par la socket, comme le vote : c'est court, c'est frequent, et tous les
+   * spectateurs doivent voir le tour avancer dans la seconde.
+   */
+  socket.on('chain:write', (payload = {}, cb) => guard(cb, () => {
+    if (socket.data.role !== 'participant') {
+      throw Object.assign(new Error('Rejoignez la session.'), { expected: true, status: 403 });
+    }
+    const { session, participant } = battle.participantOfSocket(socket);
+    battle.chainWrite(session, participant, payload.body);
+    return { you: views.youView(session, participant) };
+  }));
+
+  socket.on('chain:pass', (payload = {}, cb) => guard(cb, () => {
+    if (socket.data.role !== 'participant') {
+      throw Object.assign(new Error('Rejoignez la session.'), { expected: true, status: 403 });
+    }
+    const { session, participant } = battle.participantOfSocket(socket);
+    battle.chainPass(session, participant);
+    return { you: views.youView(session, participant) };
+  }));
+
   socket.on('play:leave', (payload, cb) => guard(cb, () => {
     if (socket.data.role === 'participant') battle.leave(socket.data.code, socket.data.participantId);
     socket.data.role = null;

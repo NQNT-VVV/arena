@@ -1,0 +1,69 @@
+/*
+ * LA CHAINE.
+ *
+ * Une page de texte, pas un tableau de bord. La ligne a prolonger est ce qu'on
+ * doit lire en premier : elle est plus grande que tout le reste, et le seul
+ * element encadre de la carte.
+ */
+
+.chaine { display: grid; gap: var(--sp-4); }
+
+.tete { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
+
+.titre { font: var(--t-h2); letter-spacing: var(--ls-display); color: var(--ink); margin: 0; }
+
+.avant { display: grid; gap: var(--sp-2); }
+
+/* La ligne precedente : la seule chose qui compte a l'ecran. */
+.ligne {
+  margin: 0;
+  font: var(--t-read);
+  letter-spacing: var(--ls-prose);
+  color: var(--ink);
+  text-transform: none;
+  border-left: var(--border-strong);
+  padding-left: var(--sp-4);
+  overflow-wrap: anywhere;
+}
+
+.amorce {
+  margin: 0;
+  font: var(--t-prose);
+  letter-spacing: var(--ls-prose);
+  color: var(--ink-90);
+  text-transform: none;
+}
+
+.aVous { display: grid; gap: var(--sp-2); border-top: var(--border); padding-top: var(--sp-4); }
+.aVous textarea { resize: vertical; min-height: 64px; }
+
+.sablier { display: flex; align-items: baseline; gap: var(--sp-3); font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink); }
+
+/* Le sablier du tour. Il descend par pas d'une seconde, comme le reste du jeu. */
+.piste { height: 4px; border: var(--border); overflow: hidden; }
+.piste i { display: block; height: 100%; background: var(--ink); transform-origin: left; transition: transform 1s steps(1, end); }
+
+.presse { color: var(--accent); }
+
+.actions { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+
+.attente {
+  display: flex; align-items: baseline; gap: var(--sp-3); flex-wrap: wrap;
+  border-top: var(--border); padding-top: var(--sp-4);
+  font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60);
+}
+.attente p { flex-basis: 100%; margin: 0; font: var(--t-prose); letter-spacing: var(--ls-prose); text-transform: none; }
+
+/* La lecture finale : une suite de lignes, chacune signee sous elle. */
+.recit { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-4); counter-reset: ligne; }
+.recit li { display: grid; gap: var(--sp-1); }
+.recit .ligne { border-left-color: var(--ink-35); }
+.recit li::before {
+  content: counter(ligne, upper-roman);
+  counter-increment: ligne;
+  font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-55);
+}
+
+@media (max-width: 600px) {
+  .ligne { padding-left: var(--sp-3); }
+}

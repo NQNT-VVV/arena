@@ -1090,6 +1090,122 @@ class BattleServer {
     if (participant) this.publishYou(session, participant);
   }
 
+  /* ---------------------------- la chaine ------------------------ */
+
+  /**
+   * LA CHAINE — ce que font les spectateurs pendant que les autres creent.
+   *
+   * Un cadavre exquis, a un tour chacun. Celui dont c'est le tour ecrit une
+   * ligne, et il ne voit que la precedente : c'est la regle entiere, et c'est
+   * elle qui rend la lecture finale drole. Le tout se devoile quand la
+   * creation est finie, en meme temps que les rendus.
+   *
+   * Rien ici ne rapporte de point et rien n'entre dans le classement. Un
+   * spectateur est venu juger, pas concourir — un jeu d'attente qui compterait
+   * ferait de lui un concurrent par la bande.
+   *
+   * Aucun minuteur : une session n'en a qu'un, occupe par les phases. Le tour
+   * expire au calcul, quand on regarde. Une echeance qui se lit vaut une
+   * echeance qui sonne, et elle ne peut pas se desynchroniser de ce qu'elle
+   * decrit.
+   */
+  static CHAIN_PHASES = new Set(['creation', 'upload']);
+  static CHAIN_TURN_MS = 90000;
+  static CHAIN_LINE_MAX = 140;
+
+  /** Les spectateurs, dans l'ordre ou ils sont arrives. L'ordre du tour. */
+  chainOrder(session) {
+    return [...session.participants.values()]
+      .filter((p) => p.spectator && !p.disqualified)
+      .sort((a, b) => a.joinedAt - b.joinedAt || (a.id < b.id ? -1 : 1))
+      .map((p) => p.id);
+  }
+
+  /**
+   * Ou en est le tour, maintenant.
+   *
+   * Les tours ecoules depuis la derniere lecture sont passes d'un coup, par le
+   * calcul : une session laissee de cote une heure ne fait pas tourner une
+   * boucle de quarante iterations au premier regard.
+   */
+  chainResolve(session, now = Date.now()) {
+    const order = this.chainOrder(session);
+    const ouvert = BattleServer.CHAIN_PHASES.has(session.phase) && order.length > 0;
+    if (!ouvert) {
+      session.chainTurnEndsAt = null;
+      session.chainTurn = null;
+      return { order, turnId: null, turnEndsAt: null, open: false };
+    }
+    if (session.chainCursor === undefined) session.chainCursor = repo.chainLines(session.id).length;
+    if (!session.chainTurnEndsAt) session.chainTurnEndsAt = now + BattleServer.CHAIN_TURN_MS;
+    if (now >= session.chainTurnEndsAt) {
+      const passes = Math.floor((now - session.chainTurnEndsAt) / BattleServer.CHAIN_TURN_MS) + 1;
+      session.chainCursor += passes;
+      session.chainTurnEndsAt += passes * BattleServer.CHAIN_TURN_MS;
+    }
+    /*
+     * Le tour est pose sur la session, pas seulement rendu.
+     *
+     * Les vues n'ont pas acces a l'ordre des spectateurs — c'est le serveur
+     * qui le tient. En deposant le resultat ici, elles le rapportent au lieu
+     * de tenter de le recalculer avec la moitie des informations.
+     */
+    session.chainTurn = order[session.chainCursor % order.length];
+    return {
+      order,
+      turnId: session.chainTurn,
+      turnEndsAt: session.chainTurnEndsAt,
+      open: true,
+    };
+  }
+
+  /** Passe la main, et remet le sablier a plein. */
+  chainAdvance(session, now) {
+    session.chainCursor = (session.chainCursor ?? 0) + 1;
+    session.chainTurnEndsAt = now + BattleServer.CHAIN_TURN_MS;
+  }
+
+  chainWrite(session, participant, body, now = Date.now()) {
+    if (!participant.spectator) {
+      throw new BattleError('La chaine est le jeu de ceux qui regardent. Vous, vous creez.', 403);
+    }
+    const { turnId, open } = this.chainResolve(session, now);
+    if (!open) throw new BattleError('La chaine ne tourne que pendant la creation.');
+    if (turnId !== participant.id) throw new BattleError('Ce n\u2019est pas votre tour.');
+
+    const text = String(body ?? '').replace(/\s+/g, ' ').trim().slice(0, BattleServer.CHAIN_LINE_MAX);
+    if (!text) throw new BattleError('Une ligne vide ne prolonge rien.');
+
+    const line = repo.addChainLine(session.id, participant.id, participant.pseudo, text, now);
+    this.chainAdvance(session, now);
+    repo.logEvent(session.id, 'chain:line', { pseudo: participant.pseudo });
+    this.publishChain(session);
+    return line;
+  }
+
+  /** Passer son tour. On ne force personne a ecrire. */
+  chainPass(session, participant, now = Date.now()) {
+    if (!participant.spectator) throw new BattleError('La chaine est le jeu de ceux qui regardent.', 403);
+    const { turnId, open } = this.chainResolve(session, now);
+    if (!open) throw new BattleError('La chaine ne tourne que pendant la creation.');
+    if (turnId !== participant.id) throw new BattleError('Ce n\u2019est pas votre tour.');
+    this.chainAdvance(session, now);
+    this.publishChain(session);
+  }
+
+  /**
+   * L'etat commun bouge, et chaque spectateur avec.
+   *
+   * Le canal personnel porte ce que lui seul doit voir — si c'est son tour, et
+   * la ligne a prolonger. L'etat commun n'en porte que le decompte.
+   */
+  publishChain(session) {
+    this.publish(session);
+    for (const p of session.participants.values()) {
+      if (p.spectator) this.publishYou(session, p);
+    }
+  }
+
   /* --------------------------- presence -------------------------- */
 
   attachHost(socket, session) {
@@ -1167,6 +1283,9 @@ class BattleServer {
    */
   publish(session) {
     if (!session) return;
+    // Le tour se resout avant d'etre diffuse : sinon un spectateur absent
+    // bloquerait la chaine jusqu'a ce que quelqu'un pense a la regarder.
+    this.chainResolve(session);
     this.io.to(roomAll(session.code)).emit('state', views.participantView(session));
     this.io.to(roomHost(session.code)).emit('state', views.hostView(session));
     this.io.to(roomScreen(session.code)).emit('state', views.screenView(session));

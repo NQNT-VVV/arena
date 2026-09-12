@@ -189,6 +189,27 @@ const MIGRATIONS = [
     // moins et aucun en plus.
     d.exec('ALTER TABLE participant ADD COLUMN spectator INTEGER NOT NULL DEFAULT 0;');
   },
+
+  /**
+   * La chaine : ce que les spectateurs ecrivent pendant que les autres creent.
+   *
+   * Une ligne par tour. On ne garde pas le tour courant en base — il se deduit
+   * de la derniere ligne et de l'ordre des spectateurs, et une valeur deduite
+   * ne peut pas se desynchroniser de ce qu'elle decrit.
+   */
+  function chaine(d) {
+    d.exec(`
+      CREATE TABLE chain_line (
+        id             INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id     TEXT NOT NULL REFERENCES session(id) ON DELETE CASCADE,
+        participant_id TEXT REFERENCES participant(id) ON DELETE SET NULL,
+        pseudo         TEXT NOT NULL,
+        body           TEXT NOT NULL,
+        at             INTEGER NOT NULL
+      );
+      CREATE INDEX chain_line_session_idx ON chain_line(session_id, id);
+    `);
+  },
 ];
 
 const applied = db.pragma('user_version', { simple: true });

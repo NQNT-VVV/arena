@@ -197,6 +197,7 @@ export interface BattleState {
   assetsZipUrl: string;
   diffusion: DiffusionState | null;
   podium: PodiumState | null;
+  chain: ChainState;
   serverNow: number;
   isHost?: boolean;
   isScreen?: boolean;
@@ -236,6 +237,30 @@ export interface OwnSubmission {
 }
 
 /** Canal personnel : ce que le serveur ne dit qu'a un participant. */
+/**
+ * LA CHAINE, vue de tout le monde.
+ *
+ * Pendant la creation, seulement le decompte et le tour : le texte n'apparait
+ * qu'une fois la creation finie, sinon il n'y aurait rien a decouvrir.
+ */
+export interface ChainState {
+  lines: number;
+  turn: { id: string; pseudo: string | null } | null;
+  turnEndsAt: number | null;
+  turnMs: number;
+  open: boolean;
+  revealed: { pseudo: string; body: string; at: number }[] | null;
+}
+
+/** Ce qu'un spectateur voit de la chaine, et lui seul : la ligne a prolonger. */
+export interface YouChain {
+  mine: boolean;
+  last: string | null;
+  lastBy: string | null;
+  position: number;
+  max: number;
+}
+
 export interface You {
   id: string;
   pseudo: string;
@@ -248,6 +273,8 @@ export interface You {
   submission: OwnSubmission | null;
   /** Ses propres notes : { renditionId: { critereId: valeur } }. */
   votes: Record<string, Record<string, number>>;
+  /** Null pour un createur : la chaine ne le concerne pas. */
+  chain: YouChain | null;
 }
 
 /** Carte de visite renvoyee par `GET /api/session/:code`. */

@@ -10,6 +10,7 @@ import { AssetPack } from '@/components/AssetPack';
 import { Brand } from '@/components/Brand';
 import { DiffusionStage } from '@/components/DiffusionStage';
 import { Podium } from '@/components/Podium';
+import { Chaine, ChaineLue } from '@/components/Chaine';
 import { Chrono } from '@/components/Chrono';
 import { JoinForm } from '@/components/JoinForm';
 import { PhaseRail } from '@/components/PhaseRail';
@@ -366,9 +367,26 @@ export function PlayClient() {
      * en donne le moins, pas l'inverse.
      */
     if (!you) return null;
-    // Un spectateur n'a rien a deposer : on lui dit ou il en est plutot que de
-    // lui montrer une zone de depot qui le refuserait.
-    if (you.spectator) return <SpectatorWait state={state!} />;
+    /*
+     * Un spectateur n'a rien a deposer. On lui donne la chaine.
+     *
+     * Le cadavre exquis remplit l'attente sans la transformer en competition :
+     * il ne rapporte aucun point et n'entre dans aucun classement. Seul, sans
+     * personne a qui passer la main, on retombe sur l'ecran d'attente simple.
+     */
+    if (you.spectator) {
+      return you.chain
+        ? (
+          <Chaine
+            socket={socket}
+            chain={state!.chain}
+            you={you.chain}
+            attendus={state!.counts.participants}
+            rendus={state!.counts.submitted}
+          />
+        )
+        : <SpectatorWait state={state!} />;
+    }
     return (
       <SubmissionBox
         code={state!.code}
@@ -451,6 +469,7 @@ export function PlayClient() {
         if (!d) return null;
         const current = d.current;
         return (
+          <>
           <DiffusionStage
             diffusion={d}
             config={state!.config}
@@ -461,6 +480,10 @@ export function PlayClient() {
             audio={audioChoice ?? d.playerAudio}
             onToggleAudio={chooseAudio}
           />
+          {/* La chaine se lit pendant que les rendus defilent : c'est le
+              moment ou le jeu d'attente devient un moment de la soiree. */}
+          <ChaineLue chain={state!.chain} />
+          </>
         );
       }
       case 'results':
@@ -471,6 +494,7 @@ export function PlayClient() {
               ? null
               : <p className="meta">L&apos;animateur devoile les places une par une.</p>}
             <Podium replay podium={state!.podium} meId={you?.id} ratings={ratings} />
+            <ChaineLue chain={state!.chain} />
           </div>
         ) : null;
       default:

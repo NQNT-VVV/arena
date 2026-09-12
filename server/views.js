@@ -30,6 +30,9 @@ const AUTHORS_VISIBLE = new Set(['results', 'archived']);
 const config = require('./config');
 const repo = require('./repo');
 const { rank } = require('./scoring');
+
+/** Doit rester egal a `BattleServer.CHAIN_TURN_MS`. Les vues ne dependent pas de la classe. */
+const CHAIN_TURN_MS = 90000;
 const { signMedia } = require('./util');
 
 function authorsVisible(session) {
@@ -343,12 +346,62 @@ function commonView(session) {
     assetsZipUrl: `/api/session/${session.code}/assets.zip`,
     diffusion: diffusionView(session),
     podium: podiumView(session),
+    chain: chainView(session),
     /** Reference d'horloge : le client s'en sert pour mesurer sa derive. */
     serverNow: Date.now(),
   };
 }
 
 /** Ce que voit un participant sur son telephone. */
+/**
+ * La chaine, vue de tout le monde.
+ *
+ * Pendant la creation, on ne dit que le nombre de lignes et a qui est le tour.
+ * Le texte, lui, n'apparait qu'une fois la creation finie : tout l'interet du
+ * cadavre exquis tient a ce que personne ne lise avant la fin.
+ */
+function chainView(session) {
+  const lignes = repo.chainLines(session.id);
+  const enCours = session.phase === 'creation' || session.phase === 'upload';
+  const auteur = (id) => session.participants.get(id);
+  const tour = session.chainTurnEndsAt && enCours ? session.chainTurn : null;
+  return {
+    lines: lignes.length,
+    // Le tour est recalcule par le serveur avant chaque diffusion : la vue ne
+    // fait que le rapporter, elle ne le devine pas.
+    turn: tour ? { id: tour, pseudo: auteur(tour)?.pseudo ?? null } : null,
+    turnEndsAt: enCours ? session.chainTurnEndsAt ?? null : null,
+    // La duree d'un tour vient d'ici : le sablier de la page se dessine avec,
+    // au lieu de reproduire une constante du serveur et de deriver le jour ou
+    // elle change.
+    turnMs: CHAIN_TURN_MS,
+    open: enCours,
+    revealed: enCours ? null : lignes.map((l) => ({ pseudo: l.pseudo, body: l.body, at: l.at })),
+  };
+}
+
+/**
+ * Ce qu'un spectateur voit de la chaine, et lui seul.
+ *
+ * La derniere ligne : celle qu'il doit prolonger. Elle ne peut pas passer par
+ * l'etat commun, ou les createurs la liraient — et ou elle ferait, a la
+ * diffusion, un spoiler de ce qui doit se decouvrir d'un coup.
+ */
+function youChainView(session, participant) {
+  if (!participant.spectator) return null;
+  const enCours = session.phase === 'creation' || session.phase === 'upload';
+  if (!enCours) return null;
+  const lignes = repo.chainLines(session.id);
+  const derniere = lignes.length ? lignes[lignes.length - 1] : null;
+  return {
+    mine: session.chainTurn === participant.id,
+    last: derniere ? derniere.body : null,
+    lastBy: derniere ? derniere.pseudo : null,
+    position: lignes.length + 1,
+    max: 140,
+  };
+}
+
 function participantView(session) {
   return commonView(session);
 }
@@ -424,6 +477,7 @@ function youView(session, participant) {
      * animateur compris — ne doit pouvoir reconstituer qui a mis quoi.
      */
     votes: votesView(session, participant),
+    chain: youChainView(session, participant),
   };
 }
 
@@ -443,4 +497,5 @@ module.exports = {
   configView, clockView, rosterView, countsView, assetsView, ownSubmissionView,
   anonymousCard, diffusionView, podiumView,
   commonView, participantView, hostView, screenView, youView,
+  chainView, youChainView,
 };

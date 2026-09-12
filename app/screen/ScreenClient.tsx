@@ -7,6 +7,7 @@ import type { Socket } from 'socket.io-client';
 import { audioPref } from '@/lib/audioPref';
 import { Brand } from '@/components/Brand';
 import { DiffusionStage } from '@/components/DiffusionStage';
+import { ChaineLue } from '@/components/Chaine';
 import { Podium } from '@/components/Podium';
 import { Chrono } from '@/components/Chrono';
 import { JoinForm } from '@/components/JoinForm';
@@ -175,6 +176,12 @@ export function ScreenClient() {
           <span className={styles.bigIcon}>CLASSEMENT FINAL · {hex(state.podium.total ?? 0)} RENDUS</span>
           <Podium podium={state.podium} large ratings={ratings} />
         </div>
+      )}
+
+      {/* Ce que les spectateurs ont ecrit pendant la creation. Sur l'ecran de
+          la salle, quelqu'un finit toujours par le lire a voix haute. */}
+      {(state.phase === 'results' || state.phase === 'archived') && (
+        <div className={styles.wide}><ChaineLue chain={state.chain} /></div>
       )}
     </div>
   );

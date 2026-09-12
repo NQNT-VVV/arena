@@ -362,6 +362,8 @@ export function HostClient() {
                 </div>
                 <p className="meta" style={{ textTransform: 'none', letterSpacing: 'var(--ls-prose)' }}>
                   Un spectateur ne depose rien et ne peut pas gagner, mais il note comme les autres.
+                  Pendant la creation, les spectateurs ecrivent une histoire a tour de role ; elle se
+                  lit a la diffusion.
                   A envoyer avant le debut de la diffusion : apres, on ne rejoint plus.
                 </p>
               </div>
