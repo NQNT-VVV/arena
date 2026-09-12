@@ -349,9 +349,18 @@ export function PlayClient() {
    */
   function renderSubmission() {
     if (!me || you?.disqualified) return null;
+    /*
+     * Tant que le canal personnel n'a rien dit, on n'ouvre rien.
+     *
+     * `you` arrive une fraction de seconde apres l'etat commun. En affichant la
+     * zone de depot par defaut, un spectateur la voyait pendant cet intervalle —
+     * et en permanence si le canal tardait. Le defaut doit etre la surface qui
+     * en donne le moins, pas l'inverse.
+     */
+    if (!you) return null;
     // Un spectateur n'a rien a deposer : on lui dit ou il en est plutot que de
     // lui montrer une zone de depot qui le refuserait.
-    if (you?.spectator) return <SpectatorWait state={state!} />;
+    if (you.spectator) return <SpectatorWait state={state!} />;
     return (
       <SubmissionBox
         code={state!.code}
@@ -372,16 +381,34 @@ export function PlayClient() {
           <div className={styles.waiting}>
             <span className={styles.bigIcon} aria-hidden="true">{MEDIA_LABELS[state!.mediaType].icon}</span>
             <h2>EN ATTENTE DU DEPART</h2>
-            <p className="muted">
-              Lis la consigne, prepare ton materiel. L&apos;animateur lance le chrono quand tout le monde est la.
-            </p>
-            <p className="meta">
-              Tu auras {humanDuration(state!.config.durationMs)} pour creer.
-            </p>
-            {state!.assets.length > 0 && (
-              <a className="btn sm" href={state!.assetsZipUrl}>
-                <Icon name="telecharge" />Recuperer les {state!.assets.length} elements
-              </a>
+            {/*
+              * Un spectateur n'a ni consigne a lire ni materiel a preparer : lui
+              * annoncer un temps « pour creer » et lui tendre les elements de
+              * travail lui promettrait un role qu'il n'a pas.
+              */}
+            {you?.spectator ? (
+              <>
+                <p className="muted">
+                  Tu suis cette session sans y concourir. L&apos;animateur lance le chrono quand tout le monde est la.
+                </p>
+                <p className="meta">
+                  Les createurs auront {humanDuration(state!.config.durationMs)}. Ton tour vient a la diffusion.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="muted">
+                  Lis la consigne, prepare ton materiel. L&apos;animateur lance le chrono quand tout le monde est la.
+                </p>
+                <p className="meta">
+                  Tu auras {humanDuration(state!.config.durationMs)} pour creer.
+                </p>
+                {state!.assets.length > 0 && (
+                  <a className="btn sm" href={state!.assetsZipUrl}>
+                    <Icon name="telecharge" />Recuperer les {state!.assets.length} elements
+                  </a>
+                )}
+              </>
             )}
           </div>
         );
@@ -392,7 +419,9 @@ export function PlayClient() {
             <p className="muted" style={{ textAlign: 'center' }}>
               {chrono.paused
                 ? 'L’animateur a mis le chrono en pause.'
-                : 'Depot possible des que le rendu est pret, sans attendre la fin.'}
+                : you?.spectator
+                  ? 'Les createurs travaillent. Tu noteras leurs rendus a la diffusion.'
+                  : 'Depot possible des que le rendu est pret, sans attendre la fin.'}
             </p>
             {renderSubmission()}
           </>
@@ -402,7 +431,9 @@ export function PlayClient() {
           <>
             <Chrono clock={chrono} hint="DERNIERE LIGNE DROITE" />
             <p className="muted" style={{ textAlign: 'center' }}>
-              Le temps de creation est ecoule. Il reste la fenetre de grace pour finaliser ton depot.
+              {you?.spectator
+                ? 'Le temps de creation est ecoule. La diffusion va commencer.'
+                : 'Le temps de creation est ecoule. Il reste la fenetre de grace pour finaliser ton depot.'}
             </p>
             {renderSubmission()}
           </>
