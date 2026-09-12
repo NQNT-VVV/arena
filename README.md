@@ -27,11 +27,13 @@ Le projet avance par increments. Ce qui suit est **fait et teste** :
 | 5 | **Resultats** : classement, revelation progressive, export JSON/CSV | ✅ |
 | 6 | **Transcodage** ffmpeg/sharp : format unique, extrait coupe et fondu, metadonnees supprimees, forme d'onde | ✅ |
 | 7 | **Nouvelle edition** en un clic, **annonces Discord** optionnelles par webhook | ✅ |
+| 8 | **Integration Podium** : identite du hub reconnue au join, classement transmis, Elo affiche au podium | ✅ |
 
 **Le brief est couvert de bout en bout** : contraintes deposees, creation
 chronometree, rendus televerses et re-encodes, diffusion en aveugle avec ecoute
 synchronisee, notation, classement revele, archive exportee, nouvelle edition
-en un clic, annonces Discord. Ce qui vient ensuite viendra de l'usage.
+en un clic, annonces Discord, classement remonte a Podium. Ce qui vient ensuite
+viendra de l'usage.
 
 ---
 
@@ -336,7 +338,7 @@ server/
   api.js        routes HTTP : fichiers, extraits, pack, export, sante, QR
   transcode.js  ouvriers ffmpeg/sharp, file en base
   scoring.js    calcul du classement, fonction pure
-  integrations/ modules optionnels : discord.js
+  integrations/ modules optionnels : discord.js, podium.js
   upload.js     reception en flux, plafonds appliques pendant le transfert
   files.js      service des fichiers : entetes, requetes partielles
   mime.js       reconnaissance par les octets, et refus d'affichage
@@ -384,10 +386,11 @@ npm run test:submissions   # depot des rendus, par le reseau         (16)
 npm run test:voting        # diffusion, notation, ecoute synchronisee, revelation, export (21)
 npm run test:transcode     # vrai ffmpeg : metadonnees, coupure, fondu, duree, cretes, image (11)
 npm run test:discord       # faux webhook : trois annonces, et rien avant la revelation (6)
+npm run test:podium        # faux hub : cookie signe, classement transmis, Elo relaye (8)
 npm test                   # parcours complet, vraies sockets        (15)
 ```
 
-Cent vingt-huit verifications au total. La suite de transcodage s'ignore
+Cent trente-six verifications au total. La suite de transcodage s'ignore
 d'elle-meme quand ffmpeg manque sur la machine.
 
 `test/state.mjs` attaque les objets directement : transitions interdites,
@@ -429,6 +432,20 @@ kubectl apply -f deploy/arena.yaml
 Une seule instance, `strategy: Recreate`, volume persistant. Deux pods ecrivant
 la meme base SQLite se marcheraient dessus — c'est l'ecart assume avec Refrain,
 qui peut se permettre d'etre sans etat.
+
+Pour brancher Arena sur Podium, un second Secret, facultatif — le Deployment le
+lit en `optional: true` et demarre sans lui :
+
+```bash
+kubectl -n arena create secret generic podium-integration \
+  --from-literal=PODIUM_URL='https://podium.danwalex.com' \
+  --from-literal=PODIUM_GAME_KEY='…' \
+  --from-literal=PODIUM_SSO_SECRET='…' \
+  --dry-run=client -o yaml | kubectl apply -f -
+kubectl -n arena rollout restart deploy/arena
+```
+
+Le modele commente est dans `deploy/podium-secret.example.yaml`.
 
 L'Ingress porte trois annotations qui comptent : deux delais longs, sans
 lesquels nginx coupe les connexions Socket.IO au bout de soixante secondes, et
@@ -540,3 +557,34 @@ perdu, jamais une soiree arretee.
 
 > Brancher un service tiers est une decision d'exploitation : l'URL de webhook
 > se renseigne dans l'environnement de deploiement, pas dans le code.
+
+---
+
+## Podium
+
+Module optionnel, comme Discord. [Podium](https://github.com/NQNT-VVV/podium)
+est le hub : comptes, classement Elo par jeu, defis hebdo. Sans `PODIUM_URL`,
+rien ne s'attache et Arena tourne exactement comme avant. Avec, trois choses :
+
+| Moment | Ce qui se passe |
+|---|---|
+| un participant entre | le serveur lit le cookie d'identite du hub dans le handshake et rattache le compte au participant ; le formulaire propose son pseudo Podium, modifiable |
+| le classement est **entierement devoile** | le podium part au hub : `POST /api/v1/games/arena/results`, avec la cle du jeu ; l'identifiant de session sert de cle d'idempotence |
+| le hub repond | les variations d'Elo sont relayees aux trois surfaces (`podium:ratings`) et s'affichent a cote des pseudos |
+
+Le compte n'est **jamais** pris dans ce que le client envoie : il est lu dans
+un cookie signe (HMAC-SHA256, secret partage `PODIUM_SSO_SECRET`), cote
+serveur, au moment du join — et se rattache aussi a la reprise, pour qui s'est
+connecte au hub entre-temps. Les pseudos restent ceux saisis en jeu ; les
+joueurs sans compte apparaissent dans l'historique du hub mais n'entrent pas au
+ranked. Les mis hors classement sont transmis derriere tout le monde, au rang
+qui suit le dernier classe.
+
+`GET /api/podium/me` rend `{ hubUrl, pid, pseudo, avatar }` pour ce navigateur,
+ou `{ hubUrl }` seul. Un hub injoignable est un classement non transmis (une
+nouvelle tentative apres cinq secondes, puis abandon en journal), jamais une
+soiree arretee. Le contrat complet est dans le depot Podium,
+`docs/integration.md`.
+
+> Comme pour Discord : URL, cle et secret se renseignent dans l'environnement
+> de deploiement (`deploy/podium-secret.example.yaml`), pas dans le code.

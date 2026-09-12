@@ -57,6 +57,7 @@ jobs:
           npm run test:voting
           npm run test:transcode
           npm run test:discord
+          npm run test:podium
           npm test
 
       - uses: docker/setup-buildx-action@v3

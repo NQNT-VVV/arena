@@ -87,7 +87,7 @@ export function AssetPack({
   const total = assets.reduce((sum, a) => sum + a.bytes, 0);
 
   const removeButton = (asset: Asset) => onRemove && (
-    <button className="btn xs danger" onClick={() => onRemove(asset)} title="Retirer">✕</button>
+    <button className="btn xs danger" onClick={() => onRemove(asset)} title="RETIRER">✕</button>
   );
 
   return (
@@ -95,7 +95,7 @@ export function AssetPack({
       {zipUrl && (
         <div className="row wrap">
           <a className="btn sm" href={zipUrl}>⬇ Tout telecharger ({humanBytes(total)})</a>
-          <span className="faint" style={{ fontSize: 12 }}>
+          <span className="meta">
             {assets.length} element{assets.length > 1 ? 's' : ''}
           </span>
         </div>
@@ -110,9 +110,9 @@ export function AssetPack({
               </a>
               <span className={styles.thumbBar}>
                 <span className={styles.thumbName}>{asset.filename}</span>
-                <a className={styles.thumbAction} href={`${asset.url}?dl=1`} title="Telecharger">⬇</a>
+                <a className={styles.thumbAction} href={`${asset.url}?dl=1`} title="TELECHARGER">⬇</a>
                 {onRemove && (
-                  <button className={styles.thumbAction} onClick={() => onRemove(asset)} title="Retirer">✕</button>
+                  <button className={styles.thumbAction} onClick={() => onRemove(asset)} title="RETIRER">✕</button>
                 )}
               </span>
             </li>
@@ -143,7 +143,7 @@ export function AssetPack({
                   <span className={styles.name}>{asset.filename}</span>
                   <span className={styles.meta}>{humanBytes(asset.bytes)}</span>
                 </span>
-                <a className={styles.action} href={`${asset.url}?dl=1`} title="Telecharger">⬇</a>
+                <a className={styles.action} href={`${asset.url}?dl=1`} title="TELECHARGER">⬇</a>
                 {removeButton(asset)}
               </li>
             );
@@ -178,7 +178,7 @@ export function AssetPack({
                       {!asset.inline && ' • telechargement seul'}
                     </span>
                   </span>
-                  <a className={styles.action} href={`${asset.url}?dl=1`} title="Telecharger">⬇</a>
+                  <a className={styles.action} href={`${asset.url}?dl=1`} title="TELECHARGER">⬇</a>
                   {removeButton(asset)}
                 </div>
                 {expanded && asset.kind === 'video' && (
@@ -207,6 +207,6 @@ function TextPreview({ asset }: { asset: Asset }) {
     return () => { cancelled = true; };
   }, [asset.url]);
 
-  if (body === null) return <p className={styles.loading}>Chargement…</p>;
+  if (body === null) return <p className={styles.loading}>CHARGEMENT…</p>;
   return <pre className={styles.text}>{body}</pre>;
 }

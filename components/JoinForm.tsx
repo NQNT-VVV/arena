@@ -38,7 +38,7 @@ export function JoinForm({ className = '', inputClassName = '' }: { className?: 
         maxLength={CODE_LENGTH}
       />
       <button className="btn primary block" type="submit" disabled={code.length !== CODE_LENGTH}>
-        Rejoindre
+        REJOINDRE
       </button>
     </form>
   );

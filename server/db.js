@@ -175,6 +175,12 @@ const MIGRATIONS = [
     // doit etre fait qu'une fois, a l'ouverture du rendu.
     d.exec('ALTER TABLE session ADD COLUMN diffusion_ends_at INTEGER;');
   },
+
+  function podiumIdentity(d) {
+    // Compte Podium du participant, lu dans le cookie signe du hub au moment
+    // du join. Null pour qui joue sans compte : le pseudo suffit toujours.
+    d.exec('ALTER TABLE participant ADD COLUMN podium_pid TEXT;');
+  },
 ];
 
 const applied = db.pragma('user_version', { simple: true });
