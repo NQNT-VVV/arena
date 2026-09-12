@@ -56,6 +56,9 @@
    glisser. Sans elle l'interface ne repond pas, ce qui se lit comme « pas fini ». */
 --dur-tap:120ms;--ease-tap:steps(2,end);
 --tap:var(--dur-tap) var(--ease-tap);
+/* Duree d'une coupe a l'apparition : l'inversion pleine du systeme, puis la tenue.
+   Partagee par le message qui arrive et la valeur qui change. */
+--dur-cut:160ms;--cut:var(--dur-cut) var(--ease-hold);
 /* --- TEXTURES : dithering Bayer 4×4 (seuils 2/4/6/8/12 sur 16), hachures, grain --- */
 --dither-12:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' shape-rendering='crispEdges'%3E%3Cpath fill='%23D9D2C3' d='M0 0h1v1H0zM2 2h1v1H2z'/%3E%3C/svg%3E");
 --dither-25:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' shape-rendering='crispEdges'%3E%3Cpath fill='%23D9D2C3' d='M0 0h1v1H0zM2 0h1v1H2zM0 2h1v1H0zM2 2h1v1H2z'/%3E%3C/svg%3E");
@@ -218,6 +221,14 @@ code { font: var(--t-meta); padding: 0 var(--sp-1); border: var(--border); }
 .btn.ghost:active:not(:disabled) { background: var(--ink-12); color: var(--accent); }
 .btn.primary:disabled, .btn.good:disabled, .btn.discord:disabled { background: transparent; background-image: none; border-color: var(--ink-25); color: var(--ink-55); }
 
+/*
+ * Occupe n'est pas interdit. `disabled` seul dit « non » ; il faut dire « ca travaille ».
+ * Ces regles viennent apres celles de :disabled, a specificite egale, et l'emportent.
+ */
+.btn[aria-busy="true"], .btn[aria-busy="true"]:disabled { cursor: progress; color: var(--ink); border-color: var(--ink); }
+.btn.primary[aria-busy="true"], .btn.primary[aria-busy="true"]:disabled,
+.btn.good[aria-busy="true"]:disabled, .btn.discord[aria-busy="true"]:disabled { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
 .btn.ghost { border-color: transparent; color: var(--ink-60); }
 .btn.ghost:hover:not(:disabled) { border-color: transparent; background-image: none; color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
 .btn.ghost:active:not(:disabled) { color: var(--accent); }
@@ -229,14 +240,19 @@ code { font: var(--t-meta); padding: 0 var(--sp-1); border: var(--border); }
 
 /*
  * Cibles tactiles. Le systeme dessine des boutons de 28 et 24 px ; le doigt en demande 44.
- * La boite dessinee ne change pas — c'est la zone sensible qui deborde, par un pseudo-element.
+ *
+ * On agrandit la boite reelle, jamais une zone sensible invisible qui deborderait :
+ * dans la regie de Refrain, les trois outils d'une ligne de joueur (retirer un point,
+ * donner un point, exclure) sont separes de quelques pixels. Trois zones fantomes de
+ * 44 px s'y recouvraient, et celle du bouton « exclure » mordait sur « donner un
+ * point ». Une cible invisible voisine d'une action destructrice est pire qu'une
+ * petite cible.
  */
-@media (hover: none) {
-  .btn.sm, .btn.xs, .btn.icon, .pill.action { position: relative; }
-  .btn.sm::after, .btn.xs::after, .btn.icon::after, .pill.action::after {
-    content: ''; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-    min-width: 44px; min-height: 44px; width: 100%; height: 100%;
-  }
+@media (pointer: coarse) {
+  .btn.sm, .btn.xs { min-height: 44px; padding-left: var(--sp-4); padding-right: var(--sp-4); }
+  .btn.icon { width: 44px; height: 44px; }
+  /* Et de quoi ne pas confondre deux actions voisines. */
+  .row, .tools, .actions { gap: var(--sp-3); }
 }
 .btn.sm { height: 28px; padding: 0 var(--sp-3); font: var(--t-meta); }
 .btn.xs { height: 24px; padding: 0 var(--sp-2); font: var(--t-meta); }
@@ -345,7 +361,9 @@ input[type="range"]::-moz-range-thumb { border: 0; width: 16px; height: 16px; ba
 .toast {
   display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--sp-3); align-items: start;
   padding: var(--sp-3) var(--sp-4); border: var(--border-ui); background: var(--bg); color: var(--ink);
-  font: var(--t-ui); letter-spacing: var(--ls-mono); text-align: left; border-radius: 0; box-shadow: none; animation: none; max-width: none;
+  font: var(--t-ui); letter-spacing: var(--ls-mono); text-align: left; border-radius: 0; box-shadow: none; max-width: none;
+  /* Un message qui apparait sans un battement passe inapercu sur un fond noir. */
+  animation: flash var(--cut) 1;
 }
 .toast time { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); padding-top: 3px; }
 .toast.ok { border-color: var(--ink); background: var(--ink); color: var(--bg); }
@@ -361,7 +379,6 @@ input[type="range"]::-moz-range-thumb { border: 0; width: 16px; height: 16px; ba
    -------------------------------------------------------------------------- */
 .brand { display: inline-flex; align-items: baseline; gap: var(--sp-2); font: var(--t-h2); letter-spacing: var(--ls-display); color: var(--ink); }
 .brand:hover { color: var(--ink); }
-.brand-mark { display: none; }
 .brand-name { background: none; -webkit-text-fill-color: currentColor; color: inherit; }
 .brand-beta { font: var(--t-meta); letter-spacing: var(--ls-mono); height: 24px; display: inline-flex; align-items: center; padding: 0 var(--sp-2); border: var(--border-ui); color: var(--ink-60); background: none; border-radius: 0; align-self: center; }
 
@@ -380,7 +397,9 @@ input[type="range"]::-moz-range-thumb { border: 0; width: 16px; height: 16px; ba
 .ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hidden { display: none !important; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-.fade-in, .pop-in { animation: none; }
+/* Une valeur qui arrive s'annonce d'une inversion breve, puis se tait. */
+.fade-in { animation: none; }
+.pop-in { animation: flash var(--cut) 1; }
 .meta { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); }
 .data { font: var(--t-data); letter-spacing: var(--ls-mono); font-variant-numeric: tabular-nums; }
 .live { color: var(--accent); }

@@ -216,7 +216,7 @@ export function PlayClient() {
         {error && <p className={styles.error}>{error}</p>}
         <button
           className="btn primary lg block"
-          disabled={busy || pseudo.trim().length < 2 || !connected}
+          disabled={busy || pseudo.trim().length < 2 || !connected} aria-busy={busy}
           onClick={join}
         >
           {connected ? 'ENTRER' : 'CONNEXION'}

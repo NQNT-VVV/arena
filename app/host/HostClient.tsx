@@ -458,7 +458,7 @@ export function HostClient() {
 
   function renderControls() {
     const btn = (label: string, event: string, payload?: Record<string, unknown>, cls = 'btn') => (
-      <button className={cls} disabled={busy} onClick={() => act(event, payload ?? {})}>{label}</button>
+      <button className={cls} disabled={busy} aria-busy={busy} onClick={() => act(event, payload ?? {})}>{label}</button>
     );
 
     switch (phase) {
@@ -515,7 +515,7 @@ export function HostClient() {
               {btn('+ 2 min', 'host:add-time', { deltaMs: 2 * 60_000 }, 'btn sm')}
               <button
                 className="btn primary lg"
-                disabled={busy || pending > 0}
+                disabled={busy || pending > 0} aria-busy={busy}
                 title={pending > 0 ? 'Le serveur prepare encore des extraits' : undefined}
                 onClick={() => act('host:start-diffusion')}
               >
@@ -537,15 +537,15 @@ export function HostClient() {
                 : 'Aucun rendu a diffuser.'}
             </p>
             <div className="row wrap">
-              <button className="btn sm" disabled={busy || !d || d.index === 0} onClick={() => act('host:diffusion-prev')}>
+              <button className="btn sm" disabled={busy || !d || d.index === 0} aria-busy={busy} onClick={() => act('host:diffusion-prev')}>
                 <Icon name="precedent" />Precedent
               </button>
-              <button className="btn sm" disabled={busy || !d?.current} title="Relancer ce rendu depuis le debut, pour tout le monde" onClick={() => act('host:diffusion-replay')}>
+              <button className="btn sm" disabled={busy || !d?.current} aria-busy={busy} title="Relancer ce rendu depuis le debut, pour tout le monde" onClick={() => act('host:diffusion-replay')}>
                 <Icon name="chrono" />Relancer
               </button>
               <button
                 className={`btn ${everyone ? 'good' : ''}`}
-                disabled={busy || last}
+                disabled={busy || last} aria-busy={busy}
                 onClick={() => act('host:diffusion-next')}
               >
                 Suivant<Icon name="suivant" />
@@ -555,7 +555,7 @@ export function HostClient() {
               <input
                 type="checkbox"
                 checked={!!d?.autoNext}
-                disabled={busy}
+                disabled={busy} aria-busy={busy}
                 onChange={(e) => act('host:auto-next', { on: e.target.checked })}
               />
               <span className="track" />
@@ -582,10 +582,10 @@ export function HostClient() {
                 : <>Devoile du dernier au premier — <b>{p?.revealed ?? 0}</b> / {p?.total ?? 0}</>}
             </p>
             <div className="row wrap">
-              <button className="btn primary" disabled={busy || !!p?.complete} onClick={() => act('host:reveal')}>
+              <button className="btn primary" disabled={busy || !!p?.complete} aria-busy={busy} onClick={() => act('host:reveal')}>
                 Devoiler la place suivante
               </button>
-              <button className="btn sm" disabled={busy || !!p?.complete} onClick={() => act('host:reveal', { all: true })}>
+              <button className="btn sm" disabled={busy || !!p?.complete} aria-busy={busy} onClick={() => act('host:reveal', { all: true })}>
                 Tout devoiler
               </button>
             </div>
@@ -619,11 +619,11 @@ export function HostClient() {
       <div className={styles.nextEdition}>
         <span className="section-title">NOUVELLE EDITION</span>
         <div className="row wrap">
-          <button className="btn good" disabled={busy} onClick={() => duplicate(true)}>
+          <button className="btn good" disabled={busy} aria-busy={busy} onClick={() => duplicate(true)}>
             <Icon name="chrono" />Relancer{hasAssets ? ' avec le meme pack' : ''}
           </button>
           {hasAssets && (
-            <button className="btn sm ghost" disabled={busy} onClick={() => duplicate(false)}>
+            <button className="btn sm ghost" disabled={busy} aria-busy={busy} onClick={() => duplicate(false)}>
               Relancer sans les elements
             </button>
           )}
@@ -815,8 +815,8 @@ export function HostClient() {
         </label>
 
         {existing
-          ? <button className="btn primary" disabled={busy} onClick={saveConfig}>ENREGISTRER LES REGLAGES</button>
-          : <button className="btn primary lg block" disabled={busy || draft.name.trim().length < 2} onClick={create}>
+          ? <button className="btn primary" disabled={busy} aria-busy={busy} onClick={saveConfig}>ENREGISTRER LES REGLAGES</button>
+          : <button className="btn primary lg block" disabled={busy || draft.name.trim().length < 2} aria-busy={busy} onClick={create}>
               Creer la session
             </button>}
       </>

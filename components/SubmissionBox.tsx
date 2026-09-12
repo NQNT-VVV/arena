@@ -134,10 +134,10 @@ export function SubmissionBox({
           onChange={(e) => setDraft(e.target.value)}
         />
         <div className="row wrap">
-          <button className="btn primary" disabled={busy || !dirty || draft.trim().length < 2} onClick={sendText}>
+          <button className="btn primary" disabled={busy || !dirty || draft.trim().length < 2} aria-busy={busy} onClick={sendText}>
             {submission ? 'Mettre a jour' : 'Deposer'}
           </button>
-          {submission && <button className="btn sm ghost" disabled={busy} onClick={withdraw}>RETIRER</button>}
+          {submission && <button className="btn sm ghost" disabled={busy} aria-busy={busy} onClick={withdraw}>RETIRER</button>}
           <span className="faint grow" style={{ textAlign: 'right' }}>
             {draft.length} caracteres{dirty && submission ? ' • non enregistre' : ''}
           </span>
@@ -191,10 +191,10 @@ export function SubmissionBox({
           )}
 
           <div className="row wrap">
-            <button className="btn sm" disabled={busy} onClick={() => input.current?.click()}>
+            <button className="btn sm" disabled={busy} aria-busy={busy} onClick={() => input.current?.click()}>
               Remplacer
             </button>
-            <button className="btn sm ghost" disabled={busy} onClick={withdraw}>RETIRER</button>
+            <button className="btn sm ghost" disabled={busy} aria-busy={busy} onClick={withdraw}>RETIRER</button>
           </div>
         </div>
       ) : (
@@ -205,7 +205,7 @@ export function SubmissionBox({
           onDrop={(e) => { e.preventDefault(); setDragging(false); void sendFile(e.dataTransfer.files); }}
         >
           <span className={styles.big} aria-hidden="true">⬆</span>
-          <button className="btn primary" disabled={busy} onClick={() => input.current?.click()}>
+          <button className="btn primary" disabled={busy} aria-busy={busy} onClick={() => input.current?.click()}>
             Choisir mon fichier
           </button>
           <span className="faint" style={{ textAlign: 'center' }}>
@@ -229,7 +229,7 @@ export function SubmissionBox({
         ref={input}
         type="file"
         className="sr-only"
-        disabled={busy}
+        disabled={busy} aria-busy={busy}
         onChange={(e) => void sendFile(e.target.files)}
       />
 
