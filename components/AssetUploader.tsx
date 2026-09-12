@@ -86,10 +86,10 @@ export function AssetUploader({
         <>
           <span className={styles.icon} aria-hidden="true">⬆</span>
           <div className={styles.bar}><i style={{ transform: `scaleX(${progress ?? 0})` }} /></div>
-          <span className="meta">
+          <span className="faint" style={{ fontSize: 12.5 }}>
             Envoi… {Math.round((progress ?? 0) * 100)} %
           </span>
-          <button className="btn xs ghost" onClick={() => cancelRef.current?.()}>ANNULER</button>
+          <button className="btn xs ghost" onClick={() => cancelRef.current?.()}>Annuler</button>
         </>
       ) : (
         <>
@@ -101,7 +101,7 @@ export function AssetUploader({
           >
             Choisir des fichiers
           </button>
-          <span className="faint" style={{ textAlign: 'center' }}>
+          <span className="faint" style={{ fontSize: 12.5, textAlign: 'center' }}>
             {disabled ? 'Les elements ne se deposent plus a ce stade.' : (hint ?? 'ou glisse-les ici')}
           </span>
         </>
@@ -113,7 +113,7 @@ export function AssetUploader({
 /** Rappel des plafonds, pour eviter le refus au bout de deux minutes d'envoi. */
 export function UploadLimits({ count, max, bytes, maxBytes }: { count: number; max: number; bytes: number; maxBytes: number }) {
   return (
-    <span className="meta">
+    <span className="faint" style={{ fontSize: 11.5 }}>
       {count}/{max} elements • {humanBytes(bytes)} / {humanBytes(maxBytes)}
     </span>
   );

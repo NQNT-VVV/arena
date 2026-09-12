@@ -1,24 +1,28 @@
-/* Notation : des cases, celle qu'on choisit s'inverse. Jamais d'etoiles. */
-.wrap { display: grid; gap: var(--sp-2); width: 100%; }
-.label { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); }
+.wrap { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.label { font-size: 12.5px; font-weight: 600; color: var(--muted); }
 
-.row { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; width: 100%; border: var(--border-ui); }
+.row { display: flex; gap: 8px; width: 100%; }
 .pip {
-  min-width: 0;
+  flex: 1; min-width: 0;
   /* Cible large : le vote se fait au pouce, souvent dans le noir. */
-  min-height: 52px; cursor: pointer;
-  background: transparent; border: 0; border-right: 1px solid var(--ink-25); color: var(--ink-60);
-  font: var(--t-ui); letter-spacing: var(--ls-mono); font-variant-numeric: tabular-nums;
-  transition: none; -webkit-tap-highlight-color: transparent;
+  min-height: 52px;
+  border-radius: var(--r-md); cursor: pointer;
+  background: var(--surface-2); border: 1px solid var(--stroke); color: var(--muted);
+  font-family: var(--display); font-weight: 700; font-size: 18px;
+  transition: background .16s, color .16s, transform .16s var(--ease), border-color .16s;
+  -webkit-tap-highlight-color: transparent;
 }
-.pip:last-child { border-right: 0; }
-.pip:hover:not(:disabled) { background: var(--ink-12); color: var(--ink); }
-.pip:active:not(:disabled) { animation: flash var(--dur-flash) var(--ease-hold); transform: none; }
-.pip[aria-pressed='true'] { background: var(--ink); background-image: none; color: var(--bg); }
-.pip:disabled { cursor: not-allowed; color: var(--ink-55); border-style: dashed; }
+.pip:hover:not(:disabled) { background: var(--surface-3); color: var(--text); }
+.pip:active:not(:disabled) { transform: scale(.95); }
+.pip[aria-pressed='true'] {
+  background: linear-gradient(135deg, var(--violet), var(--indigo) 60%, var(--cyan));
+  border-color: transparent; color: #fff;
+  box-shadow: 0 8px 24px -10px rgba(139, 92, 246, .95);
+}
+.pip:disabled { opacity: .35; cursor: not-allowed; }
 
-.slider { display: flex; align-items: center; gap: var(--sp-4); }
+.slider { display: flex; align-items: center; gap: 14px; }
 .slider input { flex: 1; }
-.value { font: var(--t-ui-l); letter-spacing: var(--ls-mono); font-variant-numeric: tabular-nums; min-width: 4.5em; text-align: right; }
+.value { font-family: var(--display); font-weight: 700; font-variant-numeric: tabular-nums; min-width: 4.5em; text-align: right; }
 
-.reason { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-55); }
+.reason { font-size: 12px; color: var(--faint); font-style: italic; }

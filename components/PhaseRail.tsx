@@ -5,8 +5,7 @@ import { Fragment, useEffect, useRef } from 'react';
 import { PHASE_STEPS, type Phase } from '@/lib/types';
 
 /**
- * La machine a etats, rendue lisible — progression 0x09 du systeme : un
- * segment par phase, faite en os plein, en cours en sang qui clignote.
+ * La machine a etats, rendue lisible.
  *
  * Presente sur les trois surfaces : un participant qui arrive en cours de route
  * doit comprendre en un coup d'oeil s'il est encore temps de creer ou s'il
@@ -44,9 +43,10 @@ export function PhaseRail({ phase }: { phase: Phase }) {
         const cls = i < current ? 'done' : i === current ? 'now' : '';
         return (
           <Fragment key={step.phase}>
+            {i > 0 && <li className="link" aria-hidden="true" />}
             <li>
               <span className={`step ${cls}`} aria-current={i === current ? 'step' : undefined}>
-                <span className="num" aria-hidden="true" />
+                <span className="num" aria-hidden="true">{i < current ? '✓' : i + 1}</span>
                 {step.label}
               </span>
             </li>

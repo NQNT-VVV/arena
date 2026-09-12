@@ -1,13 +1,26 @@
 import type { Metadata, Viewport } from 'next';
+import { Inter, Space_Grotesk } from 'next/font/google';
 
 import { Aurora } from '@/components/Aurora';
 import { Toaster } from '@/components/Toaster';
-import { archivo, departure, emoji } from '@/lib/fonts';
 import './globals.css';
 
-/** Un filet, deux reperes de coin, un carre de sang : la marque reduite a un signe. */
+const body = Inter({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-body',
+  display: 'swap',
+});
+
+const display = Space_Grotesk({
+  subsets: ['latin'],
+  weight: ['500', '600', '700'],
+  variable: '--font-display',
+  display: 'swap',
+});
+
 const FAVICON =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'%3E%3Crect width='16' height='16' fill='%23060505'/%3E%3Cpath fill='%23D9D2C3' d='M2 2h5v1H3v4H2zM9 13h5V8h-1v4H9z'/%3E%3Crect x='6' y='6' width='4' height='4' fill='%23E8362C'/%3E%3C/svg%3E";
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🎨%3C/text%3E%3C/svg%3E";
 
 export const metadata: Metadata = {
   title: { default: 'Arena — Battles creatives', template: '%s — Arena' },
@@ -18,7 +31,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#060505',
+  themeColor: '#07060e',
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
@@ -26,7 +39,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" className={`${archivo.variable} ${departure.variable} ${emoji.variable}`}>
+    <html lang="fr" className={`${body.variable} ${display.variable}`}>
       <body>
         <Aurora />
         {children}

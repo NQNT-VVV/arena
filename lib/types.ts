@@ -64,8 +64,6 @@ export interface RosterEntry {
   avatar: string;
   connected: boolean;
   disqualified: boolean;
-  /** Vient juger sans creer : on ne l'attend pas au depot. */
-  spectator: boolean;
   /** Renseignes pour la regie seulement. */
   joinedAt?: number;
   lastSeenAt?: number;
@@ -96,8 +94,6 @@ export interface Asset {
 
 export interface Counts {
   participants: number;
-  /** Ceux qui sont la pour juger, pas pour creer. */
-  spectators: number;
   connected: number;
   submitted: number;
   voted: number;
@@ -242,8 +238,6 @@ export interface You {
   avatar: string;
   isHost: boolean;
   disqualified: boolean;
-  /** Vient juger sans creer : ne depose rien, ne peut pas gagner, mais vote. */
-  spectator: boolean;
   joinedAt: number;
   submission: OwnSubmission | null;
   /** Ses propres notes : { renditionId: { critereId: valeur } }. */
@@ -271,41 +265,19 @@ export interface SavedIdentity {
   pseudo: string;
 }
 
-/**
- * Types de rendu. L'« icone » n'est plus un pictogramme mais un code systeme :
- * AGARTHA numerote, il ne decore pas.
- */
 export const MEDIA_LABELS: Record<MediaType, { label: string; icon: string; hint: string }> = {
-  audio: { label: 'AUDIO', icon: '0x01', hint: 'MORCEAU, BEAT, SOUND DESIGN' },
-  image: { label: 'IMAGE', icon: '0x02', hint: 'MONTAGE, COVER, AFFICHE' },
-  video: { label: 'VIDEO', icon: '0x03', hint: 'MONTAGE, EDIT, MOTION' },
-  text:  { label: 'TEXTE', icon: '0x04', hint: 'ECRITURE, PUNCHLINES, PITCH' },
-  file:  { label: 'LIBRE', icon: '0x05', hint: 'N’IMPORTE QUEL FICHIER' },
+  audio: { label: 'Audio', icon: '\u{1F3A7}', hint: 'Morceau, beat, sound design' },
+  image: { label: 'Image', icon: '\u{1F5BC}\u{FE0F}', hint: 'Montage, cover, affiche' },
+  video: { label: 'Video', icon: '\u{1F3AC}', hint: 'Montage, edit, motion' },
+  text:  { label: 'Texte', icon: '\u{270D}\u{FE0F}', hint: 'Ecriture, punchlines, pitch' },
+  file:  { label: 'Libre', icon: '\u{1F4E6}', hint: 'N’importe quel fichier' },
 };
 
 export const PHASE_STEPS: { phase: Phase; label: string }[] = [
-  { phase: 'config', label: 'REGLAGES' },
-  { phase: 'lobby', label: 'LOBBY' },
-  { phase: 'creation', label: 'CREATION' },
-  { phase: 'upload', label: 'DEPOT' },
-  { phase: 'diffusion', label: 'DIFFUSION' },
-  { phase: 'results', label: 'RESULTATS' },
+  { phase: 'config', label: 'Reglages' },
+  { phase: 'lobby', label: 'Lobby' },
+  { phase: 'creation', label: 'Creation' },
+  { phase: 'upload', label: 'Depot' },
+  { phase: 'diffusion', label: 'Diffusion' },
+  { phase: 'results', label: 'Resultats' },
 ];
-
-/** Ce que `GET /api/podium/me` rend : le hub, et qui y est connecte. */
-export interface PodiumIdentity {
-  hubUrl: string | null;
-  pid?: string;
-  pseudo?: string;
-  avatar?: string;
-}
-
-/** Variation d'Elo renvoyee par le hub apres le classement, par participant. */
-export interface PodiumRating {
-  participantId: string;
-  pseudo: string;
-  before: number;
-  after: number;
-  delta: number;
-  tier: string | null;
-}

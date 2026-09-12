@@ -1,4 +1,13 @@
-/** Texture globale : un grain fixe a .08. Rien ne bouge, rien ne brille. */
+/** Fond anime commun a toutes les pages : trois halos flous et un grain fin. */
 export function Aurora() {
-  return <div className="grain" aria-hidden="true" />;
+  return (
+    <>
+      <div className="aurora" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </div>
+      <div className="grain" aria-hidden="true" />
+    </>
+  );
 }

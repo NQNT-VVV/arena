@@ -6,13 +6,13 @@ import type { MediaType, Phase } from './types';
 export const CODE_LENGTH = 6;
 
 export const PHASE_LABELS: Record<Phase, string> = {
-  config: 'EN PREPARATION',
-  lobby: 'LOBBY OUVERT',
-  creation: 'CREATION EN COURS',
-  upload: 'DEPOT DES RENDUS',
-  diffusion: 'DIFFUSION ET VOTE',
-  results: 'RESULTATS',
-  archived: 'SESSION TERMINEE',
+  config: 'En preparation',
+  lobby: 'Lobby ouvert',
+  creation: 'Creation en cours',
+  upload: 'Depot des rendus',
+  diffusion: 'Diffusion et vote',
+  results: 'Resultats',
+  archived: 'Session terminee',
 };
 
 /** Duree lisible : « 1 h 30 », « 45 min », « 90 s ». */
@@ -41,9 +41,9 @@ export function humanBytes(bytes: number): string {
 }
 
 export const ACCEPTED_HINT: Record<MediaType, string> = {
-  audio: 'MP3, WAV, FLAC, M4A, OGG…',
-  image: 'PNG, JPG, WEBP, GIF…',
-  video: 'MP4, MOV, WEBM, MKV…',
-  text: 'TEXTE SAISI DIRECTEMENT, OU TXT / MD',
-  file: 'TOUT FORMAT',
+  audio: 'mp3, wav, flac, m4a, ogg…',
+  image: 'png, jpg, webp, gif…',
+  video: 'mp4, mov, webm, mkv…',
+  text: 'texte saisi directement, ou txt / md',
+  file: 'tout format',
 };

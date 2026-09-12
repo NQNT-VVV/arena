@@ -12,7 +12,6 @@ import { Chrono } from '@/components/Chrono';
 import { JoinForm } from '@/components/JoinForm';
 import { QrCode } from '@/components/QrCode';
 import { humanDuration, PHASE_LABELS } from '@/lib/format';
-import { hex } from '@/lib/hex';
 import { call } from '@/lib/socket';
 import { MEDIA_LABELS } from '@/lib/types';
 import { useBattleSocket } from '@/lib/useBattleSocket';
@@ -26,9 +25,6 @@ import styles from './screen.module.css';
  * cette page finit en partage d'ecran Discord ou dans OBS, parfois devant des
  * gens qui ne participent pas. Elle n'a que ce qu'il faut pour etre lue a cinq
  * metres.
- *
- * C'est l'ecran que tout le monde regarde : il porte l'univers. Barre systeme
- * en haut, code de session en Archivo display, quarante pour cent de vide.
  */
 export function ScreenClient() {
   const params = useSearchParams();
@@ -46,7 +42,7 @@ export function ScreenClient() {
     setError(res.ok ? null : res.error);
   }, [code]);
 
-  const { state, connected, ratings } = useBattleSocket(attach);
+  const { state, connected } = useBattleSocket(attach);
   const chrono = usePhaseClock(state);
 
   const inviteUrl = useMemo(
@@ -84,7 +80,7 @@ export function ScreenClient() {
     return (
       <div className="screen-stage">
         <Brand href={null} />
-        <h1 className="title">ECRAN DE PROJECTION</h1>
+        <h1 className="title">Ecran de projection</h1>
         <p className="muted">Saisis le code de la session a afficher.</p>
         <div style={{ width: 'min(340px, 90vw)' }}>
           <JoinForm className="col" inputClassName={styles.codeInput} />
@@ -97,8 +93,8 @@ export function ScreenClient() {
     return (
       <div className="screen-stage">
         <Brand href={null} />
-        <h1 className="title">{error.toUpperCase()}</h1>
-        <p className="muted">CODE DEMANDE · <b>{code}</b></p>
+        <h1 className="title">{error}</h1>
+        <p className="muted">Code demande : <b>{code}</b></p>
       </div>
     );
   }
@@ -106,7 +102,7 @@ export function ScreenClient() {
   if (!state) {
     return (
       <div className="screen-stage">
-        <span className="pill"><span className="dot" /> {connected ? 'CHARGEMENT' : 'CONNEXION'}</span>
+        <span className="pill"><span className="dot" /> {connected ? 'Chargement…' : 'Connexion…'}</span>
       </div>
     );
   }
@@ -116,31 +112,26 @@ export function ScreenClient() {
   return (
     <div className="screen-stage">
       <div className={styles.head}>
-        <span>SALLE {state.code}</span>
-        <span>RENDU {media.icon} · {media.label}</span>
-        <span>{PHASE_LABELS[state.phase]}</span>
-        <span className="seats" aria-label={`${state.counts.connected} sujets en ligne sur ${state.counts.participants}`}>
-          {Array.from({ length: Math.max(state.counts.participants, 1) }, (_, i) => (
-            <span key={i} className={i < state.counts.connected ? 'on' : ''} />
-          ))}
-        </span>
-        {!connected && <span className="live">HORS LIGNE · RECONNEXION</span>}
+        <Brand href={null} compact />
+        <span className="pill">{media.icon} {media.label}</span>
+        <span className="pill">{PHASE_LABELS[state.phase]}</span>
+        {!connected && <span className="pill live"><span className="dot" /> Hors ligne</span>}
       </div>
 
       <h1 className="title">{state.name}</h1>
 
       {(state.phase === 'config' || state.phase === 'lobby') && (
         <>
-          <p className={styles.invite}>REJOIGNEZ SUR <b>{inviteUrl.replace(/^https?:\/\//, '')}</b></p>
-          <span className={styles.joinCode}>{state.code}</span>
+          <p className={styles.invite}>Rejoignez sur <b>{inviteUrl.replace(/^https?:\/\//, '')}</b></p>
+          <span className="join-code code-chip">{state.code}</span>
           {inviteUrl && <QrCode text={inviteUrl} className="screen-qr" />}
           <p className={styles.count}>
-            SUJETS <b>{hex(state.counts.participants)}</b>
-            {state.counts.participants > 0 && ` · ${hex(state.counts.connected)} EN LIGNE`}
+            <b>{state.counts.participants}</b> participant{state.counts.participants > 1 ? 's' : ''}
+            {state.counts.participants > 0 && ` • ${state.counts.connected} en ligne`}
           </p>
           <p className="muted">
-            {humanDuration(state.config.durationMs).toUpperCase()} DE CREATION
-            {state.assets.length > 0 && ` · ${hex(state.assets.length)} ELEMENT(S) IMPOSE(S)`}
+            {humanDuration(state.config.durationMs)} de creation
+            {state.assets.length > 0 && ` • ${state.assets.length} element${state.assets.length > 1 ? 's' : ''} impose${state.assets.length > 1 ? 's' : ''}`}
           </p>
         </>
       )}
@@ -150,7 +141,7 @@ export function ScreenClient() {
           <Chrono clock={chrono} />
           <p className={styles.brief}>{state.brief}</p>
           <p className={styles.count}>
-            RENDUS <b>{hex(state.counts.submitted)}</b> / {hex(state.counts.participants)}
+            <b>{state.counts.submitted}</b> rendu{state.counts.submitted > 1 ? 's' : ''} sur {state.counts.participants}
           </p>
         </>
       )}
@@ -172,8 +163,8 @@ export function ScreenClient() {
 
       {(state.phase === 'results' || state.phase === 'archived') && state.podium && (
         <div className={styles.wide}>
-          <span className={styles.bigIcon}>CLASSEMENT FINAL · {hex(state.podium.total ?? 0)} RENDUS</span>
-          <Podium podium={state.podium} large ratings={ratings} />
+          <span className={styles.bigIcon} aria-hidden="true">🏆</span>
+          <Podium podium={state.podium} large />
         </div>
       )}
     </div>

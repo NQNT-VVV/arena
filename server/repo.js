@@ -64,9 +64,6 @@ function toParticipant(row) {
     joinedAt: row.joined_at,
     lastSeenAt: row.last_seen_at,
     disqualified: !!row.disqualified,
-    podiumPid: row.podium_pid ?? null,
-    /** Vient juger sans creer : ne depose rien, ne peut pas gagner, mais vote. */
-    spectator: !!row.spectator,
   };
 }
 
@@ -171,8 +168,8 @@ const repo = {
 /* ------------------------------------------------------------------ */
 
 const insertParticipant = db.prepare(`
-  INSERT INTO participant (id, session_id, pseudo, avatar, token_hash, is_host, joined_at, last_seen_at, podium_pid, spectator)
-  VALUES (@id, @sessionId, @pseudo, @avatar, @tokenHash, @isHost, @joinedAt, @joinedAt, @podiumPid, @spectator)
+  INSERT INTO participant (id, session_id, pseudo, avatar, token_hash, is_host, joined_at, last_seen_at)
+  VALUES (@id, @sessionId, @pseudo, @avatar, @tokenHash, @isHost, @joinedAt, @joinedAt)
 `);
 const selectParticipant = db.prepare('SELECT * FROM participant WHERE id = ?');
 const selectParticipants = db.prepare('SELECT * FROM participant WHERE session_id = ? ORDER BY joined_at');
@@ -184,7 +181,6 @@ const touchParticipantStmt = db.prepare('UPDATE participant SET last_seen_at = ?
 const setDisqualifiedStmt = db.prepare('UPDATE participant SET disqualified = ? WHERE id = ?');
 const renameParticipantStmt = db.prepare('UPDATE participant SET pseudo = ?, avatar = ? WHERE id = ?');
 const deleteParticipantStmt = db.prepare('DELETE FROM participant WHERE id = ?');
-const setPodiumPidStmt = db.prepare('UPDATE participant SET podium_pid = ? WHERE id = ? AND podium_pid IS NULL');
 
 Object.assign(repo, {
   addParticipant(p) {
@@ -196,8 +192,6 @@ Object.assign(repo, {
       tokenHash: p.tokenHash,
       isHost: p.isHost ? 1 : 0,
       joinedAt: p.joinedAt,
-      podiumPid: p.podiumPid ?? null,
-      spectator: p.spectator ? 1 : 0,
     });
     return toParticipant(selectParticipant.get(p.id));
   },
@@ -210,8 +204,6 @@ Object.assign(repo, {
   setDisqualified: (id, on) => setDisqualifiedStmt.run(on ? 1 : 0, id),
   renameParticipant: (id, pseudo, avatar) => renameParticipantStmt.run(pseudo, avatar, id),
   removeParticipant: (id) => deleteParticipantStmt.run(id).changes,
-  /** Rattache un compte Podium, une seule fois : le premier lien tient. */
-  setPodiumPid: (id, pid) => setPodiumPidStmt.run(pid, id).changes,
 });
 
 /* ------------------------------------------------------------------ */

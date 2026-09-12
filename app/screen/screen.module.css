@@ -1,34 +1,27 @@
-/* Barre systeme de l'ecran de projection : elle ne bouge pas, elle informe. */
 .head {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 5;
-  display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3) var(--sp-8); flex-wrap: wrap;
-  padding: var(--sp-3) var(--margin); border-bottom: var(--border); background: var(--bg);
-  font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60);
-}
-
-.joinCode {
-  font: var(--t-display); letter-spacing: var(--ls-display); white-space: nowrap;
-  padding: var(--sp-4) 0 var(--sp-3); background-image: var(--rule); background-size: 4px 4px;
+  position: fixed; top: 0; left: 0; right: 0;
+  display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
+  padding: 16px; font-size: 15px;
 }
 
 .codeInput {
-  text-align: center; font: var(--t-ui-l); letter-spacing: .4em; text-indent: .4em;
-  text-transform: uppercase; height: 56px;
+  text-align: center; font-family: var(--display); font-size: 30px; font-weight: 700;
+  letter-spacing: .34em; text-indent: .34em; text-transform: uppercase; padding: 16px;
 }
 
-.invite { font: var(--t-ui-l); letter-spacing: var(--ls-mono); color: var(--ink-60); }
-.invite b { color: var(--ink); font-weight: 400; }
+.invite { font-size: clamp(15px, 2vw, 22px); color: var(--muted); }
+.invite b { color: var(--text); }
 
-.count { font: var(--t-ui-l); letter-spacing: var(--ls-mono); color: var(--ink-60); }
-.count b { color: var(--ink); font-weight: 400; font-variant-numeric: tabular-nums; }
+.count { font-size: clamp(16px, 2.4vw, 26px); color: var(--muted); }
+.count b { font-family: var(--display); color: var(--text); font-variant-numeric: tabular-nums; }
 
 .brief {
   white-space: pre-wrap; max-width: 46ch;
-  font: var(--t-ui-l); letter-spacing: var(--ls-mono); line-height: 1.5; color: var(--ink-90);
-  border-left: var(--border-strong); padding-left: var(--sp-4);
+  font-size: clamp(15px, 1.7vw, 21px); line-height: 1.55; color: var(--muted);
 }
 
-.bigIcon { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-55); }
+.bigIcon { font-size: clamp(60px, 12vw, 140px); line-height: 1; }
 
-/* La scene et le podium occupent la largeur : eux ont besoin de place. */
-.wide { width: min(1100px, 94vw); display: grid; gap: var(--sp-6); }
+/* La scene et le podium occupent la largeur : le reste de la page est centre,
+   eux ont besoin de place. */
+.wide { width: min(1100px, 94vw); display: flex; flex-direction: column; align-items: center; gap: 18px; }

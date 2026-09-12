@@ -188,8 +188,6 @@ class LiveSession {
    * « X / Y ont note » et le seuil de l'avancement anticipe.
    */
   eligibleVoters(submission) {
-    // Les spectateurs votent : ils sont venus pour cela. Seuls l'animateur
-    // (sauf reglage) et les mis hors classement restent muets.
     const voters = [...this.participants.values()].filter((p) => !p.isHost && !p.disqualified);
     const authorVotes = submission && voters.some((p) => p.id === submission.participantId);
     return Math.max(0, voters.length - (authorVotes ? 1 : 0));
@@ -339,11 +337,7 @@ class BattleServer {
    */
   static JOINABLE = new Set(['config', 'lobby', 'creation', 'upload']);
 
-  /**
-   * `podiumPid` vient du serveur, jamais du client : c'est le compte Podium lu
-   * dans le cookie signe du handshake. Null pour qui joue sans compte.
-   */
-  join(code, { pseudo, participantId, token, podiumPid = null, spectator = false } = {}) {
+  join(code, { pseudo, participantId, token } = {}) {
     const s = this.require(code);
 
     // Retour d'un participant connu : un rafraichissement de page, un tunnel.
@@ -353,25 +347,12 @@ class BattleServer {
         const now = Date.now();
         known.lastSeenAt = now;
         repo.touchParticipant(known.id, now);
-        // Connecte au hub entre-temps : le lien se fait a la reprise, une fois.
-        if (podiumPid && !known.podiumPid && repo.setPodiumPid(known.id, podiumPid)) known.podiumPid = podiumPid;
         return { session: s, participant: known, token, resumed: true };
       }
     }
 
-    /*
-     * Un spectateur ne peut pas arriver apres le debut de la diffusion.
-     *
-     * Ce n'est pas une precaution de confort : le calcul des notes compte les
-     * votants absents pour la note par defaut. Dix spectateurs arrivant a la
-     * fin donneraient donc dix notes moyennes a tous les rendus deja passes,
-     * et le classement ne voudrait plus rien dire. On vient juger avant que la
-     * diffusion commence, ou on ne juge pas.
-     */
     if (!BattleServer.JOINABLE.has(s.phase)) {
-      throw new BattleError(spectator
-        ? 'La diffusion a commence : on ne rejoint plus, meme pour regarder.'
-        : 'Les inscriptions sont fermees pour cette session.');
+      throw new BattleError('Les inscriptions sont fermees pour cette session.');
     }
     if (s.participants.size >= config.limits.maxParticipants) {
       throw new BattleError('Cette session est complete.');
@@ -394,12 +375,10 @@ class BattleServer {
       tokenHash: hashToken(fresh),
       isHost: false,
       joinedAt: now,
-      podiumPid: podiumPid || null,
-      spectator: !!spectator,
     });
 
     s.participants.set(participant.id, participant);
-    repo.logEvent(s.id, 'participant:joined', { pseudo: name, spectator: !!spectator });
+    repo.logEvent(s.id, 'participant:joined', { pseudo: name });
     // Pas de diffusion ici : la socket n'est pas encore enregistree, et l'etat
     // montrerait le nouvel arrivant deja inscrit mais deja hors ligne. C'est
     // `attachParticipant()` qui diffuse, une fois la presence connue.
@@ -472,10 +451,6 @@ class BattleServer {
     }
     if (participant.disqualified) {
       throw new BattleError('Vous avez ete mis hors classement par l’animateur.', 403);
-    }
-    // Un spectateur juge, il ne concourt pas : le depot lui est ferme.
-    if (participant.spectator) {
-      throw new BattleError('Vous suivez la session comme spectateur : le depot vous est ferme.', 403);
     }
 
     const late = !!(session.graceEndAt && Date.now() > session.graceEndAt);
@@ -1208,8 +1183,4 @@ function nextEditionName(name) {
   return `${name} #2`.slice(0, 60);
 }
 
-module.exports = {
-  BattleServer, BattleError, LiveSession, PHASES, TRANSITIONS, sanitizeConfig, nextEditionName,
-  // Noms des salons Socket.IO, pour les modules qui parlent aux ecrans.
-  roomAll, roomHost, roomScreen,
-};
+module.exports = { BattleServer, BattleError, LiveSession, PHASES, TRANSITIONS, sanitizeConfig, nextEditionName };
