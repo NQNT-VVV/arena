@@ -20,6 +20,7 @@ const metrics = require('./metrics');
 const storage = require('./storage');
 const transcode = require('./transcode');
 const discord = require('./integrations/discord');
+const podium = require('./integrations/podium');
 const { BattleServer } = require('./battle');
 
 const ROOT_DIR = path.join(__dirname, '..');
@@ -46,6 +47,7 @@ metrics.bind(battle);
 transcode.start(battle);
 // Modules optionnels : chacun decide seul, selon sa configuration, s'il s'attache.
 if (discord.attach(battle)) console.log('[arena] annonces Discord actives');
+if (podium.attach(battle)) console.log('[arena] integration Podium active');
 
 /* ------------------------------------------------------------------ */
 /* Garde-fous                                                          */
@@ -215,7 +217,19 @@ io.on('connection', (socket) => {
 
   socket.on('play:join', (payload = {}, cb) => guard(cb, () => {
     if (!joinLimit(addressOf(socket))) throw Object.assign(new Error('Trop de tentatives. Patientez une minute.'), { expected: true });
-    const { session, participant, token } = battle.join(payload.code, payload);
+    // Le compte Podium est lu dans le cookie du handshake, cote serveur : un
+    // client ne peut pas s'attribuer l'identite d'un autre en l'ecrivant
+    // dans la charge utile.
+    const { session, participant, token } = battle.join(payload.code, {
+      pseudo: payload.pseudo,
+      participantId: payload.participantId,
+      token: payload.token,
+      podiumPid: podium.identityOf(socket.handshake.headers)?.pid ?? null,
+      // Le role est choisi a l'entree et ne bouge plus : un spectateur qui
+      // deviendrait createur en cours de route n'aurait plus le temps de creer,
+      // et un createur qui se declarerait spectateur effacerait son rendu.
+      spectator: payload.spectator === true,
+    });
     battle.attachParticipant(socket, session, participant);
     return {
       token,
@@ -240,14 +254,6 @@ io.on('connection', (socket) => {
     const { session, participant } = battle.participantOfSocket(socket);
     const done = battle.voteAs(session, participant, payload);
     return { value: done.value, criterionId: done.criterionId, you: views.youView(session, participant) };
-  }));
-
-  socket.on('play:spectator-stack', (payload = {}, cb) => guard(cb, () => {
-    if (socket.data.role !== 'participant') {
-      throw Object.assign(new Error('Rejoignez la session pour jouer.'), { expected: true, status: 403 });
-    }
-    const { session, participant } = battle.participantOfSocket(socket);
-    return { score: battle.stackSpectator(session, participant) };
   }));
 
   socket.on('play:leave', (payload, cb) => guard(cb, () => {

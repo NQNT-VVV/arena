@@ -4,6 +4,8 @@ import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import type { Socket } from 'socket.io-client';
 
+import { hexOf } from '@/lib/hex';
+import { Icon } from '@/components/Icon';
 import { AssetPack } from '@/components/AssetPack';
 import { Brand } from '@/components/Brand';
 import { DiffusionStage } from '@/components/DiffusionStage';
@@ -12,14 +14,14 @@ import { Chrono } from '@/components/Chrono';
 import { JoinForm } from '@/components/JoinForm';
 import { PhaseRail } from '@/components/PhaseRail';
 import { SubmissionBox } from '@/components/SubmissionBox';
-import { SpectatorStack } from '@/components/SpectatorStack';
 import { audioPref } from '@/lib/audioPref';
 import { identity } from '@/lib/identity';
+import { fetchPodiumIdentity } from '@/lib/podium';
 import { humanDuration, humanThreshold, PHASE_LABELS } from '@/lib/format';
 import { sfx } from '@/lib/sfx';
 import { call } from '@/lib/socket';
 import { toast } from '@/lib/toast';
-import { MEDIA_LABELS, type SavedIdentity, type SessionCard } from '@/lib/types';
+import { MEDIA_LABELS, type BattleState, type PodiumIdentity, type SavedIdentity, type SessionCard } from '@/lib/types';
 import { useBattleSocket } from '@/lib/useBattleSocket';
 import { usePhaseClock } from '@/lib/usePhaseClock';
 import styles from './play.module.css';
@@ -27,6 +29,14 @@ import styles from './play.module.css';
 export function PlayClient() {
   const params = useSearchParams();
   const code = (params.get('code') || '').toUpperCase();
+  /**
+   * Le lien decide du role.
+   *
+   * L'animateur envoie « /s/CODE » a qui vient juger : la page s'ouvre alors du
+   * bon cote, sans qu'on ait a expliquer lequel des deux boutons choisir. Le
+   * choix reste modifiable tant qu'on n'est pas entre.
+   */
+  const inviteAsSpectator = params.get('role') === 'spectateur';
 
   const [card, setCard] = useState<SessionCard | null>(null);
   const [pseudo, setPseudo] = useState('');
@@ -62,6 +72,7 @@ export function PlayClient() {
       pseudo: name,
       participantId: saved?.participantId,
       token: saved?.token,
+      // Ignore a la reprise : le serveur retrouve le role choisi a l'entree.
       spectator: asSpectator,
     });
 
@@ -81,7 +92,7 @@ export function PlayClient() {
     setJoined(true);
   }, [code]);
 
-  const { socket, state, you, connected } = useBattleSocket((s) => enter(s));
+  const { socket, state, you, connected, ratings } = useBattleSocket((s) => enter(s));
 
   const chrono = usePhaseClock(state, {
     onAlert: (s) => {
@@ -106,11 +117,35 @@ export function PlayClient() {
     return () => { cancelled = true; };
   }, [code]);
 
+  /**
+   * Pseudo propose a l'entree.
+   *
+   * L'identite gardee pour cette session passe d'abord : c'est la personne qui
+   * revient. Sinon, le compte Podium connecte dans ce navigateur, si le jeu y
+   * est branche. Le champ reste modifiable : le pseudo en jeu n'est qu'un
+   * affichage, le rattachement au compte se fait par le cookie, cote serveur.
+   */
+  const [hub, setHub] = useState<PodiumIdentity | null>(null);
   useEffect(() => {
     const saved = code ? identity.get(code) : null;
     if (saved) setPseudo(saved.pseudo);
+    let cancelled = false;
+    void fetchPodiumIdentity().then((me) => {
+      if (cancelled || !me) return;
+      setHub(me);
+      if (!saved && me.pseudo) setPseudo((current) => current || me.pseudo!);
+    });
+    return () => { cancelled = true; };
   }, [code]);
 
+  /**
+   * Le role se choisit ici, et une seule fois.
+   *
+   * Un spectateur ne depose rien mais note comme les autres : sa voix compte
+   * autant. C'est pour cela qu'il doit etre la avant la diffusion — les votants
+   * absents comptent pour la note par defaut, et des juges arrivant en retard
+   * fausseraient tous les rendus deja passes.
+   */
   const join = async (asSpectator = false) => {
     if (!socket) return;
     // Le clic sur « Entrer » est le geste qui debloque le son : sans lui, les
@@ -150,7 +185,7 @@ export function PlayClient() {
     return (
       <div className={styles.gate}>
         <Brand />
-        <h1>Rejoindre une battle</h1>
+        <h1>REJOINDRE UNE BATTLE</h1>
         <p className="muted">Saisis le code annonce par l&apos;animateur.</p>
         <JoinForm className="col" inputClassName={styles.codeInput} />
       </div>
@@ -161,7 +196,7 @@ export function PlayClient() {
     return (
       <div className={styles.gate}>
         <Brand />
-        <h1>Code inconnu</h1>
+        <h1>CODE INCONNU</h1>
         <p className="muted">La session <b>{code}</b> n&apos;existe pas, ou elle est terminee.</p>
         <JoinForm className="col" inputClassName={styles.codeInput} />
       </div>
@@ -176,31 +211,52 @@ export function PlayClient() {
         <h1>{card?.name ?? '…'}</h1>
         <p className="muted">
           {card?.mediaType
-            ? `${MEDIA_LABELS[card.mediaType].icon} Rendu attendu : ${MEDIA_LABELS[card.mediaType].label.toLowerCase()}`
-            : 'Chargement…'}
+            ? `RENDU ATTENDU · ${MEDIA_LABELS[card.mediaType].icon} ${MEDIA_LABELS[card.mediaType].label}`
+            : 'CHARGEMENT'}
         </p>
         {card && !card.open && (
-          <p className="pill" style={{ color: '#ffb4b4' }}>Les inscriptions sont fermees.</p>
+          <p className="pill err"><span>INSCRIPTIONS FERMEES</span></p>
         )}
         <div className="field" style={{ width: '100%' }}>
-          <label htmlFor="pseudo">Ton pseudo</label>
+          <label htmlFor="pseudo">TON PSEUDO</label>
           <input
             id="pseudo" className="input" value={pseudo} maxLength={22}
-            placeholder="Comment on t’appelle ?"
+            placeholder="COMMENT ON T’APPELLE ?"
             autoComplete="nickname"
             onChange={(e) => setPseudo(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') void join(false); }}
+            onKeyDown={(e) => { if (e.key === 'Enter') void join(inviteAsSpectator); }}
           />
+          {hub?.pid && (
+            <span className="pill ok" style={{ alignSelf: 'flex-start' }}>
+              Connecte via PODIUM · ta partie comptera au classement
+            </span>
+          )}
         </div>
         {error && <p className={styles.error}>{error}</p>}
         <div className={styles.roles}>
-          <button className="btn primary lg block" disabled={busy || pseudo.trim().length < 2 || !connected} onClick={() => void join(false)}>
-            {connected ? 'Je participe' : 'Connexion…'}
+          {inviteAsSpectator && (
+            <p className="pill" style={{ alignSelf: 'flex-start' }}>
+              <Icon name="oeil" />INVITATION SPECTATEUR
+            </p>
+          )}
+          <button
+            className={inviteAsSpectator ? 'btn lg block' : 'btn primary lg block'}
+            disabled={busy || pseudo.trim().length < 2 || !connected} aria-busy={busy}
+            onClick={() => void join(false)}
+          >
+            {connected ? 'JE PARTICIPE' : 'CONNEXION'}
           </button>
-          <button className="btn lg block" disabled={busy || pseudo.trim().length < 2 || !connected} onClick={() => void join(true)}>
-            Je regarde et je note
+          <button
+            className={inviteAsSpectator ? 'btn primary lg block' : 'btn lg block'}
+            disabled={busy || pseudo.trim().length < 2 || !connected} aria-busy={busy}
+            onClick={() => void join(true)}
+          >
+            <Icon name="oeil" />JE REGARDE ET JE NOTE
           </button>
-          <p className={styles.roleHint}>Spectateur : tu ne crees pas, mais tu notes les rendus et peux jouer entre spectateurs pendant la creation.</p>
+          <p className={styles.roleHint}>
+            Spectateur : tu ne deposes rien et tu ne peux pas gagner, mais ta note compte comme
+            celle des autres. A choisir maintenant, ca ne se change plus.
+          </p>
         </div>
       </div>
     );
@@ -214,16 +270,16 @@ export function PlayClient() {
         <Brand compact />
         <span className="grow">
           <span className="session-name ellipsis">{state.name}</span>
-          <span className="faint" style={{ fontSize: 12 }}>{PHASE_LABELS[phase]}</span>
+          <span className="meta">{PHASE_LABELS[phase]}</span>
         </span>
+        {you?.spectator && <span className="pill"><Icon name="oeil" />SPECTATEUR</span>}
         {you && (
           <span className="pill">
             <span aria-hidden="true">{you.avatar}</span>
             <span className="ellipsis" style={{ maxWidth: 90 }}>{you.pseudo}</span>
           </span>
         )}
-        {you?.spectator && <span className="pill">Spectateur</span>}
-        {!connected && <span className="pill live"><span className="dot" /> Hors ligne</span>}
+        {!connected && <span className="pill live"><span className="dot" /> HORS LIGNE</span>}
       </header>
 
       <div className="shell narrow">
@@ -231,44 +287,44 @@ export function PlayClient() {
 
         {you?.disqualified && (
           <p className={styles.error}>
-            Tu as ete mis hors classement par l&apos;animateur. Tu peux continuer a suivre la session.
+            <span>Hors classement, decision de l&apos;animateur. Tu peux continuer a suivre la session.</span>
           </p>
         )}
 
         <section className={`card pad ${styles.stage}`}>{renderStage()}</section>
 
         <section className="card pad col">
-          <h2 className="section-title">Consigne</h2>
+          <h2 className="section-title">CONSIGNE</h2>
           <p className="brief">{state.brief}</p>
-          <div className="row wrap faint" style={{ fontSize: 12.5 }}>
-            <span>{MEDIA_LABELS[state.mediaType].icon} {MEDIA_LABELS[state.mediaType].label}</span>
-            <span>•</span>
-            <span>{humanDuration(state.config.durationMs)}</span>
-            <span>•</span>
-            <span>note sur {state.config.scale}</span>
+          <div className="row wrap meta">
+            <span>{MEDIA_LABELS[state.mediaType].icon} · {MEDIA_LABELS[state.mediaType].label}</span>
+            <span>·</span>
+            <span>{humanDuration(state.config.durationMs).toUpperCase()}</span>
+            <span>·</span>
+            <span>NOTE SUR {state.config.scale}</span>
           </div>
         </section>
 
         <section className="card pad col">
-          <h2 className="section-title">Elements imposes</h2>
+          <h2 className="section-title">ELEMENTS IMPOSES</h2>
           <AssetPack
             assets={state.assets}
             zipUrl={state.assets.length ? state.assetsZipUrl : undefined}
-            emptyLabel="Aucun element impose : la consigne seule fait foi."
+            emptyLabel="Aucun element impose · la consigne seule fait foi"
           />
         </section>
 
         <section className="card pad col">
           <h2 className="section-title">Dans l&apos;arene ({state.counts.participants})</h2>
           {state.roster.length === 0
-            ? <p className="empty">Tu es le premier.</p>
+            ? <p className="empty">TU ES LE PREMIER.</p>
             : (
               <div className="roster">
                 {state.roster.map((p) => (
                   <div key={p.id} className={`roster-row ${p.connected ? '' : 'off'} ${p.disqualified ? 'dq' : ''}`}>
                     <span className="avatar" aria-hidden="true">{p.avatar}</span>
                     <span className="who grow">
-                      <span className="pseudo ellipsis">{p.pseudo}{p.id === you?.id ? ' (toi)' : ''}</span>
+                      <span className="pseudo ellipsis">{p.pseudo}{p.id === you?.id ? ' · VOUS' : ''}</span>
                     </span>
                   </div>
                 ))}
@@ -277,7 +333,7 @@ export function PlayClient() {
         </section>
 
         <footer className={styles.footer}>
-          <button className="btn xs ghost" onClick={leave}>Quitter la session</button>
+          <button className="btn xs ghost" onClick={leave}>QUITTER LA SESSION</button>
         </footer>
       </div>
     </>
@@ -293,7 +349,9 @@ export function PlayClient() {
    */
   function renderSubmission() {
     if (!me || you?.disqualified) return null;
-    if (you?.spectator) return null;
+    // Un spectateur n'a rien a deposer : on lui dit ou il en est plutot que de
+    // lui montrer une zone de depot qui le refuserait.
+    if (you?.spectator) return <SpectatorWait state={state!} />;
     return (
       <SubmissionBox
         code={state!.code}
@@ -313,16 +371,16 @@ export function PlayClient() {
         return (
           <div className={styles.waiting}>
             <span className={styles.bigIcon} aria-hidden="true">{MEDIA_LABELS[state!.mediaType].icon}</span>
-            <h2>En attente du depart</h2>
+            <h2>EN ATTENTE DU DEPART</h2>
             <p className="muted">
               Lis la consigne, prepare ton materiel. L&apos;animateur lance le chrono quand tout le monde est la.
             </p>
-            <p className="faint" style={{ fontSize: 12.5 }}>
+            <p className="meta">
               Tu auras {humanDuration(state!.config.durationMs)} pour creer.
             </p>
             {state!.assets.length > 0 && (
               <a className="btn sm" href={state!.assetsZipUrl}>
-                ⬇ Recuperer les {state!.assets.length} elements
+                <Icon name="telecharge" />Recuperer les {state!.assets.length} elements
               </a>
             )}
           </div>
@@ -334,17 +392,15 @@ export function PlayClient() {
             <p className="muted" style={{ textAlign: 'center' }}>
               {chrono.paused
                 ? 'L’animateur a mis le chrono en pause.'
-                : 'Tu peux deposer ton rendu des qu’il est pret, sans attendre la fin.'}
+                : 'Depot possible des que le rendu est pret, sans attendre la fin.'}
             </p>
-            {you?.spectator ? (
-              <SpectatorStack entries={state!.spectatorStack} meId={you.id} onStack={stackSpectator} />
-            ) : renderSubmission()}
+            {renderSubmission()}
           </>
         );
       case 'upload':
         return (
           <>
-            <Chrono clock={chrono} hint="Derniere ligne droite" />
+            <Chrono clock={chrono} hint="DERNIERE LIGNE DROITE" />
             <p className="muted" style={{ textAlign: 'center' }}>
               Le temps de creation est ecoule. Il reste la fenetre de grace pour finaliser ton depot.
             </p>
@@ -371,27 +427,48 @@ export function PlayClient() {
       case 'results':
         return state!.podium ? (
           <div className={styles.results}>
-            <h2>Classement</h2>
+            <h2>CLASSEMENT</h2>
             {state!.podium.complete
               ? null
-              : <p className="muted" style={{ fontSize: 13.5 }}>L&apos;animateur devoile les places une par une.</p>}
-            <Podium podium={state!.podium} meId={you?.id} />
+              : <p className="meta">L&apos;animateur devoile les places une par une.</p>}
+            <Podium podium={state!.podium} meId={you?.id} ratings={ratings} />
           </div>
         ) : null;
       default:
         return (
           <div className={styles.waiting}>
-            <span className={styles.bigIcon} aria-hidden="true">📦</span>
-            <h2>Session terminee</h2>
-            <p className="muted">Merci d&apos;avoir joue.</p>
+            <Icon name="depot" size="xl" className={styles.bigIcon} />
+            <h2>SESSION TERMINEE</h2>
+            <p className="muted">Session archivee. Merci d&apos;avoir joue.</p>
           </div>
         );
     }
   }
+}
 
-  async function stackSpectator() {
-    if (!socket) return;
-    const result = await call(socket, 'play:spectator-stack');
-    if (!result.ok) throw new Error(result.error);
-  }
+/**
+ * Ce que voit un spectateur pendant que les autres creent.
+ *
+ * Il n'a rien a deposer et rien a attendre de lui-meme : on lui dit ou en est
+ * la session, ce qu'on attend de lui, et quand son tour viendra.
+ */
+function SpectatorWait({ state }: { state: BattleState }) {
+  const attendus = state.counts.participants;
+  const rendus = state.counts.submitted;
+  return (
+    <section className="card pad" style={{ display: 'grid', gap: 'var(--sp-4)' }}>
+      <div className="meta" style={{ display: 'flex', gap: 'var(--sp-4)', flexWrap: 'wrap' }}>
+        <span>ROLE · SPECTATEUR</span>
+        <span>{hexOf(rendus, attendus)} ONT RENDU</span>
+      </div>
+      <h2 style={{ font: 'var(--t-h2)', letterSpacing: 'var(--ls-display)' }}>TU NE CREES PAS</h2>
+      <p className="muted">
+        Tu suis la session sans y concourir. Quand la diffusion commencera, les rendus defileront en
+        aveugle et tu noteras comme tout le monde : ta voix compte autant que celle des createurs.
+      </p>
+      <div className="meta" style={{ borderTop: 'var(--border)', paddingTop: 'var(--sp-3)' }}>
+        Rien a faire d&apos;ici la. Laisse la page ouverte.
+      </div>
+    </section>
+  );
 }

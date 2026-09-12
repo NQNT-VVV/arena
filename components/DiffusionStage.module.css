@@ -1,54 +1,55 @@
-.stage { display: flex; flex-direction: column; gap: 14px; width: 100%; }
+.stage { display: grid; gap: var(--sp-4); width: 100%; }
 
-.counter { display: flex; align-items: baseline; gap: 8px; }
-.position { font-family: var(--display); font-weight: 700; font-size: 30px; line-height: 1; font-variant-numeric: tabular-nums; }
+.counter { display: flex; align-items: baseline; gap: var(--sp-2); }
+.position { font: var(--t-ui-l); letter-spacing: var(--ls-mono); font-variant-numeric: tabular-nums; }
 
-/* Frise : ecoute, puis vote, puis passage au suivant. La couleur suit l'etape. */
-.timeline { display: flex; flex-direction: column; gap: 6px; width: 100%; }
-.timelineHead { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-.stageLabel { font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); }
-.stageTime { font-family: var(--display); font-weight: 700; font-size: 15px; color: var(--muted); }
-.bar { width: 100%; height: 5px; border-radius: 99px; background: rgba(255,255,255,.09); overflow: hidden; }
-.bar > i {
-  display: block; height: 100%; border-radius: 99px;
-  background: linear-gradient(90deg, var(--violet), var(--cyan));
-  transform-origin: left center; transition: transform .95s linear, background .4s;
-}
-.vote .bar > i { background: linear-gradient(90deg, var(--amber), var(--pink)); }
-.vote .stageLabel { color: var(--amber); }
-.over .stageLabel { color: var(--faint); }
+/* Frise : ecoute, puis vote, puis passage au suivant. La barre saute, elle ne glisse pas. */
+.timeline { display: grid; gap: var(--sp-2); width: 100%; }
+.timelineHead { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-3); }
+.stageLabel { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); }
+.stageTime { font: var(--t-ui); letter-spacing: var(--ls-mono); color: var(--ink); font-variant-numeric: tabular-nums; }
+.bar { width: 100%; height: 8px; border: var(--border-ui); background: transparent; overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--ink); transform-origin: left center; transition: none; }
+/* La fenetre de vote est le moment ou il faut agir : elle vit, donc elle saigne. */
+.vote .bar > i { background: var(--accent); }
+.vote .stageLabel { color: var(--accent); animation: blink var(--dur-blink) var(--ease-hold) infinite; }
+.over .stageLabel { color: var(--ink-55); }
+.over .bar { background-image: var(--hatch); }
+.over .bar > i { display: none; }
 
-.media { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
-.imageLink { display: block; width: 100%; border-radius: var(--r-md); overflow: hidden; background: rgba(0,0,0,.35); }
-.image { width: 100%; max-height: 50vh; object-fit: contain; }
+.media { display: grid; gap: var(--sp-3); width: 100%; justify-items: stretch; }
+.imageLink { display: block; width: 100%; background: var(--bg); border: var(--border); }
+.image { width: 100%; max-height: 50vh; object-fit: contain; display: block; }
 .text {
   margin: 0; width: 100%; max-height: 42vh; overflow: auto;
-  padding: 16px 18px; border-radius: var(--r-md);
-  background: rgba(0,0,0,.3); border: 1px solid var(--stroke);
-  /* Un texte se lit ; on ne l'enferme pas dans une police a chasse fixe. */
-  font-family: var(--body); font-size: 15.5px; line-height: 1.65;
-  white-space: pre-wrap; overflow-wrap: anywhere;
+  padding: var(--sp-4); background: transparent; border: var(--border);
+  /* Un texte de participant se lit tel qu'il a ete ecrit : ni capitales, ni chasse imposee. */
+  font-family: var(--font-mono); font-size: var(--fs-2); line-height: 1.6; letter-spacing: 0;
+  text-transform: none; white-space: pre-wrap; overflow-wrap: anywhere;
 }
 
-.meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--faint); }
-.tally { font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 600; transition: color .3s; }
-.tallyDone { color: #86efc7; }
+.meta { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-55); }
+.tally { font-variant-numeric: tabular-nums; color: var(--ink-60); transition: none; }
+.tallyDone { color: var(--ink); }
 
-.votes { display: flex; flex-direction: column; gap: 14px; padding-top: 4px; }
+.votes { display: grid; gap: var(--sp-4); padding-top: var(--sp-1); }
 .mine {
-  padding: 13px 16px; border-radius: var(--r-md); font-size: 13.5px; text-align: center;
-  background: var(--surface-2); border: 1px dashed var(--stroke-strong); color: var(--muted);
+  position: relative; padding: var(--sp-3) var(--sp-4) var(--sp-3) var(--sp-6);
+  font: var(--t-prose); letter-spacing: var(--ls-prose); text-transform: none;
+  border: var(--border-ui); color: var(--ink-90);
 }
+/* La texture dit « ferme » depuis le bord, sans passer sous les lettres. */
+.mine::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 8px; background-image: var(--dither-37); background-size: var(--dither-size); }
 
-.empty { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; padding: 20px 0; }
-.empty h2 { font-size: 20px; }
-.icon { font-size: 44px; line-height: 1; }
+.empty { display: grid; gap: var(--sp-3); padding: var(--sp-6) 0; justify-items: start; }
+.empty h2 { font: var(--t-h2); letter-spacing: var(--ls-display); }
+.icon { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-55); }
 
 /* Grand ecran : tout doit rester lisible a cinq metres. */
-.large .position { font-size: clamp(38px, 6vw, 72px); }
+.large .position { font: var(--t-data); letter-spacing: var(--ls-mono); font-size: clamp(40.5px, 6vw, 72px); }
 .large .image { max-height: 62vh; }
 .large .stageLabel { font-size: clamp(13px, 1.4vw, 18px); }
 .large .stageTime { font-size: clamp(18px, 2.2vw, 30px); }
-.large .bar { height: 8px; }
+.large .bar { height: 12px; }
 .large .text { font-size: clamp(17px, 2vw, 26px); max-height: 58vh; }
 .large .meta { font-size: clamp(13px, 1.4vw, 18px); }

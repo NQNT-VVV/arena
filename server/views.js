@@ -121,6 +121,7 @@ function rosterView(session) {
       avatar: p.avatar,
       connected: session.isOnline(p.id),
       disqualified: p.disqualified,
+      /** Vient juger sans creer : on ne l'attend pas au depot. */
       spectator: p.spectator,
     }));
 }
@@ -148,6 +149,8 @@ function assetsView(session) {
 
 function countsView(session, submitted = repo.submittedParticipantIds(session.id)) {
   const roster = [...session.participants.values()].filter((p) => !p.isHost);
+  // « 04/06 ont rendu » ne doit compter que ceux de qui on attend un rendu :
+  // un spectateur ne depose rien, l'inclure ferait croire a un retard.
   const creators = roster.filter((p) => !p.spectator);
   return {
     participants: creators.length,
@@ -340,19 +343,9 @@ function commonView(session) {
     assetsZipUrl: `/api/session/${session.code}/assets.zip`,
     diffusion: diffusionView(session),
     podium: podiumView(session),
-    spectatorStack: spectatorStackView(session),
     /** Reference d'horloge : le client s'en sert pour mesurer sa derive. */
     serverNow: Date.now(),
   };
-}
-
-/** Tableau du mini-jeu, visible pendant la creation seulement. */
-function spectatorStackView(session) {
-  if (session.phase !== 'creation') return [];
-  return [...session.participants.values()]
-    .filter((p) => p.spectator)
-    .map((p) => ({ id: p.id, pseudo: p.pseudo, avatar: p.avatar, score: session.spectatorStack.get(p.id) ?? 0 }))
-    .sort((a, b) => b.score - a.score || a.pseudo.localeCompare(b.pseudo));
 }
 
 /** Ce que voit un participant sur son telephone. */
@@ -388,6 +381,7 @@ function hostView(session) {
         avatar: p.avatar,
         connected: session.isOnline(p.id),
         disqualified: p.disqualified,
+        /** Vient juger sans creer : la regie ne l'attend pas au depot. */
         spectator: p.spectator,
         joinedAt: p.joinedAt,
         lastSeenAt: p.lastSeenAt,
@@ -447,6 +441,6 @@ function votesView(session, participant) {
 module.exports = {
   authorsVisible, authorOf,
   configView, clockView, rosterView, countsView, assetsView, ownSubmissionView,
-  anonymousCard, diffusionView, podiumView, spectatorStackView,
+  anonymousCard, diffusionView, podiumView,
   commonView, participantView, hostView, screenView, youView,
 };

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { Icon } from '@/components/Icon';
 import { ACCEPTED_HINT, humanBytes } from '@/lib/format';
 import { toast } from '@/lib/toast';
 import { uploadFiles } from '@/lib/uploads';
@@ -121,7 +122,7 @@ export function SubmissionBox({
     return (
       <div className={styles.box}>
         <div className={styles.head}>
-          <h3>Ta creation</h3>
+          <h3>TA CREATION</h3>
           {submission && <Badge submission={submission} />}
         </div>
         <textarea
@@ -133,11 +134,11 @@ export function SubmissionBox({
           onChange={(e) => setDraft(e.target.value)}
         />
         <div className="row wrap">
-          <button className="btn primary" disabled={busy || !dirty || draft.trim().length < 2} onClick={sendText}>
+          <button className="btn primary" disabled={busy || !dirty || draft.trim().length < 2} aria-busy={busy} onClick={sendText}>
             {submission ? 'Mettre a jour' : 'Deposer'}
           </button>
-          {submission && <button className="btn sm ghost" disabled={busy} onClick={withdraw}>Retirer</button>}
-          <span className="faint grow" style={{ fontSize: 12, textAlign: 'right' }}>
+          {submission && <button className="btn sm ghost" disabled={busy} aria-busy={busy} onClick={withdraw}>RETIRER</button>}
+          <span className="faint grow" style={{ textAlign: 'right' }}>
             {draft.length} caracteres{dirty && submission ? ' • non enregistre' : ''}
           </span>
         </div>
@@ -150,14 +151,14 @@ export function SubmissionBox({
   return (
     <div className={styles.box}>
       <div className={styles.head}>
-        <h3>Ta creation</h3>
+        <h3>TA CREATION</h3>
         {submission && <Badge submission={submission} />}
       </div>
 
       {submission ? (
         <div className={styles.done}>
           <div className="row">
-            <span className={styles.icon} aria-hidden="true">✓</span>
+            <Icon name="valide" size="lg" className={styles.icon} />
             <span className="grow" style={{ minWidth: 0 }}>
               <span className={styles.name}>{submission.filename}</span>
               <span className={styles.meta}>
@@ -181,7 +182,7 @@ export function SubmissionBox({
           )}
 
           {submission.error && submission.status === 'ready' && (
-            <span className="faint" style={{ fontSize: 12 }}>
+            <span className="meta">
               Le fichier n&apos;a pas pu etre converti : il sera diffuse tel quel.
               {submission.kind === 'audio' || submission.kind === 'video'
                 ? ' Verifie qu’il s’ouvre bien chez toi.'
@@ -190,10 +191,10 @@ export function SubmissionBox({
           )}
 
           <div className="row wrap">
-            <button className="btn sm" disabled={busy} onClick={() => input.current?.click()}>
+            <button className="btn sm" disabled={busy} aria-busy={busy} onClick={() => input.current?.click()}>
               Remplacer
             </button>
-            <button className="btn sm ghost" disabled={busy} onClick={withdraw}>Retirer</button>
+            <button className="btn sm ghost" disabled={busy} aria-busy={busy} onClick={withdraw}>RETIRER</button>
           </div>
         </div>
       ) : (
@@ -204,10 +205,10 @@ export function SubmissionBox({
           onDrop={(e) => { e.preventDefault(); setDragging(false); void sendFile(e.dataTransfer.files); }}
         >
           <span className={styles.big} aria-hidden="true">⬆</span>
-          <button className="btn primary" disabled={busy} onClick={() => input.current?.click()}>
+          <button className="btn primary" disabled={busy} aria-busy={busy} onClick={() => input.current?.click()}>
             Choisir mon fichier
           </button>
-          <span className="faint" style={{ fontSize: 12.5, textAlign: 'center' }}>
+          <span className="faint" style={{ textAlign: 'center' }}>
             {config.allowedExt.length ? config.allowedExt.join(', ') : ACCEPTED_HINT[mediaType]}
             {' • '}{humanBytes(config.maxFileBytes)} maximum
           </span>
@@ -218,8 +219,8 @@ export function SubmissionBox({
         <>
           <div className={styles.bar}><i style={{ transform: `scaleX(${progress})` }} /></div>
           <div className="row">
-            <span className="faint grow" style={{ fontSize: 12.5 }}>Envoi… {Math.round(progress * 100)} %</span>
-            <button className="btn xs ghost" onClick={() => cancelRef.current?.()}>Annuler</button>
+            <span className="faint grow">Envoi… {Math.round(progress * 100)} %</span>
+            <button className="btn xs ghost" onClick={() => cancelRef.current?.()}>ANNULER</button>
           </div>
         </>
       )}
@@ -228,12 +229,12 @@ export function SubmissionBox({
         ref={input}
         type="file"
         className="sr-only"
-        disabled={busy}
+        disabled={busy} aria-busy={busy}
         onChange={(e) => void sendFile(e.target.files)}
       />
 
       {closingAt && (
-        <span className="faint" style={{ fontSize: 11.5 }}>
+        <span className="meta">
           Tu peux remplacer ton fichier jusqu&apos;a la fermeture des depots.
         </span>
       )}
@@ -251,8 +252,8 @@ export function SubmissionBox({
  */
 function Badge({ submission }: { submission: OwnSubmission }) {
   if (submission.status === 'pending' || submission.status === 'transcoding') {
-    return <span className="pill"><span className="dot" /> Traitement…</span>;
+    return <span className="pill"><span className="dot" /> TRAITEMENT…</span>;
   }
-  if (submission.late) return <span className="pill" style={{ color: '#ffc9dc' }}>Hors delai</span>;
-  return <span className="pill ok"><span className="dot" /> {submission.transcoded ? 'Pret' : 'Depose'}</span>;
+  if (submission.late) return <span className="pill err"><span>HORS DELAI</span></span>;
+  return <span className="pill ok"><span className="dot" /> {submission.transcoded ? 'PRET' : 'DEPOSE'}</span>;
 }

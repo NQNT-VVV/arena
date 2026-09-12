@@ -137,6 +137,20 @@ const config = {
   discord: {
     webhookUrl: str('DISCORD_WEBHOOK_URL', ''),
   },
+
+  /**
+   * Module Podium, le hub : inerte tant que l'URL n'est pas fournie.
+   *
+   * La cle d'ingestion sert a poster les classements ; le secret SSO, partage
+   * avec le hub, sert a verifier le cookie d'identite que les joueurs portent
+   * d'un sous-domaine a l'autre.
+   */
+  podium: {
+    url: str('PODIUM_URL', '').replace(/\/+$/, ''),
+    gameKey: str('PODIUM_GAME_KEY', ''),
+    ssoSecret: str('PODIUM_SSO_SECRET', ''),
+    cookie: str('PODIUM_SSO_COOKIE', 'nqnt_id'),
+  },
 };
 
 module.exports = config;

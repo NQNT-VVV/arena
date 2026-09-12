@@ -78,6 +78,27 @@ spec:
                 secretKeyRef:
                   name: arena
                   key: SESSION_SECRET
+            # Podium, le hub : facultatif. Sans le secret `podium-integration`,
+            # le module ne s'attache pas et Arena tourne comme avant. Voir
+            # deploy/podium-secret.example.yaml.
+            - name: PODIUM_URL
+              valueFrom:
+                secretKeyRef:
+                  name: podium-integration
+                  key: PODIUM_URL
+                  optional: true
+            - name: PODIUM_GAME_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: podium-integration
+                  key: PODIUM_GAME_KEY
+                  optional: true
+            - name: PODIUM_SSO_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: podium-integration
+                  key: PODIUM_SSO_SECRET
+                  optional: true
           readinessProbe:
             httpGet:
               path: /api/health

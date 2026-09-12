@@ -11,7 +11,15 @@ import styles from './Waveform.module.css';
  * silhouette, et ils pesent quelques kilo-octets quelle que soit la duree du
  * morceau. La tete de lecture suit `progress`, qui vient de l'horloge
  * synchronisee — pas de l'element audio, dont la position peut deriver.
+ *
+ * Les barres sont de l'os : .60 pour ce qui reste, plein pour ce qui est passe.
+ * La tete de lecture est la seule chose vivante de l'ecran, donc en sang.
  */
+
+/** Les trois seules couleurs que ce dessin a le droit de connaitre. */
+const INK = '#D9D2C3';
+const INK_60 = 'rgba(217, 210, 195, .6)';
+const ACCENT = '#E8362C';
 export function Waveform({
   peaksUrl,
   progress,
@@ -68,18 +76,18 @@ export function Waveform({
         const to = Math.max(from + 1, Math.floor((i + 1) * step));
         for (let j = from; j < to && j < peaks.length; j++) if (peaks[j] > peak) peak = peaks[j];
 
-        const h = Math.max(2, peak * (height - 4));
+        // Hauteur arrondie au pixel : le dessin reste net, jamais lisse.
+        const h = Math.max(2, Math.round(peak * (height - 4)));
         const x = i * barWidth;
-        ctx.fillStyle = i < played ? 'rgba(139, 92, 246, .95)' : 'rgba(255, 255, 255, .22)';
-        ctx.beginPath();
-        ctx.roundRect(x + barWidth * 0.18, mid - h / 2, barWidth * 0.64, h, 1.5);
-        ctx.fill();
+        ctx.fillStyle = i < played ? INK : INK_60;
+        // Un rectangle franc : le systeme n'arrondit rien.
+        ctx.fillRect(Math.round(x + barWidth * 0.18), Math.round(mid - h / 2), Math.max(1, Math.round(barWidth * 0.64)), h);
       }
 
-      // Tete de lecture.
+      // Tete de lecture : la seule donnee vivante, donc le seul sang.
       if (progress > 0 && progress < 1) {
-        const x = width * progress;
-        ctx.fillStyle = 'rgba(34, 211, 238, .95)';
+        const x = Math.round(width * progress);
+        ctx.fillStyle = ACCENT;
         ctx.fillRect(x - 1, 0, 2, height);
       }
     };

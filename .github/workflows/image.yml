@@ -44,6 +44,7 @@ jobs:
           npm run test:state
           npm run test:mime
           npm run test:scoring
+          npm run test:spectators
 
       - name: Build Next
         run: SESSION_SECRET=ci-only npm run build
@@ -57,6 +58,7 @@ jobs:
           npm run test:voting
           npm run test:transcode
           npm run test:discord
+          npm run test:podium
           npm test
 
       - uses: docker/setup-buildx-action@v3

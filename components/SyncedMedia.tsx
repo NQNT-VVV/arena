@@ -168,7 +168,7 @@ export function SyncedMedia({
         <span className={styles.note}>Son coupe sur cet appareil.</span>
       )}
       {over && enabled && (
-        <span className={styles.note}>Ecoute terminee.</span>
+        <span className={styles.note}>ECOUTE TERMINEE.</span>
       )}
     </div>
   );

@@ -18,6 +18,7 @@ const repo = require('./repo');
 const storage = require('./storage');
 const transcode = require('./transcode');
 const views = require('./views');
+const hub = require('./integrations/podium');
 const { receiveFiles, UploadError } = require('./upload');
 const { uuid, safeFilename, cleanText, verifyMedia } = require('./util');
 const { BattleServer } = require('./battle');
@@ -79,6 +80,19 @@ function mount(app, battle) {
     });
   });
 
+  /**
+   * Qui est connecte a Podium, vu par ce navigateur.
+   *
+   * Le formulaire d'entree s'en sert pour pre-remplir le pseudo. Sans hub
+   * configure, ou sans cookie valide, seule l'URL du hub (ou null) est rendue :
+   * le jeu fonctionne exactement comme avant.
+   */
+  app.get('/api/podium/me', (req, res) => {
+    const me = hub.identityOf(req.headers);
+    res.set('Cache-Control', 'no-store');
+    res.json({ hubUrl: config.podium.url || null, ...(me ?? {}) });
+  });
+
   app.get('/api/qr', guard(async (req, res) => {
     const text = String(req.query.text || '').slice(0, 512);
     if (!text) return res.status(400).send('parametre « text » manquant');
@@ -94,6 +108,18 @@ function mount(app, battle) {
   /** Lien court d'invitation. */
   app.get('/j/:code', (req, res) => {
     res.redirect(`/play?code=${encodeURIComponent(String(req.params.code).toUpperCase())}`);
+  });
+
+  /**
+   * Lien spectateur, celui que l'animateur envoie a qui vient juger sans creer.
+   *
+   * Un chemin distinct plutot qu'un parametre ajoute au lien joueur : un lien
+   * se recopie dans une conversation, se tronque, se retape. « /s/K7X2 » reste
+   * lisible et ne se confond pas avec « /j/K7X2 » ; un parametre perdu en
+   * route ferait entrer un juge comme createur, sans qu'il le remarque.
+   */
+  app.get('/s/:code', (req, res) => {
+    res.redirect(`/play?code=${encodeURIComponent(String(req.params.code).toUpperCase())}&role=spectateur`);
   });
 
   /* ---------------------------------------------------------------- */

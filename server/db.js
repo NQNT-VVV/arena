@@ -176,8 +176,17 @@ const MIGRATIONS = [
     d.exec('ALTER TABLE session ADD COLUMN diffusion_ends_at INTEGER;');
   },
 
+  function podiumIdentity(d) {
+    // Compte Podium du participant, lu dans le cookie signe du hub au moment
+    // du join. Null pour qui joue sans compte : le pseudo suffit toujours.
+    d.exec('ALTER TABLE participant ADD COLUMN podium_pid TEXT;');
+  },
+
   function spectators(d) {
-    // Un spectateur est un participant qui juge sans deposer de rendu.
+    // Un spectateur vient juger sans creer : il ne depose rien, ne peut pas
+    // gagner, mais sa voix compte au meme titre que celle des createurs.
+    // Colonne plutot qu'une table : c'est un participant, avec un droit en
+    // moins et aucun en plus.
     d.exec('ALTER TABLE participant ADD COLUMN spectator INTEGER NOT NULL DEFAULT 0;');
   },
 ];

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Socket } from 'socket.io-client';
 
+import { Icon } from '@/components/Icon';
 import { AssetPack } from '@/components/AssetPack';
 import { AssetUploader } from '@/components/AssetUploader';
 import { Brand } from '@/components/Brand';
@@ -113,7 +114,7 @@ export function HostClient() {
     setBooted(true);
   }, [code]);
 
-  const { socket, state, connected } = useBattleSocket(attach);
+  const { socket, state, connected, ratings } = useBattleSocket(attach);
 
   const chrono = usePhaseClock(state, {
     onAlert: (s) => { sfx.alert(s); toast(`Plus que ${humanThreshold(s)}`, 'info'); },
@@ -157,6 +158,17 @@ export function HostClient() {
 
   const inviteUrl = useMemo(
     () => (code && typeof window !== 'undefined' ? `${window.location.origin}/j/${code}` : ''),
+    [code],
+  );
+  /**
+   * Le lien de ceux qui viennent juger sans creer.
+   *
+   * Deux liens plutot qu'un seul avec une case a cocher : l'animateur envoie
+   * l'un a ses createurs, l'autre a qui veut seulement voter, et personne n'a
+   * de choix a comprendre en arrivant.
+   */
+  const spectatorUrl = useMemo(
+    () => (code && typeof window !== 'undefined' ? `${window.location.origin}/s/${code}` : ''),
     [code],
   );
 
@@ -286,7 +298,7 @@ export function HostClient() {
   /* ------------------------------ rendu ----------------------------- */
 
   if (!booted) {
-    return <div className={styles.boot}><span className="pill"><span className="dot" /> Connexion…</span></div>;
+    return <div className={styles.boot}><span className="pill"><span className="dot" /> CONNEXION…</span></div>;
   }
 
   if (!code || !state) return renderCreate();
@@ -300,7 +312,7 @@ export function HostClient() {
         <Brand compact />
         <span className="grow">
           <span className="session-name">{state.name}</span>
-          <span className="faint" style={{ fontSize: 12 }}>{PHASE_LABELS[phase]}</span>
+          <span className="meta">{PHASE_LABELS[phase]}</span>
         </span>
         <span className={`pill ${connected ? 'ok' : ''}`}>
           <span className="dot" /> {connected ? 'En ligne' : 'Reconnexion…'}
@@ -308,7 +320,7 @@ export function HostClient() {
         <span className="pill">
           <span className="code-chip">{state.code}</span>
         </span>
-        <button className="btn sm ghost" onClick={quit}>Quitter</button>
+        <button className="btn sm ghost" onClick={quit}>QUITTER</button>
       </header>
 
       <div className="shell">
@@ -322,34 +334,53 @@ export function HostClient() {
 
           <div className="col">
             <div className={`card pad ${styles.invite}`}>
-              <h2 className="section-title">Inviter</h2>
+              <h2 className="section-title">INVITER</h2>
               <div className={styles.codeBig}><span className="code-chip">{state.code}</span></div>
               {inviteUrl && <QrCode text={inviteUrl} className="screen-qr" />}
-              <div className="row">
-                <input className="input grow" readOnly value={inviteUrl} onFocus={(e) => e.currentTarget.select()} />
-                <button
-                  className="btn sm"
-                  onClick={() => { void copyToClipboard(inviteUrl); toast('Lien copie', 'ok'); }}
-                >
-                  Copier
-                </button>
+              <div className={styles.linkBlock}>
+                <span className="meta">POUR CREER</span>
+                <div className="row">
+                  <input className="input grow" readOnly value={inviteUrl} onFocus={(e) => e.currentTarget.select()} aria-label="Lien pour les createurs" />
+                  <button
+                    className="btn sm" aria-label="Copier le lien des createurs"
+                    onClick={() => { void copyToClipboard(inviteUrl); toast('Lien createur copie', 'ok'); }}
+                  >
+                    <Icon name="copier" />Copier
+                  </button>
+                </div>
+              </div>
+              <div className={styles.linkBlock}>
+                <span className="meta">POUR JUGER SANS CREER</span>
+                <div className="row">
+                  <input className="input grow" readOnly value={spectatorUrl} onFocus={(e) => e.currentTarget.select()} aria-label="Lien pour les spectateurs" />
+                  <button
+                    className="btn sm" aria-label="Copier le lien des spectateurs"
+                    onClick={() => { void copyToClipboard(spectatorUrl); toast('Lien spectateur copie', 'ok'); }}
+                  >
+                    <Icon name="copier" />Copier
+                  </button>
+                </div>
+                <p className="meta" style={{ textTransform: 'none', letterSpacing: 'var(--ls-prose)' }}>
+                  Un spectateur ne depose rien et ne peut pas gagner, mais il note comme les autres.
+                  A envoyer avant le debut de la diffusion : apres, on ne rejoint plus.
+                </p>
               </div>
               <a className="btn sm block" href={`/screen?code=${state.code}`} target="_blank" rel="noreferrer">
-                📺 Ouvrir l&apos;ecran de projection
+                <Icon name="ecran" />Ouvrir l&apos;ecran de projection
               </a>
             </div>
 
             <div className="stats">
-              <div className="stat"><span className="v">{state.counts.participants}</span><span className="k">Inscrits</span></div>
-              <div className="stat"><span className="v">{state.counts.connected}</span><span className="k">En ligne</span></div>
-              <div className="stat"><span className="v">{state.counts.submitted}</span><span className="k">Rendus</span></div>
+              <div className="stat"><span className="v">{state.counts.participants}</span><span className="k">INSCRITS</span></div>
+              <div className="stat"><span className="v">{state.counts.connected}</span><span className="k">EN LIGNE</span></div>
+              <div className="stat"><span className="v">{state.counts.submitted}</span><span className="k">RENDUS</span></div>
             </div>
           </div>
         </section>
 
         {phase === 'diffusion' && state.diffusion && (
           <section className="card pad col">
-            <h2 className="section-title">Rendu diffuse</h2>
+            <h2 className="section-title">RENDU DIFFUSE</h2>
             {/* La regie voit exactement ce que voit la salle : aucun auteur,
                 aucun nom de fichier. Elle partage souvent son ecran. */}
             <DiffusionStage
@@ -365,15 +396,15 @@ export function HostClient() {
 
         {phase === 'results' && state.podium && (
           <section className="card pad col">
-            <h2 className="section-title">Classement</h2>
-            <Podium podium={state.podium} />
+            <h2 className="section-title">CLASSEMENT</h2>
+            <Podium podium={state.podium} ratings={ratings} />
           </section>
         )}
 
         <section className="card pad col">
-          <h2 className="section-title">Consigne</h2>
+          <h2 className="section-title">CONSIGNE</h2>
           <p className="brief">{state.brief}</p>
-          <div className="row wrap faint" style={{ fontSize: 12.5 }}>
+          <div className="row wrap faint">
             <span>{MEDIA_LABELS[state.mediaType].icon} {MEDIA_LABELS[state.mediaType].label}</span>
             <span>•</span>
             <span>{humanDuration(state.config.durationMs)} de creation</span>
@@ -394,12 +425,12 @@ export function HostClient() {
           <h2 className="section-title">
             Elements imposes
             {state.assets.length > 0 && (
-              <span className="faint" style={{ fontSize: 11.5, letterSpacing: 0, textTransform: 'none' }}>
+              <span className="faint" style={{ letterSpacing: 0, textTransform: 'none' }}>
                 {state.assets.length} • {humanBytes(state.assets.reduce((n, a) => n + a.bytes, 0))}
               </span>
             )}
           </h2>
-          <p className="muted" style={{ fontSize: 13.5 }}>
+          <p className="meta">
             Samples, screenshots, rushes, templates. Les participants les consultent directement
             dans leur page et peuvent recuperer le pack complet.
           </p>
@@ -407,7 +438,7 @@ export function HostClient() {
             code={state.code}
             token={hostKeys.get(state.code)}
             disabled={!ASSET_ADD_PHASES.has(phase)}
-            hint="ou glisse-les ici — plusieurs a la fois"
+            hint="Ou glisse-les ici — plusieurs a la fois"
           />
           <AssetPack
             assets={state.assets}
@@ -434,7 +465,7 @@ export function HostClient() {
                     <span className="who grow">
                       <span className="pseudo ellipsis">{p.pseudo}</span>
                       <span className="sub">
-                        {p.hasSubmitted ? '✓ a rendu' : (p.connected ? 'en ligne' : 'deconnecte')}
+                        {p.hasSubmitted ? 'a rendu' : (p.connected ? 'en ligne' : 'deconnecte')}
                       </span>
                     </span>
                     <button
@@ -442,7 +473,7 @@ export function HostClient() {
                       title={p.disqualified ? 'Reintegrer' : 'Disqualifier'}
                       onClick={() => act('host:disqualify', { participantId: p.id, on: !p.disqualified })}
                     >
-                      {p.disqualified ? '↩' : '✕'}
+                      {p.disqualified ? 'Reintegrer' : 'Ecarter'}
                     </button>
                   </div>
                 ))}
@@ -457,7 +488,7 @@ export function HostClient() {
 
   function renderControls() {
     const btn = (label: string, event: string, payload?: Record<string, unknown>, cls = 'btn') => (
-      <button className={cls} disabled={busy} onClick={() => act(event, payload ?? {})}>{label}</button>
+      <button className={cls} disabled={busy} aria-busy={busy} onClick={() => act(event, payload ?? {})}>{label}</button>
     );
 
     switch (phase) {
@@ -508,13 +539,13 @@ export function HostClient() {
           <div className={styles.controls}>
             <p className="muted">
               Fenetre de depot. {state!.counts.submitted} rendu(s) recu(s) sur {state!.counts.participants} inscrit(s).
-              {pending > 0 && <> <b>{pending}</b> en cours de traitement.</>}
+              {pending > 0 && <> <b>{pending}</b> EN COURS DE TRAITEMENT.</>}
             </p>
             <div className="row wrap">
               {btn('+ 2 min', 'host:add-time', { deltaMs: 2 * 60_000 }, 'btn sm')}
               <button
                 className="btn primary lg"
-                disabled={busy || pending > 0}
+                disabled={busy || pending > 0} aria-busy={busy}
                 title={pending > 0 ? 'Le serveur prepare encore des extraits' : undefined}
                 onClick={() => act('host:start-diffusion')}
               >
@@ -536,35 +567,35 @@ export function HostClient() {
                 : 'Aucun rendu a diffuser.'}
             </p>
             <div className="row wrap">
-              <button className="btn sm" disabled={busy || !d || d.index === 0} onClick={() => act('host:diffusion-prev')}>
-                ← Precedent
+              <button className="btn sm" disabled={busy || !d || d.index === 0} aria-busy={busy} onClick={() => act('host:diffusion-prev')}>
+                <Icon name="precedent" />Precedent
               </button>
-              <button className="btn sm" disabled={busy || !d?.current} title="Relancer ce rendu depuis le debut, pour tout le monde" onClick={() => act('host:diffusion-replay')}>
-                🔁 Relancer
+              <button className="btn sm" disabled={busy || !d?.current} aria-busy={busy} title="Relancer ce rendu depuis le debut, pour tout le monde" onClick={() => act('host:diffusion-replay')}>
+                <Icon name="chrono" />Relancer
               </button>
               <button
                 className={`btn ${everyone ? 'good' : ''}`}
-                disabled={busy || last}
+                disabled={busy || last} aria-busy={busy}
                 onClick={() => act('host:diffusion-next')}
               >
-                Suivant →
+                Suivant<Icon name="suivant" />
               </button>
             </div>
             <label className="switch" title="Le serveur passe seul au rendu suivant apres l’ecoute et la fenetre de vote">
               <input
                 type="checkbox"
                 checked={!!d?.autoNext}
-                disabled={busy}
+                disabled={busy} aria-busy={busy}
                 onChange={(e) => act('host:auto-next', { on: e.target.checked })}
               />
               <span className="track" />
-              <span style={{ fontSize: 13.5 }}>
+              <span>
                 {d?.autoNext ? 'Enchainement automatique' : 'Enchainement manuel — coupe pour commenter'}
               </span>
             </label>
             {btn('Afficher les resultats', 'host:results', {}, `btn ${last ? 'primary' : ''}`)}
             {!last && (
-              <span className="faint" style={{ fontSize: 12 }}>
+              <span className="meta">
                 Il reste {(d?.total ?? 0) - (d?.index ?? 0) - 1} rendu(s) a passer.
               </span>
             )}
@@ -581,16 +612,16 @@ export function HostClient() {
                 : <>Devoile du dernier au premier — <b>{p?.revealed ?? 0}</b> / {p?.total ?? 0}</>}
             </p>
             <div className="row wrap">
-              <button className="btn primary" disabled={busy || !!p?.complete} onClick={() => act('host:reveal')}>
+              <button className="btn primary" disabled={busy || !!p?.complete} aria-busy={busy} onClick={() => act('host:reveal')}>
                 Devoiler la place suivante
               </button>
-              <button className="btn sm" disabled={busy || !!p?.complete} onClick={() => act('host:reveal', { all: true })}>
+              <button className="btn sm" disabled={busy || !!p?.complete} aria-busy={busy} onClick={() => act('host:reveal', { all: true })}>
                 Tout devoiler
               </button>
             </div>
             <div className="row wrap">
-              <button className="btn sm ghost" onClick={() => download('csv')}>⬇ CSV</button>
-              <button className="btn sm ghost" onClick={() => download('json')}>⬇ JSON</button>
+              <button className="btn sm ghost" onClick={() => download('csv')}><Icon name="telecharge" />CSV</button>
+              <button className="btn sm ghost" onClick={() => download('json')}><Icon name="telecharge" />JSON</button>
               {btn('Archiver la session', 'host:archive', {}, 'btn sm ghost')}
             </div>
             {renderNextEdition()}
@@ -600,10 +631,10 @@ export function HostClient() {
       default:
         return (
           <div className={styles.controls}>
-            <p className="muted">Session archivee.</p>
+            <p className="muted">SESSION ARCHIVEE.</p>
             <div className="row wrap">
-              <button className="btn sm ghost" onClick={() => download('csv')}>⬇ CSV</button>
-              <button className="btn sm ghost" onClick={() => download('json')}>⬇ JSON</button>
+              <button className="btn sm ghost" onClick={() => download('csv')}><Icon name="telecharge" />CSV</button>
+              <button className="btn sm ghost" onClick={() => download('json')}><Icon name="telecharge" />JSON</button>
             </div>
             {renderNextEdition()}
           </div>
@@ -616,18 +647,18 @@ export function HostClient() {
     const hasAssets = (state?.assets.length ?? 0) > 0;
     return (
       <div className={styles.nextEdition}>
-        <span className="section-title">Nouvelle edition</span>
+        <span className="section-title">NOUVELLE EDITION</span>
         <div className="row wrap">
-          <button className="btn good" disabled={busy} onClick={() => duplicate(true)}>
-            🔁 Relancer{hasAssets ? ' avec le meme pack' : ''}
+          <button className="btn good" disabled={busy} aria-busy={busy} onClick={() => duplicate(true)}>
+            <Icon name="chrono" />Relancer{hasAssets ? ' avec le meme pack' : ''}
           </button>
           {hasAssets && (
-            <button className="btn sm ghost" disabled={busy} onClick={() => duplicate(false)}>
+            <button className="btn sm ghost" disabled={busy} aria-busy={busy} onClick={() => duplicate(false)}>
               Relancer sans les elements
             </button>
           )}
         </div>
-        <span className="faint" style={{ fontSize: 12 }}>
+        <span className="meta">
           Reglages et consigne repris ; participants, rendus et votes repartent de zero.
         </span>
       </div>
@@ -643,7 +674,7 @@ export function HostClient() {
         </header>
         <div className="shell narrow">
           <header>
-            <h1 style={{ fontSize: 30, marginBottom: 6 }}>Nouvelle session</h1>
+            <h1 >NOUVELLE SESSION</h1>
             <p className="muted">Tout reste modifiable tant que la creation n&apos;a pas demarre.</p>
           </header>
           <section className="card pad col">{renderForm(false)}</section>
@@ -660,16 +691,16 @@ export function HostClient() {
         <h2 className="section-title">{existing ? 'Reglages' : 'La session'}</h2>
 
         <div className="field">
-          <label htmlFor="name">Nom de la session</label>
+          <label htmlFor="name">NOM DE LA SESSION</label>
           <input
             id="name" className="input" value={draft.name} maxLength={60}
-            placeholder="Beat Battle #12"
+            placeholder="BEAT BATTLE #12"
             onChange={(e) => set('name', e.target.value)}
           />
         </div>
 
         <div className="field">
-          <label>Type de rendu attendu</label>
+          <label>TYPE DE RENDU ATTENDU</label>
           <div className="media-choice">
             {(Object.keys(MEDIA_LABELS) as MediaType[]).map((type) => (
               <button
@@ -682,29 +713,29 @@ export function HostClient() {
               </button>
             ))}
           </div>
-          <span className="faint" style={{ fontSize: 12 }}>{MEDIA_LABELS[draft.mediaType].hint}</span>
+          <span className="meta">{MEDIA_LABELS[draft.mediaType].hint}</span>
         </div>
 
         <div className="field">
-          <label htmlFor="brief">Consigne</label>
+          <label htmlFor="brief">CONSIGNE</label>
           <textarea
             id="brief" className="input" rows={5} value={draft.brief} maxLength={4000}
             placeholder={'Les 5 samples du pack sont obligatoires.\nAucun autre son externe.\nDuree libre.'}
             onChange={(e) => set('brief', e.target.value)}
           />
-          <span className="faint" style={{ fontSize: 12 }}>Affichee en permanence aux participants.</span>
+          <span className="meta">Affichee en permanence aux participants.</span>
         </div>
 
         <div className={styles.two}>
           <div className="field">
-            <label htmlFor="duration">Duree de creation (minutes)</label>
+            <label htmlFor="duration">DUREE DE CREATION (MINUTES)</label>
             <input
               id="duration" className="input" type="number" min={1} max={720} value={draft.durationMin}
               onChange={(e) => set('durationMin', Number(e.target.value))}
             />
           </div>
           <div className="field">
-            <label htmlFor="grace">Fenetre de grace (minutes)</label>
+            <label htmlFor="grace">FENETRE DE GRACE (MINUTES)</label>
             <input
               id="grace" className="input" type="number" min={0} max={30} value={draft.graceMin}
               onChange={(e) => set('graceMin', Number(e.target.value))}
@@ -719,7 +750,7 @@ export function HostClient() {
               id="playMax" className="input" type="number" min={5} max={600} value={draft.playMaxS}
               onChange={(e) => set('playMaxS', Number(e.target.value))}
             />
-            <span className="faint" style={{ fontSize: 12 }}>Au-dela, l&apos;extrait est coupe en fondu.</span>
+            <span className="meta">Au-dela, l&apos;extrait est coupe en fondu.</span>
           </div>
           <div className="field">
             <label htmlFor="voteWindow">Fenetre de vote apres l&apos;ecoute (secondes)</label>
@@ -727,7 +758,7 @@ export function HostClient() {
               id="voteWindow" className="input" type="number" min={0} max={300} value={draft.voteWindowS}
               onChange={(e) => set('voteWindowS', Number(e.target.value))}
             />
-            <span className="faint" style={{ fontSize: 12 }}>Sautee des que tout le monde a note.</span>
+            <span className="meta">Sautee des que tout le monde a note.</span>
           </div>
         </div>
 
@@ -742,12 +773,12 @@ export function HostClient() {
           <span className="track" />
           <span>Jouer le son sur les telephones des participants</span>
         </label>
-        <span className="faint" style={{ fontSize: 12, marginTop: -6 }}>
+        <span className="faint" style={{ marginTop: 'calc(-1 * var(--sp-2))' }}>
           A couper si une enceinte ou le partage d&apos;ecran diffuse deja pour tout le monde.
         </span>
 
         <div className="field">
-          <label>Alertes sonores</label>
+          <label>ALERTES SONORES</label>
           <div className="row wrap">
             {ALERT_CHOICES.map((s) => {
               const on = draft.alerts.includes(s);
@@ -763,31 +794,31 @@ export function HostClient() {
               );
             })}
           </div>
-          <span className="faint" style={{ fontSize: 12 }}>
+          <span className="meta">
             Un signal sonore et un changement de couleur du chrono a chaque seuil coche.
           </span>
         </div>
 
         <div className={styles.two}>
           <div className="field">
-            <label htmlFor="scale">Bareme (note maximale)</label>
+            <label htmlFor="scale">BAREME (NOTE MAXIMALE)</label>
             <input
               id="scale" className="input" type="number" min={2} max={100} value={draft.scale}
               onChange={(e) => set('scale', Number(e.target.value))}
             />
           </div>
           <div className="field">
-            <label htmlFor="defaultVote">Note par defaut</label>
+            <label htmlFor="defaultVote">NOTE PAR DEFAUT</label>
             <input
               id="defaultVote" className="input" type="number" min={0} max={draft.scale} step={0.5} value={draft.defaultVote}
               onChange={(e) => set('defaultVote', Number(e.target.value))}
             />
-            <span className="faint" style={{ fontSize: 12 }}>Appliquee quand un votant saute un rendu.</span>
+            <span className="meta">Appliquee quand un votant saute un rendu.</span>
           </div>
         </div>
 
         <div className="field">
-          <label>Depots hors delai</label>
+          <label>DEPOTS HORS DELAI</label>
           <div className="seg">
             {LATE_POLICIES.map((p) => (
               <button
@@ -799,7 +830,7 @@ export function HostClient() {
               </button>
             ))}
           </div>
-          <span className="faint" style={{ fontSize: 12 }}>
+          <span className="meta">
             {LATE_POLICIES.find((p) => p.id === draft.latePolicy)?.hint}
           </span>
         </div>
@@ -814,8 +845,8 @@ export function HostClient() {
         </label>
 
         {existing
-          ? <button className="btn primary" disabled={busy} onClick={saveConfig}>Enregistrer les reglages</button>
-          : <button className="btn primary lg block" disabled={busy || draft.name.trim().length < 2} onClick={create}>
+          ? <button className="btn primary" disabled={busy} aria-busy={busy} onClick={saveConfig}>ENREGISTRER LES REGLAGES</button>
+          : <button className="btn primary lg block" disabled={busy || draft.name.trim().length < 2} aria-busy={busy} onClick={create}>
               Creer la session
             </button>}
       </>
