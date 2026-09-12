@@ -256,7 +256,12 @@ code { font: var(--t-meta); padding: 0 var(--sp-1); border: var(--border); }
 }
 .btn.sm { height: 28px; padding: 0 var(--sp-3); font: var(--t-meta); }
 .btn.xs { height: 24px; padding: 0 var(--sp-2); font: var(--t-meta); }
-.btn.lg { height: 56px; padding: 0 var(--sp-6); font: var(--t-ui-l); }
+/* Un bouton pleine largeur porte souvent une phrase : en 27 px fixes elle
+   passait a la ligne et poussait le pictogramme au-dessus du libelle. La taille
+   suit la largeur disponible, entre le niveau d'interface et le niveau large. */
+.btn.lg { height: 56px; padding: 0 var(--sp-6); font: var(--t-ui-l); font-size: clamp(var(--fs-2), 2.4vw, var(--fs-3)); }
+.btn.lg.block { justify-content: center; }
+.btn { flex-wrap: nowrap; }
 .btn.block { width: 100%; }
 .btn.icon { width: 40px; height: 40px; padding: 0; }
 .btn.danger.sm::before, .btn.danger.xs::before { width: 4px; }
