@@ -415,16 +415,24 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 @media (max-width: 640px) {
   /* Une phrase en capitales monospace de 27 px demande 900 px de large : elle debordait. */
   .hero p, .lead { font: var(--t-prose); letter-spacing: var(--ls-prose); }
+  /*
+   * Seuls les TITRES peuvent etre coupes en cours de mot : ce sont des mots longs et
+   * uniques. Un bouton, lui, ne se coupe jamais — sinon « ACCUEIL » descend en colonne
+   * d'une lettre par ligne. C'est au conteneur de passer a la ligne, pas au libelle.
+   */
   .hero h1, .game-hero h1, .profile-head h1 { white-space: normal; overflow-wrap: anywhere; }
+  .btn { max-width: 100%; white-space: nowrap; }
   .btn.lg { height: 48px; padding: 0 var(--sp-4); font: var(--t-ui); letter-spacing: var(--ls-mono); }
-  .btn { max-width: 100%; }
-  .btn span, .btn { overflow-wrap: anywhere; white-space: normal; text-align: center; }
-  .row.wrap > .btn, .hero .cta > .btn { flex: 1 1 auto; }
+  .topbar, .nav, .row.wrap { flex-wrap: wrap; }
+  .hero .cta > .btn { flex: 1 1 auto; }
+  /* Un titre de section reste un chapitre, mais il tient sur l'ecran. */
+  .section-title { font-size: clamp(var(--fs-2), 5.5vw, var(--fs-3)); flex-wrap: wrap; }
+  .section-title::after { min-width: 24px; }
   .shell { gap: var(--sp-6); }
 }
 @media (max-width: 420px) {
-  .btn.lg, .btn { font: var(--t-meta); letter-spacing: var(--ls-mono); }
-  .btn.lg { height: 44px; }
+  .btn.lg { height: 44px; font: var(--t-ui); }
+  .btn.lg, .btn { letter-spacing: var(--ls-mono); }
 }
 
 /* --------------------------------------------------------------------------

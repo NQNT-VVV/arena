@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { Icon } from '@/components/Icon';
 import { ACCEPTED_HINT, humanBytes } from '@/lib/format';
 import { toast } from '@/lib/toast';
 import { uploadFiles } from '@/lib/uploads';
@@ -157,7 +158,7 @@ export function SubmissionBox({
       {submission ? (
         <div className={styles.done}>
           <div className="row">
-            <span className={styles.icon} aria-hidden="true">✓</span>
+            <Icon name="valide" size="lg" className={styles.icon} />
             <span className="grow" style={{ minWidth: 0 }}>
               <span className={styles.name}>{submission.filename}</span>
               <span className={styles.meta}>
