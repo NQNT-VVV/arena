@@ -64,6 +64,7 @@ function toParticipant(row) {
     joinedAt: row.joined_at,
     lastSeenAt: row.last_seen_at,
     disqualified: !!row.disqualified,
+    spectator: !!row.spectator,
   };
 }
 
@@ -168,8 +169,8 @@ const repo = {
 /* ------------------------------------------------------------------ */
 
 const insertParticipant = db.prepare(`
-  INSERT INTO participant (id, session_id, pseudo, avatar, token_hash, is_host, joined_at, last_seen_at)
-  VALUES (@id, @sessionId, @pseudo, @avatar, @tokenHash, @isHost, @joinedAt, @joinedAt)
+  INSERT INTO participant (id, session_id, pseudo, avatar, token_hash, is_host, joined_at, last_seen_at, spectator)
+  VALUES (@id, @sessionId, @pseudo, @avatar, @tokenHash, @isHost, @joinedAt, @joinedAt, @spectator)
 `);
 const selectParticipant = db.prepare('SELECT * FROM participant WHERE id = ?');
 const selectParticipants = db.prepare('SELECT * FROM participant WHERE session_id = ? ORDER BY joined_at');
@@ -192,6 +193,7 @@ Object.assign(repo, {
       tokenHash: p.tokenHash,
       isHost: p.isHost ? 1 : 0,
       joinedAt: p.joinedAt,
+      spectator: p.spectator ? 1 : 0,
     });
     return toParticipant(selectParticipant.get(p.id));
   },

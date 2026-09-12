@@ -175,6 +175,11 @@ const MIGRATIONS = [
     // doit etre fait qu'une fois, a l'ouverture du rendu.
     d.exec('ALTER TABLE session ADD COLUMN diffusion_ends_at INTEGER;');
   },
+
+  function spectators(d) {
+    // Un spectateur est un participant qui juge sans deposer de rendu.
+    d.exec('ALTER TABLE participant ADD COLUMN spectator INTEGER NOT NULL DEFAULT 0;');
+  },
 ];
 
 const applied = db.pragma('user_version', { simple: true });

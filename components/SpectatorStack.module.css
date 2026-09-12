@@ -1,0 +1,16 @@
+.game { width: 100%; display: grid; gap: 13px; text-align: left; }
+.heading { display: flex; justify-content: space-between; gap: 12px; align-items: end; }
+.heading h2 { font-size: 21px; }
+.heading strong { color: var(--cyan); font-size: 13px; white-space: nowrap; }
+.kicker { display: block; color: var(--faint); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.game > p { font-size: 13.5px; }
+.board { position: relative; height: 178px; overflow: hidden; border: 1px solid var(--stroke); border-radius: var(--r-md); background: linear-gradient(180deg, rgba(34,211,238,.10), rgba(139,92,246,.03)); }
+.tower, .block { position: absolute; left: 0; height: 23px; border-radius: 5px; }
+.tower { bottom: 17px; background: linear-gradient(90deg, var(--indigo), var(--violet)); box-shadow: 0 -25px 0 rgba(139,92,246,.8), 0 -50px 0 rgba(99,102,241,.65), 0 -75px 0 rgba(139,92,246,.5); }
+.block { bottom: 116px; border: 0; background: var(--cyan); color: #061217; font-size: 11px; font-weight: 800; cursor: pointer; box-shadow: 0 5px 15px rgba(34,211,238,.25); }
+.block:disabled { opacity: 1; cursor: default; }
+.restart { position: absolute; inset: 0; border: 0; background: rgba(7,6,14,.82); color: var(--text); font-weight: 700; cursor: pointer; }
+.ranking { list-style: none; display: grid; gap: 3px; margin: 0; padding: 0; font-size: 13px; }
+.ranking li { display: flex; justify-content: space-between; padding: 5px 8px; border-radius: 7px; color: var(--muted); }
+.ranking .me { color: var(--text); background: rgba(34,211,238,.1); }
+.error { color: #ffb4b4; font-size: 12px; }

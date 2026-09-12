@@ -12,6 +12,7 @@ import { Chrono } from '@/components/Chrono';
 import { JoinForm } from '@/components/JoinForm';
 import { PhaseRail } from '@/components/PhaseRail';
 import { SubmissionBox } from '@/components/SubmissionBox';
+import { SpectatorStack } from '@/components/SpectatorStack';
 import { audioPref } from '@/lib/audioPref';
 import { identity } from '@/lib/identity';
 import { humanDuration, humanThreshold, PHASE_LABELS } from '@/lib/format';
@@ -50,7 +51,7 @@ export function PlayClient() {
    * reprise est automatique : c'est ce qui fait qu'un rafraichissement, un
    * passage en veille ou un tunnel de metro ne coutent pas sa place.
    */
-  const enter = useCallback(async (socket: Socket, withPseudo?: string) => {
+  const enter = useCallback(async (socket: Socket, withPseudo?: string, asSpectator = false) => {
     if (!code) return;
     const saved = identity.get(code);
     const name = withPseudo ?? saved?.pseudo;
@@ -61,6 +62,7 @@ export function PlayClient() {
       pseudo: name,
       participantId: saved?.participantId,
       token: saved?.token,
+      spectator: asSpectator,
     });
 
     if (!res.ok) {
@@ -109,13 +111,13 @@ export function PlayClient() {
     if (saved) setPseudo(saved.pseudo);
   }, [code]);
 
-  const join = async () => {
+  const join = async (asSpectator = false) => {
     if (!socket) return;
     // Le clic sur « Entrer » est le geste qui debloque le son : sans lui, les
     // alertes de fin de temps ne sortiraient jamais du navigateur.
     sfx.unlock();
     setBusy(true);
-    await enter(socket, pseudo.trim());
+    await enter(socket, pseudo.trim(), asSpectator);
     setBusy(false);
   };
 
@@ -187,17 +189,19 @@ export function PlayClient() {
             placeholder="Comment on t’appelle ?"
             autoComplete="nickname"
             onChange={(e) => setPseudo(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') void join(); }}
+            onKeyDown={(e) => { if (e.key === 'Enter') void join(false); }}
           />
         </div>
         {error && <p className={styles.error}>{error}</p>}
-        <button
-          className="btn primary lg block"
-          disabled={busy || pseudo.trim().length < 2 || !connected}
-          onClick={join}
-        >
-          {connected ? 'Entrer' : 'Connexion…'}
-        </button>
+        <div className={styles.roles}>
+          <button className="btn primary lg block" disabled={busy || pseudo.trim().length < 2 || !connected} onClick={() => void join(false)}>
+            {connected ? 'Je participe' : 'Connexion…'}
+          </button>
+          <button className="btn lg block" disabled={busy || pseudo.trim().length < 2 || !connected} onClick={() => void join(true)}>
+            Je regarde et je note
+          </button>
+          <p className={styles.roleHint}>Spectateur : tu ne crees pas, mais tu notes les rendus et peux jouer entre spectateurs pendant la creation.</p>
+        </div>
       </div>
     );
   }
@@ -218,6 +222,7 @@ export function PlayClient() {
             <span className="ellipsis" style={{ maxWidth: 90 }}>{you.pseudo}</span>
           </span>
         )}
+        {you?.spectator && <span className="pill">Spectateur</span>}
         {!connected && <span className="pill live"><span className="dot" /> Hors ligne</span>}
       </header>
 
@@ -288,6 +293,7 @@ export function PlayClient() {
    */
   function renderSubmission() {
     if (!me || you?.disqualified) return null;
+    if (you?.spectator) return null;
     return (
       <SubmissionBox
         code={state!.code}
@@ -330,7 +336,9 @@ export function PlayClient() {
                 ? 'L’animateur a mis le chrono en pause.'
                 : 'Tu peux deposer ton rendu des qu’il est pret, sans attendre la fin.'}
             </p>
-            {renderSubmission()}
+            {you?.spectator ? (
+              <SpectatorStack entries={state!.spectatorStack} meId={you.id} onStack={stackSpectator} />
+            ) : renderSubmission()}
           </>
         );
       case 'upload':
@@ -379,5 +387,11 @@ export function PlayClient() {
           </div>
         );
     }
+  }
+
+  async function stackSpectator() {
+    if (!socket) return;
+    const result = await call(socket, 'play:spectator-stack');
+    if (!result.ok) throw new Error(result.error);
   }
 }

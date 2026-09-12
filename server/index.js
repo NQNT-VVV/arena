@@ -242,6 +242,14 @@ io.on('connection', (socket) => {
     return { value: done.value, criterionId: done.criterionId, you: views.youView(session, participant) };
   }));
 
+  socket.on('play:spectator-stack', (payload = {}, cb) => guard(cb, () => {
+    if (socket.data.role !== 'participant') {
+      throw Object.assign(new Error('Rejoignez la session pour jouer.'), { expected: true, status: 403 });
+    }
+    const { session, participant } = battle.participantOfSocket(socket);
+    return { score: battle.stackSpectator(session, participant) };
+  }));
+
   socket.on('play:leave', (payload, cb) => guard(cb, () => {
     if (socket.data.role === 'participant') battle.leave(socket.data.code, socket.data.participantId);
     socket.data.role = null;

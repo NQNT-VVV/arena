@@ -139,6 +139,22 @@ test('participants : pseudo unique, reconnexion par jeton', () => {
   throws(() => srv.join(session.code, { pseudo: 'Alex' }), 'deja pris');
 });
 
+test('spectateur : ne depose pas et joue a l’empilement pendant la creation', () => {
+  const srv = new BattleServer(fakeIo());
+  const { session, hostToken } = srv.createSession({ name: 'X' });
+  srv.publishSession(session.code, hostToken);
+  const creator = srv.join(session.code, { pseudo: 'Createur' });
+  const spectator = srv.join(session.code, { pseudo: 'Spectateur', spectator: true });
+  assert.equal(spectator.participant.spectator, true);
+  assert.equal(views.participantView(session).counts.participants, 1);
+  assert.equal(views.participantView(session).counts.spectators, 1);
+  srv.start(session.code, hostToken);
+  throws(() => srv.openSubmissionSlot(session.code, spectator.participant.id, spectator.token), 'spectateur');
+  assert.equal(srv.stackSpectator(session, spectator.participant), 1);
+  assert.deepEqual(views.participantView(session).spectatorStack.map((p) => [p.pseudo, p.score]), [['Spectateur', 1]]);
+  throws(() => srv.stackSpectator(session, creator.participant), 'reserve aux spectateurs');
+});
+
 test('inscriptions : fermees des la diffusion, reconnexion toujours possible', () => {
   const srv = new BattleServer(fakeIo());
   const { session, hostToken } = srv.createSession({ name: 'X' });

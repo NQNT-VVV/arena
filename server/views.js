@@ -121,6 +121,7 @@ function rosterView(session) {
       avatar: p.avatar,
       connected: session.isOnline(p.id),
       disqualified: p.disqualified,
+      spectator: p.spectator,
     }));
 }
 
@@ -147,8 +148,10 @@ function assetsView(session) {
 
 function countsView(session, submitted = repo.submittedParticipantIds(session.id)) {
   const roster = [...session.participants.values()].filter((p) => !p.isHost);
+  const creators = roster.filter((p) => !p.spectator);
   return {
-    participants: roster.length,
+    participants: creators.length,
+    spectators: roster.length - creators.length,
     connected: roster.filter((p) => session.isOnline(p.id)).length,
     submitted: submitted.length,
     // Renseigne par l'increment vote.
@@ -337,9 +340,19 @@ function commonView(session) {
     assetsZipUrl: `/api/session/${session.code}/assets.zip`,
     diffusion: diffusionView(session),
     podium: podiumView(session),
+    spectatorStack: spectatorStackView(session),
     /** Reference d'horloge : le client s'en sert pour mesurer sa derive. */
     serverNow: Date.now(),
   };
+}
+
+/** Tableau du mini-jeu, visible pendant la creation seulement. */
+function spectatorStackView(session) {
+  if (session.phase !== 'creation') return [];
+  return [...session.participants.values()]
+    .filter((p) => p.spectator)
+    .map((p) => ({ id: p.id, pseudo: p.pseudo, avatar: p.avatar, score: session.spectatorStack.get(p.id) ?? 0 }))
+    .sort((a, b) => b.score - a.score || a.pseudo.localeCompare(b.pseudo));
 }
 
 /** Ce que voit un participant sur son telephone. */
@@ -375,6 +388,7 @@ function hostView(session) {
         avatar: p.avatar,
         connected: session.isOnline(p.id),
         disqualified: p.disqualified,
+        spectator: p.spectator,
         joinedAt: p.joinedAt,
         lastSeenAt: p.lastSeenAt,
         hasSubmitted: submitted.has(p.id),
@@ -406,6 +420,7 @@ function youView(session, participant) {
     avatar: participant.avatar,
     isHost: participant.isHost,
     disqualified: participant.disqualified,
+    spectator: participant.spectator,
     joinedAt: participant.joinedAt,
     submission: ownSubmissionView(repo.submissionOf(session.id, participant.id)),
     /**
@@ -432,6 +447,6 @@ function votesView(session, participant) {
 module.exports = {
   authorsVisible, authorOf,
   configView, clockView, rosterView, countsView, assetsView, ownSubmissionView,
-  anonymousCard, diffusionView, podiumView,
+  anonymousCard, diffusionView, podiumView, spectatorStackView,
   commonView, participantView, hostView, screenView, youView,
 };

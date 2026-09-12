@@ -165,6 +165,9 @@ class LiveSession {
     this.presence = new Map();
     this.hostSockets = new Set();
     this.screenSockets = new Set();
+    // Mini-jeu ephemere : il ne touche ni aux rendus ni au classement.
+    this.spectatorStack = new Map();
+    this.spectatorStackLastMove = new Map();
   }
 
   patch(fields) {
@@ -337,7 +340,7 @@ class BattleServer {
    */
   static JOINABLE = new Set(['config', 'lobby', 'creation', 'upload']);
 
-  join(code, { pseudo, participantId, token } = {}) {
+  join(code, { pseudo, participantId, token, spectator = false } = {}) {
     const s = this.require(code);
 
     // Retour d'un participant connu : un rafraichissement de page, un tunnel.
@@ -352,7 +355,9 @@ class BattleServer {
     }
 
     if (!BattleServer.JOINABLE.has(s.phase)) {
-      throw new BattleError('Les inscriptions sont fermees pour cette session.');
+      throw new BattleError(spectator
+        ? 'La diffusion a commence : on ne rejoint plus, meme pour regarder.'
+        : 'Les inscriptions sont fermees pour cette session.');
     }
     if (s.participants.size >= config.limits.maxParticipants) {
       throw new BattleError('Cette session est complete.');
@@ -375,10 +380,11 @@ class BattleServer {
       tokenHash: hashToken(fresh),
       isHost: false,
       joinedAt: now,
+      spectator: !!spectator,
     });
 
     s.participants.set(participant.id, participant);
-    repo.logEvent(s.id, 'participant:joined', { pseudo: name });
+    repo.logEvent(s.id, 'participant:joined', { pseudo: name, spectator: !!spectator });
     // Pas de diffusion ici : la socket n'est pas encore enregistree, et l'etat
     // montrerait le nouvel arrivant deja inscrit mais deja hors ligne. C'est
     // `attachParticipant()` qui diffuse, une fois la presence connue.
@@ -395,10 +401,26 @@ class BattleServer {
     if (s.phase === 'config' || s.phase === 'lobby') {
       s.participants.delete(participantId);
       s.presence.delete(participantId);
+      s.spectatorStack.delete(participantId);
+      s.spectatorStackLastMove.delete(participantId);
       repo.removeParticipant(participantId);
       repo.logEvent(s.id, 'participant:left', { pseudo: p.pseudo });
       this.publish(s);
     }
+  }
+
+  /** Une brique posee dans le mini-jeu des spectateurs. */
+  stackSpectator(session, participant) {
+    if (!participant.spectator) throw new BattleError('Ce mini-jeu est reserve aux spectateurs.', 403);
+    if (session.phase !== 'creation') throw new BattleError('Le mini-jeu est termine : la creation est finie.');
+    const now = Date.now();
+    const last = session.spectatorStackLastMove.get(participant.id) ?? 0;
+    if (now - last < 180) throw new BattleError('Doucement : une brique a la fois.');
+    const score = (session.spectatorStack.get(participant.id) ?? 0) + 1;
+    session.spectatorStack.set(participant.id, score);
+    session.spectatorStackLastMove.set(participant.id, now);
+    this.publish(session);
+    return score;
   }
 
   setDisqualified(code, token, participantId, on) {
@@ -451,6 +473,9 @@ class BattleServer {
     }
     if (participant.disqualified) {
       throw new BattleError('Vous avez ete mis hors classement par l’animateur.', 403);
+    }
+    if (participant.spectator) {
+      throw new BattleError('Vous suivez la session comme spectateur : le depot vous est ferme.', 403);
     }
 
     const late = !!(session.graceEndAt && Date.now() > session.graceEndAt);

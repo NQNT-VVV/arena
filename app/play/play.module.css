@@ -27,3 +27,6 @@
 
 .results { display: flex; flex-direction: column; gap: 12px; width: 100%; }
 .results h2 { font-size: 20px; text-align: center; }
+
+.roles { display: grid; gap: 9px; width: 100%; }
+.roleHint { color: var(--muted); font-size: 13px; text-align: left; }

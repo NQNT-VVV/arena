@@ -64,6 +64,7 @@ export interface RosterEntry {
   avatar: string;
   connected: boolean;
   disqualified: boolean;
+  spectator: boolean;
   /** Renseignes pour la regie seulement. */
   joinedAt?: number;
   lastSeenAt?: number;
@@ -94,6 +95,7 @@ export interface Asset {
 
 export interface Counts {
   participants: number;
+  spectators: number;
   connected: number;
   submitted: number;
   voted: number;
@@ -193,11 +195,20 @@ export interface BattleState {
   assetsZipUrl: string;
   diffusion: DiffusionState | null;
   podium: PodiumState | null;
+  /** Classement ephemere du mini-jeu, pendant la creation seulement. */
+  spectatorStack: SpectatorStackEntry[];
   serverNow: number;
   isHost?: boolean;
   isScreen?: boolean;
   /** Regie seulement : rendus recus mais pas encore prets a diffuser. */
   pendingSubmissions?: number;
+}
+
+export interface SpectatorStackEntry {
+  id: string;
+  pseudo: string;
+  avatar: string;
+  score: number;
 }
 
 export type SubmissionStatus = 'pending' | 'transcoding' | 'ready' | 'failed';
@@ -238,6 +249,7 @@ export interface You {
   avatar: string;
   isHost: boolean;
   disqualified: boolean;
+  spectator: boolean;
   joinedAt: number;
   submission: OwnSubmission | null;
   /** Ses propres notes : { renditionId: { critereId: valeur } }. */
