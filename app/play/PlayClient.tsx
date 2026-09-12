@@ -165,8 +165,8 @@ export function PlayClient() {
     return (
       <div className={styles.gate}>
         <Brand />
-        <h1>Rejoindre une battle</h1>
-        <p className="muted">Saisis le code annonce par l&apos;animateur.</p>
+        <h1>REJOINDRE UNE BATTLE</h1>
+        <p className="muted">SAISIS LE CODE ANNONCE PAR L&apos;ANIMATEUR.</p>
         <JoinForm className="col" inputClassName={styles.codeInput} />
       </div>
     );
@@ -176,8 +176,8 @@ export function PlayClient() {
     return (
       <div className={styles.gate}>
         <Brand />
-        <h1>Code inconnu</h1>
-        <p className="muted">La session <b>{code}</b> n&apos;existe pas, ou elle est terminee.</p>
+        <h1>CODE INCONNU</h1>
+        <p className="muted">LA SESSION <b>{code}</b> N&apos;EXISTE PAS, OU ELLE EST TERMINEE.</p>
         <JoinForm className="col" inputClassName={styles.codeInput} />
       </div>
     );
@@ -191,24 +191,24 @@ export function PlayClient() {
         <h1>{card?.name ?? '…'}</h1>
         <p className="muted">
           {card?.mediaType
-            ? `${MEDIA_LABELS[card.mediaType].icon} Rendu attendu : ${MEDIA_LABELS[card.mediaType].label.toLowerCase()}`
-            : 'Chargement…'}
+            ? `RENDU ATTENDU · ${MEDIA_LABELS[card.mediaType].icon} ${MEDIA_LABELS[card.mediaType].label}`
+            : 'CHARGEMENT'}
         </p>
         {card && !card.open && (
-          <p className="pill" style={{ color: '#ffb4b4' }}>Les inscriptions sont fermees.</p>
+          <p className="pill err"><span>INSCRIPTIONS FERMEES</span></p>
         )}
         <div className="field" style={{ width: '100%' }}>
-          <label htmlFor="pseudo">Ton pseudo</label>
+          <label htmlFor="pseudo">TON PSEUDO</label>
           <input
             id="pseudo" className="input" value={pseudo} maxLength={22}
-            placeholder="Comment on t’appelle ?"
+            placeholder="COMMENT ON T’APPELLE ?"
             autoComplete="nickname"
             onChange={(e) => setPseudo(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') void join(); }}
           />
           {hub?.pid && (
             <span className="pill ok" style={{ alignSelf: 'flex-start' }}>
-              <span aria-hidden="true">{hub.avatar || '🏆'}</span> Connecte via Podium — ta partie comptera au classement
+              CONNECTE VIA PODIUM · TA PARTIE COMPTERA AU CLASSEMENT
             </span>
           )}
         </div>
@@ -218,7 +218,7 @@ export function PlayClient() {
           disabled={busy || pseudo.trim().length < 2 || !connected}
           onClick={join}
         >
-          {connected ? 'Entrer' : 'Connexion…'}
+          {connected ? 'ENTRER' : 'CONNEXION'}
         </button>
       </div>
     );
@@ -232,7 +232,7 @@ export function PlayClient() {
         <Brand compact />
         <span className="grow">
           <span className="session-name ellipsis">{state.name}</span>
-          <span className="faint" style={{ fontSize: 12 }}>{PHASE_LABELS[phase]}</span>
+          <span className="meta">{PHASE_LABELS[phase]}</span>
         </span>
         {you && (
           <span className="pill">
@@ -240,7 +240,7 @@ export function PlayClient() {
             <span className="ellipsis" style={{ maxWidth: 90 }}>{you.pseudo}</span>
           </span>
         )}
-        {!connected && <span className="pill live"><span className="dot" /> Hors ligne</span>}
+        {!connected && <span className="pill live"><span className="dot" /> HORS LIGNE</span>}
       </header>
 
       <div className="shell narrow">
@@ -248,44 +248,44 @@ export function PlayClient() {
 
         {you?.disqualified && (
           <p className={styles.error}>
-            Tu as ete mis hors classement par l&apos;animateur. Tu peux continuer a suivre la session.
+            <span>HORS CLASSEMENT · DECISION DE L&apos;ANIMATEUR. TU PEUX CONTINUER A SUIVRE LA SESSION.</span>
           </p>
         )}
 
         <section className={`card pad ${styles.stage}`}>{renderStage()}</section>
 
         <section className="card pad col">
-          <h2 className="section-title">Consigne</h2>
+          <h2 className="section-title">CONSIGNE</h2>
           <p className="brief">{state.brief}</p>
-          <div className="row wrap faint" style={{ fontSize: 12.5 }}>
-            <span>{MEDIA_LABELS[state.mediaType].icon} {MEDIA_LABELS[state.mediaType].label}</span>
-            <span>•</span>
-            <span>{humanDuration(state.config.durationMs)}</span>
-            <span>•</span>
-            <span>note sur {state.config.scale}</span>
+          <div className="row wrap meta">
+            <span>{MEDIA_LABELS[state.mediaType].icon} · {MEDIA_LABELS[state.mediaType].label}</span>
+            <span>·</span>
+            <span>{humanDuration(state.config.durationMs).toUpperCase()}</span>
+            <span>·</span>
+            <span>NOTE SUR {state.config.scale}</span>
           </div>
         </section>
 
         <section className="card pad col">
-          <h2 className="section-title">Elements imposes</h2>
+          <h2 className="section-title">ELEMENTS IMPOSES</h2>
           <AssetPack
             assets={state.assets}
             zipUrl={state.assets.length ? state.assetsZipUrl : undefined}
-            emptyLabel="Aucun element impose : la consigne seule fait foi."
+            emptyLabel="AUCUN ELEMENT IMPOSE · LA CONSIGNE SEULE FAIT FOI"
           />
         </section>
 
         <section className="card pad col">
           <h2 className="section-title">Dans l&apos;arene ({state.counts.participants})</h2>
           {state.roster.length === 0
-            ? <p className="empty">Tu es le premier.</p>
+            ? <p className="empty">TU ES LE PREMIER.</p>
             : (
               <div className="roster">
                 {state.roster.map((p) => (
                   <div key={p.id} className={`roster-row ${p.connected ? '' : 'off'} ${p.disqualified ? 'dq' : ''}`}>
                     <span className="avatar" aria-hidden="true">{p.avatar}</span>
                     <span className="who grow">
-                      <span className="pseudo ellipsis">{p.pseudo}{p.id === you?.id ? ' (toi)' : ''}</span>
+                      <span className="pseudo ellipsis">{p.pseudo}{p.id === you?.id ? ' · VOUS' : ''}</span>
                     </span>
                   </div>
                 ))}
@@ -294,7 +294,7 @@ export function PlayClient() {
         </section>
 
         <footer className={styles.footer}>
-          <button className="btn xs ghost" onClick={leave}>Quitter la session</button>
+          <button className="btn xs ghost" onClick={leave}>QUITTER LA SESSION</button>
         </footer>
       </div>
     </>
@@ -329,11 +329,11 @@ export function PlayClient() {
         return (
           <div className={styles.waiting}>
             <span className={styles.bigIcon} aria-hidden="true">{MEDIA_LABELS[state!.mediaType].icon}</span>
-            <h2>En attente du depart</h2>
+            <h2>EN ATTENTE DU DEPART</h2>
             <p className="muted">
               Lis la consigne, prepare ton materiel. L&apos;animateur lance le chrono quand tout le monde est la.
             </p>
-            <p className="faint" style={{ fontSize: 12.5 }}>
+            <p className="meta">
               Tu auras {humanDuration(state!.config.durationMs)} pour creer.
             </p>
             {state!.assets.length > 0 && (
@@ -350,7 +350,7 @@ export function PlayClient() {
             <p className="muted" style={{ textAlign: 'center' }}>
               {chrono.paused
                 ? 'L’animateur a mis le chrono en pause.'
-                : 'Tu peux deposer ton rendu des qu’il est pret, sans attendre la fin.'}
+                : 'DEPOT POSSIBLE DES QUE LE RENDU EST PRET, SANS ATTENDRE LA FIN.'}
             </p>
             {renderSubmission()}
           </>
@@ -358,7 +358,7 @@ export function PlayClient() {
       case 'upload':
         return (
           <>
-            <Chrono clock={chrono} hint="Derniere ligne droite" />
+            <Chrono clock={chrono} hint="DERNIERE LIGNE DROITE" />
             <p className="muted" style={{ textAlign: 'center' }}>
               Le temps de creation est ecoule. Il reste la fenetre de grace pour finaliser ton depot.
             </p>
@@ -385,10 +385,10 @@ export function PlayClient() {
       case 'results':
         return state!.podium ? (
           <div className={styles.results}>
-            <h2>Classement</h2>
+            <h2>CLASSEMENT</h2>
             {state!.podium.complete
               ? null
-              : <p className="muted" style={{ fontSize: 13.5 }}>L&apos;animateur devoile les places une par une.</p>}
+              : <p className="meta">L&apos;animateur devoile les places une par une.</p>}
             <Podium podium={state!.podium} meId={you?.id} ratings={ratings} />
           </div>
         ) : null;
@@ -396,8 +396,8 @@ export function PlayClient() {
         return (
           <div className={styles.waiting}>
             <span className={styles.bigIcon} aria-hidden="true">📦</span>
-            <h2>Session terminee</h2>
-            <p className="muted">Merci d&apos;avoir joue.</p>
+            <h2>SESSION TERMINEE</h2>
+            <p className="muted">SESSION ARCHIVEE · MERCI D&apos;AVOIR JOUE</p>
           </div>
         );
     }

@@ -1,51 +1,50 @@
-.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+/* Scoreboard 0x07 : une ligne par rendu, filet entre les lignes, l'or au seul premier. */
+.list { list-style: none; margin: 0; padding: 0; display: grid; border: var(--border); }
 
 .row {
-  display: flex; align-items: center; gap: 12px;
-  padding: 12px 14px; border-radius: var(--r-md);
-  background: var(--surface); border: 1px solid var(--stroke);
+  display: grid; grid-template-columns: 56px minmax(0, 1fr) auto;
+  gap: var(--sp-3); align-items: center;
+  padding: var(--sp-3) var(--sp-4); border-bottom: var(--border);
 }
-.hidden { opacity: .4; }
-.dots { color: var(--faint); letter-spacing: .3em; font-size: 13px; }
+.row:last-child { border-bottom: 0; }
+.hidden { color: var(--ink-40); background-image: var(--dither-12); background-size: var(--dither-size); }
+.dots { color: var(--ink-40); letter-spacing: .3em; font: var(--t-meta); }
 
 .place {
-  width: 42px; flex: none; text-align: center;
-  font-family: var(--display); font-weight: 700; font-size: 20px;
-  font-variant-numeric: tabular-nums; color: var(--muted);
+  font: var(--t-ui); letter-spacing: var(--ls-mono);
+  font-variant-numeric: tabular-nums; color: var(--ink-60); justify-self: start;
 }
 
-.who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.pseudo { font-family: var(--display); font-weight: 700; font-size: 16px; overflow-wrap: anywhere; }
-.detail { font-size: 11.5px; color: var(--faint); }
-.criteria { font-size: 11.5px; color: var(--muted); }
+.who { min-width: 0; display: grid; gap: var(--sp-1); }
+.pseudo { font: var(--t-ui); letter-spacing: var(--ls-mono); overflow-wrap: anywhere; }
+.detail { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-40); }
+.criteria { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); }
 
 .score {
-  font-family: var(--display); font-weight: 700; font-size: 24px;
-  font-variant-numeric: tabular-nums; flex: none;
+  font: var(--t-ui-l); letter-spacing: var(--ls-mono);
+  font-variant-numeric: tabular-nums; text-align: right;
 }
-.raw { color: var(--faint); font-size: 19px; }
+.raw { color: var(--ink-40); }
 
-.top {
-  border-color: rgba(251, 191, 36, .38);
-  background: linear-gradient(100deg, rgba(251, 191, 36, .1), rgba(255, 61, 139, .05));
-}
-.top .place { font-size: 26px; }
-.mine { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(139, 92, 246, .35); }
-.aside { opacity: .68; border-style: dashed; }
+/* Le premier : le seul or de l'ecran, en aplat sur le rang. */
+.top .place { background: var(--gold); color: var(--bg); padding: 0 var(--sp-1); }
+.mine { background: var(--ink-06); }
+/* Hors classement : ecarte, mais toujours la. */
+.aside { color: var(--ink-40); background-image: var(--dither-12); background-size: var(--dither-size); }
+.aside .pseudo { text-decoration: line-through; }
 
-.large .row { padding: 18px 22px; gap: 18px; }
-.large .pseudo { font-size: clamp(20px, 2.6vw, 34px); }
-.large .score { font-size: clamp(26px, 3.4vw, 46px); }
-.large .place { width: 64px; font-size: clamp(24px, 3vw, 40px); }
-.large .detail, .large .criteria { font-size: clamp(12px, 1.2vw, 16px); }
+.large .row { grid-template-columns: 88px minmax(0, 1fr) auto; padding: var(--sp-4) var(--sp-6); gap: var(--sp-6); }
+.large .pseudo { font: var(--t-ui-l); letter-spacing: var(--ls-mono); }
+.large .score { font: var(--t-data); letter-spacing: var(--ls-mono); font-size: clamp(27px, 3.4vw, 46px); }
+.large .place { font: var(--t-ui-l); letter-spacing: var(--ls-mono); }
+.large .detail, .large .criteria { font: var(--t-ui); letter-spacing: var(--ls-mono); }
 
-/* Variation d'Elo annoncee par Podium, a cote du pseudo. */
+/* Variation d'Elo annoncee par Podium : une donnee qui vient de changer, donc du sang. */
 .rating {
-  display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 999px;
-  font-family: var(--body); font-size: 11.5px; font-weight: 700; letter-spacing: .02em;
-  font-variant-numeric: tabular-nums; vertical-align: middle;
-  background: var(--surface-2); border: 1px solid var(--stroke); color: var(--muted);
+  display: inline-flex; align-items: center; height: 24px; margin-left: var(--sp-2); padding: 0 var(--sp-2);
+  font: var(--t-meta); letter-spacing: var(--ls-mono); font-variant-numeric: tabular-nums; vertical-align: middle;
+  border: 1px solid var(--ink-25); color: var(--ink-60);
 }
-.rating.up { color: #86efc7; background: rgba(52, 211, 153, .14); border-color: rgba(52, 211, 153, .3); }
-.rating.down { color: #ffb4b4; background: rgba(251, 93, 93, .14); border-color: rgba(251, 93, 93, .3); }
-.large .rating { font-size: clamp(12px, 1.2vw, 16px); padding: 3px 11px; margin-left: 12px; }
+.rating.up { color: var(--accent); border-color: var(--accent); }
+.rating.down { color: var(--ink-60); border-color: var(--ink-25); }
+.large .rating { height: 28px; margin-left: var(--sp-3); }

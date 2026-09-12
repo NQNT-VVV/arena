@@ -6,6 +6,7 @@ import { Waveform } from './Waveform';
 import { humanBytes } from '@/lib/format';
 import type { DiffusionState, SessionConfig } from '@/lib/types';
 import { useDiffusionClock } from '@/lib/useDiffusionClock';
+import { hex } from '@/lib/hex';
 import styles from './DiffusionStage.module.css';
 
 const SINGLE = [{ id: '_', label: '', weight: 1 }];
@@ -53,7 +54,7 @@ export function DiffusionStage({
     return (
       <div className={styles.empty}>
         <span className={styles.icon} aria-hidden="true">🕳️</span>
-        <h2>Aucun rendu a diffuser</h2>
+        <h2>AUCUN RENDU A DIFFUSER</h2>
         <p className="muted">Personne n&apos;a depose de creation pour cette session.</p>
       </div>
     );
@@ -75,9 +76,9 @@ export function DiffusionStage({
   return (
     <div className={`${styles.stage} ${large ? styles.large : ''}`}>
       <div className={styles.counter}>
-        <span className={styles.position}>{diffusion.index + 1}</span>
-        <span className="faint">/ {diffusion.total}</span>
-        {card.late && <span className="pill" style={{ color: '#ffc9dc' }}>Hors delai</span>}
+        <span className={styles.position}>{hex(diffusion.index + 1)}</span>
+        <span className="faint">/ {hex(diffusion.total)}</span>
+        {card.late && <span className="pill err"><span>HORS DELAI</span></span>}
         <span className="grow" />
         {onToggleAudio && (
           <button
@@ -106,7 +107,7 @@ export function DiffusionStage({
 
       <div className={styles.media}>
         {!card.inline && card.url && (
-          <a className="btn" href={`${card.url}?dl=1`}>⬇ Telecharger pour ouvrir</a>
+          <a className="btn" href={`${card.url}?dl=1`}>⬇ TELECHARGER POUR OUVRIR</a>
         )}
 
         {card.inline && card.kind === 'audio' && card.peaksUrl && diffusion.startedAt && diffusion.endsAt && (
@@ -133,7 +134,7 @@ export function DiffusionStage({
         )}
 
         {card.inline && card.kind === 'image' && card.url && (
-          <a href={card.url} target="_blank" rel="noreferrer" className={styles.imageLink} title="Ouvrir en grand">
+          <a href={card.url} target="_blank" rel="noreferrer" className={styles.imageLink} title="OUVRIR EN GRAND">
             <img className={styles.image} src={card.url} alt={`Rendu ${diffusion.index + 1}`} />
           </a>
         )}

@@ -3,11 +3,12 @@
  * d'evenement peut appeler `toast()` sans passer par un contexte.
  */
 
-export type ToastKind = 'ok' | 'err' | 'info';
+export type ToastKind = 'ok' | 'err' | 'info' | 'live';
 export interface Toast {
   id: number;
   message: string;
   kind: ToastKind;
+  at: number;
   leaving?: boolean;
 }
 
@@ -21,7 +22,7 @@ function emit() {
 }
 
 export function toast(message: string, kind: ToastKind = 'info'): void {
-  const item: Toast = { id: ++sequence, message, kind };
+  const item: Toast = { id: ++sequence, message, kind, at: Date.now() };
   toasts.push(item);
   emit();
   setTimeout(() => {
@@ -32,7 +33,7 @@ export function toast(message: string, kind: ToastKind = 'info'): void {
       toasts = toasts.filter((t) => t.id !== item.id);
       emit();
     }, 320);
-  }, 3200);
+  }, 4200);
 }
 
 export function subscribeToasts(fn: () => void): () => void {

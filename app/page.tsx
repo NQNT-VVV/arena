@@ -6,28 +6,28 @@ import styles from './page.module.css';
 
 const FEATURES = [
   {
-    title: '🎛️ N’importe quel media',
-    text: 'Beat, montage video, cover, affiche, texte, ou fichier libre. Le type de rendu est un reglage de session, pas une version differente de l’outil.',
+    title: 'N’IMPORTE QUEL MEDIA',
+    text: 'BEAT, MONTAGE VIDEO, COVER, AFFICHE, TEXTE, OU FICHIER LIBRE. LE TYPE DE RENDU EST UN REGLAGE DE SESSION, PAS UNE VERSION DIFFERENTE DE L’OUTIL.',
   },
   {
-    title: '⏱️ Chrono qui fait autorite',
-    text: 'Le temps est compte par le serveur. Tous les ecrans affichent la meme seconde, et avancer l’horloge de son telephone ne donne rien.',
+    title: 'CHRONO QUI FAIT AUTORITE',
+    text: 'LE TEMPS EST COMPTE PAR LE SERVEUR. TOUS LES ECRANS AFFICHENT LA MEME SECONDE, ET AVANCER L’HORLOGE DE SON TELEPHONE NE DONNE RIEN.',
   },
   {
-    title: '🕶️ Vote reellement anonyme',
-    text: 'Ni pseudo, ni nom de fichier, ni metadonnee. Les auteurs n’apparaissent qu’au classement — y compris pour l’animateur.',
+    title: 'VOTE REELLEMENT ANONYME',
+    text: 'NI PSEUDO, NI NOM DE FICHIER, NI METADONNEE. LES AUTEURS N’APPARAISSENT QU’AU CLASSEMENT — Y COMPRIS POUR L’ANIMATEUR.',
   },
   {
-    title: '📺 Ecran de projection',
-    text: 'Une page plein ecran a partager en visio ou a capturer dans OBS, sans aucun controle dessus.',
+    title: 'ECRAN DE PROJECTION',
+    text: 'UNE PAGE PLEIN ECRAN A PARTAGER EN VISIO OU A CAPTURER DANS OBS, SANS AUCUN CONTROLE DESSUS.',
   },
 ];
 
 const EXAMPLES = [
-  { icon: '🎧', title: 'Beat battle', text: '5 samples imposes, une heure, un morceau.' },
-  { icon: '🖼️', title: 'Graphisme', text: '5 screenshots, tout doit venir de la.' },
-  { icon: '🎬', title: 'Montage', text: 'Un pack de rushes, 90 minutes.' },
-  { icon: '✍️', title: 'Ecriture', text: 'Un theme et 5 mots obligatoires.' },
+  { icon: '0x01', title: 'BEAT BATTLE', text: '5 SAMPLES IMPOSES, UNE HEURE, UN MORCEAU.' },
+  { icon: '0x02', title: 'GRAPHISME', text: '5 CAPTURES, TOUT DOIT VENIR DE LA.' },
+  { icon: '0x03', title: 'MONTAGE', text: 'UN PACK DE RUSHES, 90 MINUTES.' },
+  { icon: '0x04', title: 'ECRITURE', text: 'UN THEME ET 5 MOTS OBLIGATOIRES.' },
 ];
 
 export default function HomePage() {
@@ -36,43 +36,43 @@ export default function HomePage() {
       <div className={styles.topbar}>
         <Brand href={null} />
         <span className={styles.spacer} />
-        <Link className="btn sm" href="/screen">📺 Ecran</Link>
+        <Link className="btn sm" href="/screen">ECRAN DE PROJECTION</Link>
       </div>
 
       <header className={styles.hero}>
         <span className={`pill ${styles.badge}`}>
-          <span className="dot" /> Aucun compte requis • un pseudo suffit
+          <span className="dot" /> AUCUN COMPTE REQUIS · UN PSEUDO SUFFIT
         </span>
-        <h1>Arena</h1>
+        <h1>ARENA</h1>
         <p>
-          Des contraintes, un chrono, et tout le monde cree. A la fin, les rendus defilent en
-          aveugle, chacun note, et le classement revele les auteurs.
+          DES CONTRAINTES, UN CHRONO, ET TOUT LE MONDE CREE. A LA FIN, LES RENDUS DEFILENT EN
+          AVEUGLE, CHACUN NOTE, ET LE CLASSEMENT REVELE LES AUTEURS.
         </p>
       </header>
 
       <main className={styles.choices}>
         <section className={`card ${styles.choice}`}>
-          <div className={styles.icon}>🎛️</div>
-          <h2>J&apos;anime la battle</h2>
+          <div className={styles.icon}>PROCEDURE 0x01</div>
+          <h2>J&apos;ANIME LA BATTLE</h2>
           <p className={styles.lead}>
-            Choisis le type de rendu, ecris ta consigne, depose tes assets, regle le chrono. Tu
-            gardes la main sur chaque phase — y compris pour ajouter du temps quand il le faut.
+            CHOISIS LE TYPE DE RENDU, ECRIS TA CONSIGNE, DEPOSE TES ELEMENTS, REGLE LE CHRONO. TU
+            GARDES LA MAIN SUR CHAQUE PHASE — Y COMPRIS POUR AJOUTER DU TEMPS QUAND IL LE FAUT.
           </p>
-          <Link className="btn primary lg block" href="/host">Creer une session</Link>
+          <Link className="btn primary lg block" href="/host">CREER UNE SESSION</Link>
         </section>
 
         <section className={`card ${styles.choice} ${styles.join}`}>
-          <div className={styles.icon}>📱</div>
-          <h2>Je participe</h2>
+          <div className={styles.icon}>PROCEDURE 0x02</div>
+          <h2>JE PARTICIPE</h2>
           <p className={styles.lead}>
-            Saisis le code annonce, choisis ton pseudo, recupere les assets et lance-toi.
+            SAISIS LE CODE ANNONCE, CHOISIS TON PSEUDO, RECUPERE LES ELEMENTS ET LANCE-TOI.
           </p>
           <JoinForm className="col" inputClassName={styles.codeInput} />
         </section>
       </main>
 
       <section className={styles.examples}>
-        <h2 className="section-title">Quelques formats</h2>
+        <h2 className="section-title">QUELQUES FORMATS</h2>
         <div className={styles.exampleGrid}>
           {EXAMPLES.map((e) => (
             <div key={e.title} className={styles.example}>
@@ -94,10 +94,8 @@ export default function HomePage() {
       </section>
 
       <footer className={styles.footer}>
-        <p>
-          Deja anime une session ? <Link href="/host">Reprendre la regie</Link> — le lien retrouve
-          ta session en cours.
-        </p>
+        <span>DEJA ANIME UNE SESSION ? <Link href="/host">REPRENDRE LA REGIE</Link> — LE LIEN RETROUVE TA SESSION EN COURS.</span>
+        <span>NODE AG-EU-03 · SESSION CONSIGNEE</span>
       </footer>
     </div>
   );

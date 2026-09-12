@@ -5,9 +5,10 @@ import styles from './Rating.module.css';
 /**
  * Saisie d'une note.
  *
- * Des boutons tant que le bareme reste petit, un curseur au-dela. Sur
+ * Des cases tant que le bareme reste petit, un curseur au-dela. Sur
  * telephone — ou se fera l'essentiel des votes — une rangee de six cibles
  * larges se touche sans viser ; vingt cibles ne se touchent plus du tout.
+ * La case choisie s'inverse : os sur noir devient noir sur os.
  */
 export function Rating({
   scale,

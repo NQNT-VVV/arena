@@ -1,29 +1,32 @@
 .gate {
   min-height: 100dvh; max-width: 420px; margin: 0 auto;
-  padding: 8vh 22px 40px;
-  display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center;
+  padding: var(--sp-12) var(--margin) var(--sp-8);
+  display: grid; gap: var(--sp-4); align-content: start;
 }
-.gate h1 { font-size: clamp(26px, 7vw, 36px); line-height: 1.1; }
+.gate h1 { font: var(--t-h1); letter-spacing: var(--ls-display); }
 .gate .field { text-align: left; }
 
 .codeInput {
-  text-align: center; font-family: var(--display); font-size: 28px; font-weight: 700;
-  letter-spacing: .34em; text-indent: .34em; text-transform: uppercase; padding: 15px;
+  text-align: center; font: var(--t-ui-l); letter-spacing: .4em; text-indent: .4em;
+  text-transform: uppercase; height: 56px;
 }
 
+/* Erreur : filet d'os et bande hachuree. Jamais de rouge de decoration. */
 .error {
-  padding: 11px 15px; border-radius: var(--r-md); font-size: 13.5px;
-  background: rgba(251, 93, 93, .13); border: 1px solid rgba(251, 93, 93, .34); color: #ffc0c0;
+  display: grid; grid-template-columns: 8px minmax(0, 1fr); gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3) var(--sp-2) 0; border: 1px solid var(--ink);
+  font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink);
 }
+.error::before { content: ''; background-image: var(--hatch); margin: calc(-1 * var(--sp-2)) 0; }
 
-.stage { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+.stage { display: grid; gap: var(--sp-6); }
 
-.waiting { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; padding: 14px 0; }
-.waiting h2 { font-size: 22px; }
-.waiting p { font-size: 14px; max-width: 42ch; }
-.bigIcon { font-size: 46px; line-height: 1; }
+.waiting { display: grid; gap: var(--sp-3); padding: var(--sp-4) 0; justify-items: start; }
+.waiting h2 { font: var(--t-h2); letter-spacing: var(--ls-display); }
+.waiting p { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); max-width: 42ch; }
+.bigIcon { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-40); }
 
-.footer { text-align: center; padding-bottom: 20px; }
+.footer { padding-bottom: var(--sp-6); font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); }
 
-.results { display: flex; flex-direction: column; gap: 12px; width: 100%; }
-.results h2 { font-size: 20px; text-align: center; }
+.results { display: grid; gap: var(--sp-3); width: 100%; }
+.results h2 { font: var(--t-h2); letter-spacing: var(--ls-display); }

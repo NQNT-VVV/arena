@@ -1,0 +1,338 @@
+/* ==========================================================================
+   AGARTHA · SYSTEME DE DESIGN · V0.4.0 « LITURGIE » — JETONS
+   Copie conforme du design system. La seule source de valeurs : tout ce qui
+   n'est pas ici est une faute. Les deux familles de polices sont fournies par
+   next/font (variables --font-archivo et --font-departure) et servies par
+   notre propre serveur.
+   ========================================================================== */
+:root{
+/* --- COULEUR : fond, os, sang, or. Les gris sont des opacités de l'os. --- */
+--bg:#060505;--ink:#D9D2C3;--accent:#E8362C;--accent-deep:#8E1B1B;--gold:#C99A2E;
+--ink-90:rgba(217,210,195,.9);--ink-60:rgba(217,210,195,.6);--ink-40:rgba(217,210,195,.4);--ink-25:rgba(217,210,195,.25);--ink-12:rgba(217,210,195,.12);--ink-06:rgba(217,210,195,.06);
+/* --- BORDURE · RADIUS : une épaisseur, zéro arrondi --- */
+--border:1px solid var(--ink-25);--border-strong:1px solid var(--ink);--border-live:1px solid var(--accent);--border-gold:1px solid var(--gold);--radius:0;
+/* --- TYPO : 2 polices, 6 niveaux, ratio 1.5 --- */
+--font-display:var(--font-archivo),'Archivo',ui-sans-serif,sans-serif;--font-mono:var(--font-departure),'Departure Mono','Courier New',ui-monospace,monospace;
+--fs-1:12px;--fs-2:18px;--fs-3:27px;--fs-4:40.5px;--fs-5:60.75px;--fs-6:clamp(60.75px,12vw,205.03px);
+--ls-display:-.04em;--ls-mono:.08em;
+--t-display:900 expanded var(--fs-6)/.9 var(--font-display);
+--t-h1:900 expanded var(--fs-4)/.95 var(--font-display);
+--t-h2:800 expanded var(--fs-3)/1 var(--font-display);
+--t-data:var(--fs-5)/1 var(--font-mono);
+--t-ui-l:var(--fs-3)/1.2 var(--font-mono);
+--t-ui:var(--fs-2)/1.2 var(--font-mono);
+--t-meta:var(--fs-1)/1.4 var(--font-mono);
+/* --- ESPACEMENT : base 4, 10 pas --- */
+--sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-6:24px;--sp-8:32px;--sp-12:48px;--sp-16:64px;--sp-24:96px;--sp-32:128px;
+--gutter:var(--sp-4);--margin:clamp(var(--sp-4),4vw,var(--sp-16));
+/* --- MOTION : coupes sèches --- */
+--dur-0:0ms;--dur-flash:80ms;--dur-blink:600ms;--ease-cut:steps(3,end);--ease-hold:steps(1,end);
+/* --- TEXTURES : dithering Bayer 4×4 (seuils 2/4/6/8/12 sur 16), hachures, grain --- */
+--dither-12:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' shape-rendering='crispEdges'%3E%3Cpath fill='%23D9D2C3' d='M0 0h1v1H0zM2 2h1v1H2z'/%3E%3C/svg%3E");
+--dither-25:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' shape-rendering='crispEdges'%3E%3Cpath fill='%23D9D2C3' d='M0 0h1v1H0zM2 0h1v1H2zM0 2h1v1H0zM2 2h1v1H2z'/%3E%3C/svg%3E");
+--dither-37:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' shape-rendering='crispEdges'%3E%3Cpath fill='%23D9D2C3' d='M0 0h1v1H0zM2 0h1v1H2zM0 2h1v1H0zM2 2h1v1H2zM1 1h1v1H1zM3 3h1v1H3z'/%3E%3C/svg%3E");
+--dither-50:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' shape-rendering='crispEdges'%3E%3Cpath fill='%23D9D2C3' d='M0 0h1v1H0zM2 0h1v1H2zM0 2h1v1H0zM2 2h1v1H2zM1 1h1v1H1zM3 3h1v1H3zM3 1h1v1H3zM1 3h1v1H1z'/%3E%3C/svg%3E");
+--dither-75:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' shape-rendering='crispEdges'%3E%3Cpath fill='%23D9D2C3' d='M0 0h1v1H0zM2 0h1v1H2zM0 2h1v1H0zM2 2h1v1H2zM1 1h1v1H1zM3 3h1v1H3zM3 1h1v1H3zM1 3h1v1H1zM1 0h1v1H1zM3 0h1v1H3zM3 2h1v1H3zM1 2h1v1H1z'/%3E%3C/svg%3E");
+--dither-size:8px 8px;
+--hatch:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' shape-rendering='crispEdges'%3E%3Cpath d='M-1 1l2-2M0 8L8 0M7 9l2-2' stroke='%23D9D2C3' stroke-opacity='.6' fill='none'/%3E%3C/svg%3E");
+--hatch-gold:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' shape-rendering='crispEdges'%3E%3Cpath d='M-1 1l2-2M0 8L8 0M7 9l2-2' stroke='%23C99A2E' fill='none'/%3E%3C/svg%3E");
+--rule:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' shape-rendering='crispEdges'%3E%3Cpath d='M0 3.5h4' stroke='%23D9D2C3' stroke-opacity='.12'/%3E%3C/svg%3E");
+--grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23g)'/%3E%3C/svg%3E");
+--veil:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' shape-rendering='crispEdges'%3E%3Cpath fill='%23060505' d='M0 0h1v1H0zM2 0h1v1H2zM0 2h1v1H0zM2 2h1v1H2zM1 1h1v1H1zM3 3h1v1H3zM3 1h1v1H3zM1 3h1v1H1zM1 0h1v1H1zM3 0h1v1H3zM3 2h1v1H3zM1 2h1v1H1z'/%3E%3C/svg%3E");
+--grid8:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M0 7.5h8M7.5 0v8' stroke='%23E8362C' stroke-opacity='.2'/%3E%3C/svg%3E");
+}
+/* ==========================================================================
+   AGARTHA — BASE ET VOCABULAIRE PARTAGE
+   Applique le systeme aux classes que Podium, Refrain et Arena ont en commun.
+   Regles : 1 px, radius 0, aucune ombre, aucun degrade, aucune transition ;
+   le sang pour ce qui vit, l'or pour le rang (un seul par ecran), le dither
+   pour le desactive, les hachures pour l'erreur, capitales partout.
+   ========================================================================== */
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; overflow-x: hidden; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: var(--t-ui); letter-spacing: var(--ls-mono); text-transform: uppercase;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3, h4, .display { font: var(--t-h1); letter-spacing: var(--ls-display); margin: 0; text-wrap: balance; }
+h1 { font: var(--t-h1); }
+h2 { font: var(--t-h2); }
+h3 { font: var(--t-ui-l); letter-spacing: var(--ls-mono); font-family: var(--font-mono); }
+p { margin: 0; text-wrap: pretty; }
+a { color: var(--ink); text-decoration: none; }
+a:hover { color: var(--accent); }
+button, input, select, textarea { font: inherit; letter-spacing: inherit; color: inherit; border-radius: 0; margin: 0; text-transform: inherit; }
+input::placeholder, textarea::placeholder { color: var(--ink-40); opacity: 1; }
+:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
+::selection { background: var(--accent); color: var(--bg); }
+::-webkit-scrollbar { width: 8px; height: 8px; background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--ink-25); }
+img { max-width: 100%; display: block; }
+/* Ce qui ne se met jamais en capitales : le code, les cles, la saisie libre. */
+code, pre, kbd, .keybox, .no-caps, input[type="url"], input[type="email"], input[type="password"], textarea { text-transform: none; }
+code { font: var(--t-meta); padding: 0 var(--sp-1); border: var(--border); }
+
+/* --- MOTION : coupes seches. Le flash : inversion pleine 80 ms, puis tenue. -------- */
+@keyframes blink { 0%, 49.9% { opacity: 1; } 50%, 100% { opacity: 0; } }
+@keyframes blink-inv { 0%, 49.9% { background: var(--accent-deep); color: var(--ink); border-color: var(--accent); } 50%, 100% { background: transparent; color: var(--accent); border-color: var(--accent); } }
+@keyframes flash { from, to { background: var(--ink); color: var(--bg); } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; } }
+
+/* --- TEXTURE GLOBALE : grain fixe .08. L'aurore des anciens ecrans n'existe plus. ---- */
+.grain { position: fixed; inset: 0; z-index: 100; pointer-events: none; opacity: .08; background-image: var(--grain); background-size: 256px 256px; }
+.aurora { display: none !important; }
+
+/* --------------------------------------------------------------------------
+   Blocs
+   -------------------------------------------------------------------------- */
+.card { background: var(--bg); border: var(--border); border-radius: 0; box-shadow: none; }
+.card.pad { padding: var(--sp-4); }
+.card.tight { padding: var(--sp-2); }
+
+.section-title {
+  font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60);
+  display: flex; align-items: center; gap: var(--sp-3); margin: 0;
+}
+.section-title::after { content: ''; flex: 1; height: 1px; background: var(--ink-25); }
+
+.muted { color: var(--ink-60); }
+.faint { color: var(--ink-40); }
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* --------------------------------------------------------------------------
+   Boutons — CMP 0x01. Secondaire par defaut, primaire = inversion.
+   -------------------------------------------------------------------------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2);
+  height: 40px; padding: 0 var(--sp-4);
+  font: var(--t-ui); letter-spacing: var(--ls-mono); white-space: nowrap; cursor: pointer;
+  border: 1px solid var(--ink-25); background: transparent; color: var(--ink);
+  border-radius: 0; box-shadow: none; transition: none; user-select: none; -webkit-tap-highlight-color: transparent;
+}
+.btn:hover:not(:disabled) { border-color: var(--ink); background-image: var(--dither-12); background-size: var(--dither-size); animation: flash var(--dur-flash) var(--ease-hold); }
+.btn:active:not(:disabled) { border-color: var(--accent); color: var(--accent); background-image: none; }
+.btn:disabled { cursor: not-allowed; border-color: var(--ink-12); background-image: var(--dither-12); background-size: var(--dither-size); color: var(--ink-40); animation: none; }
+
+.btn.primary, .btn.good, .btn.discord { border-color: var(--ink); background: var(--ink); color: var(--bg); }
+.btn.primary:hover:not(:disabled), .btn.good:hover:not(:disabled), .btn.discord:hover:not(:disabled) { background: var(--bg); background-image: none; color: var(--ink); animation: flash var(--dur-flash) var(--ease-hold); }
+.btn.primary:active:not(:disabled), .btn.good:active:not(:disabled), .btn.discord:active:not(:disabled) { border-color: var(--accent); background: var(--accent-deep); color: var(--ink); }
+.btn.primary:disabled, .btn.good:disabled, .btn.discord:disabled { background-color: transparent; background-image: var(--dither-25); background-size: var(--dither-size); border-color: var(--ink-12); color: var(--ink-40); }
+
+.btn.ghost { border-color: transparent; color: var(--ink-60); }
+.btn.ghost:hover:not(:disabled) { border-color: transparent; background-image: none; color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
+.btn.ghost:active:not(:disabled) { color: var(--accent); }
+
+.btn.danger { justify-content: flex-start; gap: var(--sp-3); padding-left: 0; border-color: var(--ink); color: var(--ink); }
+.btn.danger::before { content: ''; display: block; width: 8px; align-self: stretch; background-image: var(--hatch); }
+.btn.danger:hover:not(:disabled) { background-color: var(--ink-12); background-image: none; }
+.btn.danger:active:not(:disabled) { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+.btn.sm { height: 28px; padding: 0 var(--sp-3); font: var(--t-meta); }
+.btn.xs { height: 24px; padding: 0 var(--sp-2); font: var(--t-meta); }
+.btn.lg { height: 56px; padding: 0 var(--sp-6); font: var(--t-ui-l); }
+.btn.block { width: 100%; }
+.btn.icon { width: 40px; height: 40px; padding: 0; }
+.btn.danger.sm::before, .btn.danger.xs::before { width: 4px; }
+
+/* Chargement : trois carres, jamais de spinner. */
+.loading-dots { display: inline-flex; gap: var(--sp-1); }
+.loading-dots span { width: 8px; height: 8px; background: currentColor; animation: blink 900ms var(--ease-hold) infinite; }
+.loading-dots span:nth-child(2) { animation-delay: 300ms; }
+.loading-dots span:nth-child(3) { animation-delay: 600ms; }
+
+/* --------------------------------------------------------------------------
+   Champs — CMP 0x03. Hauteur 40, filet .25, survol os, focus sang, erreur hachures.
+   -------------------------------------------------------------------------- */
+.field { display: flex; flex-direction: column; gap: var(--sp-2); }
+.field > label, .field > span:first-child { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); }
+.input {
+  width: 100%; height: 40px; padding: 0 var(--sp-3);
+  background: transparent; border: 1px solid var(--ink-25); border-radius: 0;
+  font: var(--t-ui); letter-spacing: var(--ls-mono); color: var(--ink); caret-color: var(--accent);
+  transition: none; box-shadow: none;
+}
+.input:hover { border-color: var(--ink); }
+.input:focus { outline: none; border-color: var(--accent); }
+.input:disabled { border-color: var(--ink-12); background-image: var(--dither-12); background-size: var(--dither-size); color: var(--ink-40); cursor: not-allowed; }
+.input.ok { border-color: var(--ink); }
+.input.ko { border-color: var(--ink); background-image: var(--hatch); background-repeat: repeat-x; background-position: bottom; background-size: 8px 4px; }
+textarea.input { height: auto; min-height: 96px; padding: var(--sp-2) var(--sp-3); resize: vertical; }
+select.input { appearance: none; cursor: pointer; padding-right: 40px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' shape-rendering='crispEdges'%3E%3Cpath fill='%23D9D2C3' d='M0 2h8v1H0zM1 3h6v1H1zM2 4h4v1H2zM3 5h2v1H3z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right var(--sp-3) center; background-size: 8px 8px; }
+select.input option { background: var(--bg); color: var(--ink); }
+input[type="color"].input { padding: 0; height: 40px; }
+
+/* Interrupteur : un carre qui change de cote. */
+.switch { display: inline-flex; align-items: center; gap: var(--sp-3); cursor: pointer; user-select: none; font: var(--t-meta); letter-spacing: var(--ls-mono); }
+.switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+.switch .track { width: 40px; height: 20px; border: 1px solid var(--ink-25); position: relative; flex: none; background: transparent; border-radius: 0; transition: none; }
+.switch .track::after { content: ''; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; background: var(--ink-60); transition: none; border-radius: 0; box-shadow: none; }
+.switch input:checked + .track { border-color: var(--ink); background: var(--ink); }
+.switch input:checked + .track::after { left: 23px; background: var(--bg); }
+.switch input:focus-visible + .track { outline: 1px solid var(--accent); outline-offset: 2px; }
+
+/* Segments : des cases, la choisie inversee. */
+.seg { display: inline-flex; border: 1px solid var(--ink-25); padding: 0; gap: 0; background: transparent; border-radius: 0; }
+.seg button, .seg a { border: 0; border-right: 1px solid var(--ink-25); background: transparent; color: var(--ink-60); cursor: pointer; height: 28px; padding: 0 var(--sp-3); font: var(--t-meta); letter-spacing: var(--ls-mono); border-radius: 0; transition: none; display: inline-flex; align-items: center; }
+.seg button:last-child, .seg a:last-child { border-right: 0; }
+.seg button:hover, .seg a:hover { color: var(--ink); background-image: var(--dither-12); background-size: var(--dither-size); }
+.seg button[aria-pressed="true"], .seg a[aria-pressed="true"] { background: var(--ink); background-image: none; color: var(--bg); box-shadow: none; }
+
+input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 24px; background: transparent; cursor: pointer; touch-action: none; }
+input[type="range"]::-webkit-slider-runnable-track { height: 8px; border: 1px solid var(--ink-25); background: transparent; border-radius: 0; }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; margin-top: -5px; width: 16px; height: 16px; background: var(--ink); border-radius: 0; box-shadow: none; border: 0; }
+input[type="range"]::-moz-range-track { height: 8px; border: 1px solid var(--ink-25); background: transparent; border-radius: 0; }
+input[type="range"]::-moz-range-thumb { border: 0; width: 16px; height: 16px; background: var(--ink); border-radius: 0; }
+
+/* --------------------------------------------------------------------------
+   Badges et pastilles — CMP 0x08. Badge 24 px, pastille 8×8, jamais ronde.
+   -------------------------------------------------------------------------- */
+.pill {
+  display: inline-flex; align-items: center; gap: var(--sp-2); height: 24px; padding: 0 var(--sp-2);
+  border: 1px solid var(--ink-25); background: transparent; border-radius: 0;
+  font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); white-space: nowrap;
+}
+.pill.ok { border-color: var(--ink); color: var(--ink); }
+.pill.live { border-color: var(--accent); color: var(--accent); }
+.pill.gold { border-color: var(--gold); color: var(--gold); }
+.pill.off { border-color: var(--ink-12); color: var(--ink-40); }
+.pill.dead { border-color: var(--ink-25); color: var(--ink-40); text-decoration: line-through; background-image: var(--dither-12); background-size: var(--dither-size); }
+.pill.err { border-color: var(--ink); color: var(--ink); background-image: var(--hatch); padding: 0 var(--sp-1); }
+.pill.err > * { background: var(--bg); padding: 0 var(--sp-1); }
+.dot { width: 8px; height: 8px; background: currentColor; border-radius: 0; box-shadow: none; animation: blink var(--dur-blink) var(--ease-hold) infinite; flex: none; }
+
+/* Avatar : carre 48 en dither, le glyphe pose sur un aplat de fond. Le systeme
+   est monochrome : l'emoji choisi par le joueur est rendu en niveaux d'os. */
+.avatar {
+  width: 48px; height: 48px; flex: none; border-radius: 0;
+  border: 1px solid var(--ink-25); background-image: var(--dither-50); background-size: var(--dither-size);
+  display: grid; place-items: center; font-size: 20px; line-height: 1;
+}
+.avatar > span, .avatar::first-letter { background: var(--bg); padding: 0 2px; }
+.avatar { filter: grayscale(1) contrast(1.1); }
+.avatar.sm { width: 28px; height: 28px; font-size: 14px; }
+.avatar.lg { width: 80px; height: 80px; font-size: 40px; }
+
+.code-chip { font: var(--t-h1); letter-spacing: var(--ls-display); color: var(--ink); background: none; -webkit-text-fill-color: currentColor; }
+
+/* --------------------------------------------------------------------------
+   Messages systeme — CMP 0x0B. Horodates, pile en bas a droite, 0 ms.
+   -------------------------------------------------------------------------- */
+#toasts { position: fixed; z-index: 999; right: var(--sp-4); bottom: var(--sp-4); left: auto; transform: none; display: flex; flex-direction: column; gap: var(--sp-2); align-items: stretch; pointer-events: none; width: min(440px, calc(100vw - 2 * var(--sp-4))); padding: 0; }
+.toast {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--sp-3); align-items: start;
+  padding: var(--sp-3) var(--sp-4); border: 1px solid var(--ink-25); background: var(--bg); color: var(--ink);
+  font: var(--t-ui); letter-spacing: var(--ls-mono); text-align: left; border-radius: 0; box-shadow: none; animation: none; max-width: none;
+}
+.toast time { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); padding-top: 3px; }
+.toast.ok { border-color: var(--ink); background: var(--ink); color: var(--bg); }
+.toast.ok time { color: var(--bg); }
+.toast.err { grid-template-columns: 8px auto minmax(0, 1fr); padding-left: 0; border-color: var(--ink); }
+.toast.err::before { content: ''; align-self: stretch; margin: calc(-1 * var(--sp-3)) 0; background-image: var(--hatch); }
+.toast.live { border-color: var(--accent); }
+.toast.live time { color: var(--accent); }
+.toast.out { display: none; }
+
+/* --------------------------------------------------------------------------
+   Marque : le nom en Archivo, rien d'autre. Le pictogramme se tait.
+   -------------------------------------------------------------------------- */
+.brand { display: inline-flex; align-items: baseline; gap: var(--sp-2); font: var(--t-h2); letter-spacing: var(--ls-display); color: var(--ink); }
+.brand:hover { color: var(--ink); }
+.brand-mark { display: none; }
+.brand-name { background: none; -webkit-text-fill-color: currentColor; color: inherit; }
+.brand-beta { font: var(--t-meta); letter-spacing: var(--ls-mono); height: 24px; display: inline-flex; align-items: center; padding: 0 var(--sp-2); border: 1px solid var(--ink-25); color: var(--ink-60); background: none; border-radius: 0; align-self: center; }
+
+.support-note { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); text-align: center; }
+.support-note b { color: var(--ink); font-weight: 400; }
+.support-note a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; border: 0; }
+
+/* --------------------------------------------------------------------------
+   Utilitaires
+   -------------------------------------------------------------------------- */
+.row { display: flex; align-items: center; gap: var(--sp-3); }
+.row.wrap { flex-wrap: wrap; }
+.col { display: flex; flex-direction: column; gap: var(--sp-3); }
+.grow { flex: 1; min-width: 0; }
+.center { display: grid; place-items: center; }
+.ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hidden { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.fade-in, .pop-in { animation: none; }
+.meta { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); }
+.data { font: var(--t-data); letter-spacing: var(--ls-mono); font-variant-numeric: tabular-nums; }
+.live { color: var(--accent); }
+.gold { color: var(--gold); }
+.hatch { background-image: var(--hatch); }
+.dither { background-image: var(--dither-25); background-size: var(--dither-size); }
+/* Reperes de coin 8×8 : buzzer, modale, plaque. Le parent est en position relative. */
+.corners::before, .corners::after, .corners > .corner-b::before, .corners > .corner-b::after { content: ''; position: absolute; width: 8px; height: 8px; }
+.corners::before { left: var(--sp-1); top: var(--sp-1); border-top: 1px solid currentColor; border-left: 1px solid currentColor; }
+.corners::after { right: var(--sp-1); top: var(--sp-1); border-top: 1px solid currentColor; border-right: 1px solid currentColor; }
+.corners > .corner-b::before { left: var(--sp-1); bottom: var(--sp-1); border-bottom: 1px solid currentColor; border-left: 1px solid currentColor; }
+.corners > .corner-b::after { right: var(--sp-1); bottom: var(--sp-1); border-bottom: 1px solid currentColor; border-right: 1px solid currentColor; }
+
+/* --------------------------------------------------------------------------
+   Barre systeme et gabarit (Arena : .topbar/.shell ; Podium : .nav/.shell)
+   -------------------------------------------------------------------------- */
+.topbar {
+  display: flex; align-items: center; gap: var(--sp-4); flex-wrap: wrap;
+  padding: var(--sp-3) var(--margin); border-bottom: var(--border); background: var(--bg);
+  position: sticky; top: 0; z-index: 20; font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60);
+}
+.topbar .session-name { font: var(--t-ui); letter-spacing: var(--ls-mono); color: var(--ink); }
+.shell { max-width: 1180px; margin: 0 auto; padding: var(--sp-8) var(--margin) var(--sp-16); display: flex; flex-direction: column; gap: var(--sp-8); }
+.shell.narrow { max-width: 720px; }
+
+/* --------------------------------------------------------------------------
+   Tuiles de mesure — donnees en mono, libelle en meta.
+   -------------------------------------------------------------------------- */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: var(--gutter); }
+.stat { border: var(--border); padding: var(--sp-3); display: grid; gap: var(--sp-1); background: transparent; border-radius: 0; }
+.stat .v { font: var(--t-ui-l); letter-spacing: var(--ls-mono); font-variant-numeric: tabular-nums; }
+.stat .k { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); }
+
+/* --------------------------------------------------------------------------
+   Timer — CMP 0x06 (Arena .chrono). Dixiemes, urgence en sang, ecoule en hachures.
+   -------------------------------------------------------------------------- */
+.chrono { font: var(--t-data); letter-spacing: var(--ls-mono); font-variant-numeric: tabular-nums; font-size: clamp(var(--fs-5), 14vw, 160px); line-height: 1; transition: none; text-shadow: none; }
+.chrono.calm, .chrono.warn { color: var(--ink); }
+.chrono.danger { color: var(--accent); animation: none; }
+.chrono.over, .chrono.paused { color: var(--ink-40); }
+.chrono-wrap { display: grid; gap: var(--sp-2); text-align: left; justify-items: stretch; }
+.chrono-label { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); }
+.chrono.danger ~ .chrono-label, .chrono-label.danger { color: var(--accent); animation: blink var(--dur-blink) var(--ease-hold) infinite; }
+.chrono-bar { width: 100%; height: 8px; border: 1px solid var(--ink-25); background: transparent; overflow: hidden; border-radius: 0; }
+.chrono-bar > i { display: block; height: 100%; background: var(--ink); transform-origin: left center; transition: none; }
+.chrono-bar.warn > i { background: var(--ink); }
+.chrono-bar.danger > i { background: var(--accent); }
+.chrono-bar.over { background-image: var(--hatch); }
+.chrono-bar.over > i { display: none; }
+
+/* --------------------------------------------------------------------------
+   Progression — CMP 0x09 (Arena .phase-rail). Faite = os, en cours = sang.
+   -------------------------------------------------------------------------- */
+.phase-rail { display: flex; align-items: stretch; gap: 0; overflow-x: auto; padding: 0; scrollbar-width: none; border: var(--border); }
+.phase-rail::-webkit-scrollbar { display: none; }
+.phase-rail li { list-style: none; display: flex; align-items: stretch; flex: 1 0 auto; }
+.phase-rail .step { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-40); border-right: var(--border); border-radius: 0; background: transparent; white-space: nowrap; transition: none; flex: 1; }
+.phase-rail li:last-child .step { border-right: 0; }
+.phase-rail .step .num { width: 8px; height: 8px; border: 1px solid var(--ink-25); border-radius: 0; font-size: 0; background: transparent; flex: none; }
+.phase-rail .step.done { color: var(--ink-60); }
+.phase-rail .step.done .num { background: var(--ink); border-color: var(--ink); }
+.phase-rail .step.now { color: var(--ink); background: transparent; border-color: var(--ink-25); }
+.phase-rail .step.now .num { background: var(--accent); border-color: var(--accent); animation: blink var(--dur-blink) var(--ease-hold) infinite; }
+.phase-rail .link { display: none; }
+
+/* --------------------------------------------------------------------------
+   Lignes de joueurs (Arena .roster) — CMP 0x05 / 0x07
+   -------------------------------------------------------------------------- */
+.roster { display: grid; gap: 0; border: var(--border); }
+.roster-row { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: var(--sp-3); align-items: center; padding: var(--sp-3); border-bottom: var(--border); background: transparent; border-radius: 0; }
+.roster-row:last-child { border-bottom: 0; }
+.roster-row:hover { background: var(--ink-06); }
+.roster-row.dq { color: var(--ink-40); background-image: var(--dither-12); background-size: var(--dither-size); text-decoration: line-through; }
+.roster-row.off { color: var(--ink-40); }
