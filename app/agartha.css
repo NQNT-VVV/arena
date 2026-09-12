@@ -251,8 +251,13 @@ code { font: var(--t-meta); padding: 0 var(--sp-1); border: var(--border); }
 @media (pointer: coarse) {
   .btn.sm, .btn.xs { min-height: 44px; padding-left: var(--sp-4); padding-right: var(--sp-4); }
   .btn.icon { width: 44px; height: 44px; }
-  /* Et de quoi ne pas confondre deux actions voisines. */
-  .row, .tools, .actions { gap: var(--sp-3); }
+  /* Et de quoi ne pas confondre deux actions voisines. `:where()` ramene le
+     poids a zero — sans lui, la regle perdait contre `.form .actions` et
+     consorts, et ne s'appliquait a aucun groupe d'actions de l'application. */
+  :where(.row, .tools, .actions) { gap: var(--sp-3); }
+  /* Les filtres segmentes se touchent aussi : 28 px se ratent. */
+  .seg a, .seg button { min-height: 44px; display: inline-flex; align-items: center; }
+  .btn { min-height: 44px; }
 }
 .btn.sm { height: 28px; padding: 0 var(--sp-3); font: var(--t-meta); }
 .btn.xs { height: 24px; padding: 0 var(--sp-2); font: var(--t-meta); }
@@ -268,7 +273,11 @@ code { font: var(--t-meta); padding: 0 var(--sp-1); border: var(--border); }
  * `.btn.block`, elle faisait passer le pictogramme au-dessus du libelle — sur la
  * seule porte d'entree du hub, le bouton de connexion Discord.
  */
-.btn.block { width: 100%; flex-direction: row; }
+/* `display` et `gap` tombaient eux aussi du cote de `.block` : meme poids, et
+   la feuille de l'application passe apres. Le libelle se retrouvait a 16 px du
+   pictogramme au lieu de 8. On reprend les trois proprietes, pas seulement la
+   direction. */
+.btn.block { width: 100%; flex-direction: row; display: inline-flex; gap: var(--sp-2); }
 .btn.icon { width: 40px; height: 40px; padding: 0; }
 .btn.danger.sm::before, .btn.danger.xs::before { width: 4px; }
 

@@ -134,13 +134,21 @@ async function postResults(slug, payload) {
 
 const challengeCache = new Map(); // slug -> { at, list }
 
-/** Defis actifs pour ce jeu. Tableau vide si le hub est injoignable. */
+/**
+ * Defis actifs pour ce jeu. Tableau vide si le hub est injoignable.
+ *
+ * La cle du jeu part avec la demande : c'est elle qui ouvre la graine du
+ * defi. Le hub ne la sert plus a qui ne la presente pas — elle determine le
+ * contenu tire au sort, et une requete publique donnait la reponse a
+ * l'avance. Sans cle, la liste arrive quand meme, simplement sans graine.
+ */
 async function activeChallenges(slug = SLUG) {
   if (!enabled()) return [];
   const hit = challengeCache.get(slug);
   if (hit && Date.now() - hit.at < CACHE_MS) return hit.list;
   try {
-    const res = await fetchJson(`${config.podium.url}/api/v1/games/${encodeURIComponent(slug)}/challenges/active`, {}, 5000);
+    const init = config.podium.gameKey ? { headers: { Authorization: `Bearer ${config.podium.gameKey}` } } : {};
+    const res = await fetchJson(`${config.podium.url}/api/v1/games/${encodeURIComponent(slug)}/challenges/active`, init, 5000);
     const list = res.ok && Array.isArray(res.json?.challenges) ? res.json.challenges : [];
     challengeCache.set(slug, { at: Date.now(), list });
     return list;
