@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import type { Socket } from 'socket.io-client';
 
+import { Icon } from '@/components/Icon';
 import { AssetPack } from '@/components/AssetPack';
 import { Brand } from '@/components/Brand';
 import { DiffusionStage } from '@/components/DiffusionStage';
@@ -338,7 +339,7 @@ export function PlayClient() {
             </p>
             {state!.assets.length > 0 && (
               <a className="btn sm" href={state!.assetsZipUrl}>
-                ⬇ Recuperer les {state!.assets.length} elements
+                <Icon name="telecharge" />Recuperer les {state!.assets.length} elements
               </a>
             )}
           </div>
@@ -395,7 +396,7 @@ export function PlayClient() {
       default:
         return (
           <div className={styles.waiting}>
-            <span className={styles.bigIcon} aria-hidden="true">📦</span>
+            <Icon name="depot" size="xl" className={styles.bigIcon} />
             <h2>SESSION TERMINEE</h2>
             <p className="muted">Session archivee. Merci d&apos;avoir joue.</p>
           </div>

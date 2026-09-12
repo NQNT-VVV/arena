@@ -36,11 +36,6 @@
 .roster-row.dq .pseudo { text-decoration: line-through; }
 .roster-row.dq .sub, .roster-row.off .sub { color: var(--ink-55); }
 
-.empty {
-  position: relative; padding: var(--sp-6) var(--sp-4) var(--sp-6) var(--sp-6); color: var(--ink-60);
-  border: var(--border); font: var(--t-meta); letter-spacing: var(--ls-mono);
-}
-.empty::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 8px; background-image: var(--dither-37); background-size: var(--dither-size); }
 
 /* --------------------------------------------------------------------------
    Type de rendu : des cases, la choisie inversee

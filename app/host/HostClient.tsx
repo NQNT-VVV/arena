@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Socket } from 'socket.io-client';
 
+import { Icon } from '@/components/Icon';
 import { AssetPack } from '@/components/AssetPack';
 import { AssetUploader } from '@/components/AssetUploader';
 import { Brand } from '@/components/Brand';
@@ -335,7 +336,7 @@ export function HostClient() {
                 </button>
               </div>
               <a className="btn sm block" href={`/screen?code=${state.code}`} target="_blank" rel="noreferrer">
-                📺 Ouvrir l&apos;ecran de projection
+                <Icon name="ecran" />Ouvrir l&apos;ecran de projection
               </a>
             </div>
 
@@ -434,7 +435,7 @@ export function HostClient() {
                     <span className="who grow">
                       <span className="pseudo ellipsis">{p.pseudo}</span>
                       <span className="sub">
-                        {p.hasSubmitted ? '✓ a rendu' : (p.connected ? 'en ligne' : 'deconnecte')}
+                        {p.hasSubmitted ? 'a rendu' : (p.connected ? 'en ligne' : 'deconnecte')}
                       </span>
                     </span>
                     <button
@@ -442,7 +443,7 @@ export function HostClient() {
                       title={p.disqualified ? 'Reintegrer' : 'Disqualifier'}
                       onClick={() => act('host:disqualify', { participantId: p.id, on: !p.disqualified })}
                     >
-                      {p.disqualified ? '↩' : '✕'}
+                      {p.disqualified ? 'Reintegrer' : 'Ecarter'}
                     </button>
                   </div>
                 ))}
@@ -537,17 +538,17 @@ export function HostClient() {
             </p>
             <div className="row wrap">
               <button className="btn sm" disabled={busy || !d || d.index === 0} onClick={() => act('host:diffusion-prev')}>
-                ← Precedent
+                <Icon name="precedent" />Precedent
               </button>
               <button className="btn sm" disabled={busy || !d?.current} title="Relancer ce rendu depuis le debut, pour tout le monde" onClick={() => act('host:diffusion-replay')}>
-                🔁 Relancer
+                <Icon name="chrono" />Relancer
               </button>
               <button
                 className={`btn ${everyone ? 'good' : ''}`}
                 disabled={busy || last}
                 onClick={() => act('host:diffusion-next')}
               >
-                Suivant →
+                Suivant<Icon name="suivant" />
               </button>
             </div>
             <label className="switch" title="Le serveur passe seul au rendu suivant apres l’ecoute et la fenetre de vote">
@@ -589,8 +590,8 @@ export function HostClient() {
               </button>
             </div>
             <div className="row wrap">
-              <button className="btn sm ghost" onClick={() => download('csv')}>⬇ CSV</button>
-              <button className="btn sm ghost" onClick={() => download('json')}>⬇ JSON</button>
+              <button className="btn sm ghost" onClick={() => download('csv')}><Icon name="telecharge" />CSV</button>
+              <button className="btn sm ghost" onClick={() => download('json')}><Icon name="telecharge" />JSON</button>
               {btn('Archiver la session', 'host:archive', {}, 'btn sm ghost')}
             </div>
             {renderNextEdition()}
@@ -602,8 +603,8 @@ export function HostClient() {
           <div className={styles.controls}>
             <p className="muted">SESSION ARCHIVEE.</p>
             <div className="row wrap">
-              <button className="btn sm ghost" onClick={() => download('csv')}>⬇ CSV</button>
-              <button className="btn sm ghost" onClick={() => download('json')}>⬇ JSON</button>
+              <button className="btn sm ghost" onClick={() => download('csv')}><Icon name="telecharge" />CSV</button>
+              <button className="btn sm ghost" onClick={() => download('json')}><Icon name="telecharge" />JSON</button>
             </div>
             {renderNextEdition()}
           </div>
@@ -619,7 +620,7 @@ export function HostClient() {
         <span className="section-title">NOUVELLE EDITION</span>
         <div className="row wrap">
           <button className="btn good" disabled={busy} onClick={() => duplicate(true)}>
-            🔁 Relancer{hasAssets ? ' avec le meme pack' : ''}
+            <Icon name="chrono" />Relancer{hasAssets ? ' avec le meme pack' : ''}
           </button>
           {hasAssets && (
             <button className="btn sm ghost" disabled={busy} onClick={() => duplicate(false)}>

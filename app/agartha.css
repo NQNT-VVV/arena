@@ -13,7 +13,7 @@
    .55 est le premier a atteindre 4.5:1 sur le fond (texte lisible), .45 le premier a atteindre
    3:1 (element d'interface percevable). Sans eux, .40 sert de texte a 2.83:1 et .25 de bordure
    a 1.75:1 : les filets disparaissent et l'interface perd toute structure. */
---ink-55:rgba(217,210,195,.55);--ink-45:rgba(217,210,195,.45);
+--ink-55:rgba(217,210,195,.55);--ink-45:rgba(217,210,195,.45);--gold-18:rgba(201,154,46,.18);
 /* --- BORDURE · RADIUS : une épaisseur, zéro arrondi --- */
 /* --border sert de separateur interne (2.42:1, assume : il ordonne sans crier).
    --border-ui habille tout ce qui se clique ou se saisit et tient le seuil de 3:1. */
@@ -33,13 +33,29 @@
 /* Niveau de lecture continue. Le systeme d'origine est une vitrine : ses six niveaux servent
    des libelles courts, aucun ne porte un paragraphe. --t-prose comble ce manque, dans la meme
    police et la meme famille de tailles, avec l'interlignage et la casse qu'exige un texte suivi. */
+--t-read:var(--fs-2)/1.6 var(--font-mono);
 --t-prose:14px/1.65 var(--font-mono);
 --ls-prose:.02em;
+/* ECHELLE D'USAGE — un role, un jeton.
+   --t-display  affiche, nom du hub, code de salle
+   --t-h1       titre de page, titre de section
+   --t-h2       titre de carte
+   --t-data     donnee vivante : chrono, cote, score
+   --t-ui       corps d'interface : cellules, boutons, champs, navigation
+   --t-read     texte suivi qui EST le contenu : pages legales, consigne
+   --t-prose    texte suivi qui ANNOTE : description de carte, etat vide, aide
+   --t-meta     badges, horodates, en-tetes de colonne, compteurs, index hexa
+   Regle de controle : une chaine lue pour elle-meme n'est pas en --t-meta. */
 /* --- ESPACEMENT : base 4, 10 pas --- */
 --sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-6:24px;--sp-8:32px;--sp-12:48px;--sp-16:64px;--sp-24:96px;--sp-32:128px;
 --gutter:var(--sp-4);--margin:clamp(var(--sp-4),4vw,var(--sp-16));
 /* --- MOTION : coupes sèches --- */
 --dur-0:0ms;--dur-flash:80ms;--dur-blink:600ms;--ease-cut:steps(3,end);--ease-hold:steps(1,end);
+/* Duree d'un retour au doigt ou a la souris. Une coupe seche n'est pas l'absence de
+   mouvement : c'est un changement franc, en deux paliers, qu'on percoit sans le voir
+   glisser. Sans elle l'interface ne repond pas, ce qui se lit comme « pas fini ». */
+--dur-tap:120ms;--ease-tap:steps(2,end);
+--tap:var(--dur-tap) var(--ease-tap);
 /* --- TEXTURES : dithering Bayer 4×4 (seuils 2/4/6/8/12 sur 16), hachures, grain --- */
 --dither-12:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' shape-rendering='crispEdges'%3E%3Cpath fill='%23D9D2C3' d='M0 0h1v1H0zM2 2h1v1H2z'/%3E%3C/svg%3E");
 --dither-25:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' shape-rendering='crispEdges'%3E%3Cpath fill='%23D9D2C3' d='M0 0h1v1H0zM2 0h1v1H2zM0 2h1v1H0zM2 2h1v1H2z'/%3E%3C/svg%3E");
@@ -111,10 +127,24 @@ code { font: var(--t-meta); padding: 0 var(--sp-1); border: var(--border); }
 @keyframes blink { 0%, 49.9% { opacity: 1; } 50%, 100% { opacity: 0; } }
 @keyframes blink-inv { 0%, 49.9% { background: var(--accent-deep); color: var(--ink); border-color: var(--accent); } 50%, 100% { background: transparent; color: var(--accent); border-color: var(--accent); } }
 @keyframes flash { from, to { background: var(--ink); color: var(--bg); } }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; } }
+/* Balayage d'un squelette : une bande de dithering qui avance par paliers. */
+@keyframes sweep { from { background-position: 0 0; } to { background-position: 32px 0; } }
+/*
+ * Mouvement reduit : on coupe le decoratif, jamais l'information. Le clignotement du
+ * compte a rebours et de la pastille « en cours » dit quelque chose qu'aucun autre
+ * signal ne porte : il reste, ralenti.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; }
+  .grain { display: none; }
+  [class*="skeleton"], .loading-dots span { animation: none !important; }
+  .dot, .chrono-label.danger { animation-duration: 1.6s !important; }
+}
 
 /* --- TEXTURE GLOBALE : grain fixe .08. L'aurore des anciens ecrans n'existe plus. ---- */
-.grain { position: fixed; inset: 0; z-index: 100; pointer-events: none; opacity: .06; background-image: var(--grain); background-size: 256px 256px; }
+/* A .06 le grain coutait 0,6 point de contraste et faisait tomber --ink-55
+   sous le seuil de lecture. */
+.grain { position: fixed; inset: 0; z-index: 100; pointer-events: none; opacity: .04; background-image: var(--grain); background-size: 256px 256px; }
 .aurora { display: none !important; }
 
 /* --------------------------------------------------------------------------
@@ -124,13 +154,42 @@ code { font: var(--t-meta); padding: 0 var(--sp-1); border: var(--border); }
 .card.pad { padding: var(--sp-4); }
 .card.tight { padding: var(--sp-2); }
 
+/* Etat vide : c'est un message, il se lit. Donc ni 12 px ni capitales. La texture
+   qui dit « rien ici » passe en bandeau, jamais sous les lettres. */
+.empty {
+  position: relative; border: var(--border);
+  padding: var(--sp-6) var(--sp-4) var(--sp-6) var(--sp-6);
+  font: var(--t-prose); letter-spacing: var(--ls-prose); text-transform: none; color: var(--ink-90);
+}
+.empty::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 8px; background-image: var(--dither-37); background-size: var(--dither-size); }
+
+/*
+ * Un titre de section est un repere de structure. En 12 px --ink-60 il etait, au
+ * pixel et a la couleur pres, identique aux en-tetes de colonne, aux badges et au
+ * pied de page : la page n'avait plus de chapitres, seulement une nappe uniforme.
+ * Le systeme source place ses titres de section au niveau 6 ; le niveau 4 est la
+ * version assagie pour une interface dense.
+ */
 .section-title {
-  font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60);
+  font: var(--t-h1); font-size: clamp(var(--fs-3), 3.2vw, var(--fs-4));
+  letter-spacing: var(--ls-display); color: var(--ink);
   display: flex; align-items: center; gap: var(--sp-3); margin: 0;
 }
-.section-title::after { content: ''; flex: 1; height: 1px; background: var(--ink-25); }
+.section-title::after { content: ''; flex: 1; height: 1px; background: var(--ink-35); }
+/* L'index hexadecimal sort du titre et redevient une bande inversee, comme
+   « SECTION 0x02 » dans le systeme source. */
+.section-title .idx {
+  font: var(--t-meta); letter-spacing: var(--ls-mono);
+  background: var(--ink); color: var(--bg);
+  padding: 0 var(--sp-1); align-self: center; flex: none;
+}
+/* En-tete de panneau dense : ce n'est pas un chapitre de page. */
+.section-title.sub { font: var(--t-ui-l); font-size: var(--fs-3); letter-spacing: var(--ls-mono); color: var(--ink); }
+.section-title.sub::after { background: var(--ink-25); }
 
 .muted { color: var(--ink-60); }
+/* .faint est reserve a l'inerte : desactive, masque, hors jeu. Pour une
+   information secondaire, c'est .muted. */
 .faint { color: var(--ink-55); }
 .tnum { font-variant-numeric: tabular-nums; }
 
@@ -142,17 +201,21 @@ code { font: var(--t-meta); padding: 0 var(--sp-1); border: var(--border); }
   height: 40px; padding: 0 var(--sp-4);
   font: var(--t-ui); letter-spacing: var(--ls-mono); white-space: nowrap; cursor: pointer;
   border: var(--border-ui); background: transparent; color: var(--ink);
-  border-radius: 0; box-shadow: none; transition: none; user-select: none; -webkit-tap-highlight-color: transparent;
+  border-radius: 0; box-shadow: none; user-select: none; -webkit-tap-highlight-color: transparent;
+  /* En escalier : le changement se percoit, mais rien ne glisse. */
+  transition: background var(--tap), border-color var(--tap), color var(--tap);
+  touch-action: manipulation;
 }
 /* Sans cela, un pictogramme en flex se fait ecraser a quelques pixels par le libelle. */
 .btn svg, .btn img { flex: none; }
 .btn:hover:not(:disabled) { border-color: var(--ink); background: var(--ink-12); animation: flash var(--dur-flash) var(--ease-hold); }
-.btn:active:not(:disabled) { border-color: var(--accent); color: var(--accent); background-image: none; }
+.btn:active:not(:disabled) { border-color: var(--accent); color: var(--accent); background: var(--accent-deep); background-image: none; }
 .btn:disabled { cursor: not-allowed; border-color: var(--ink-25); background: transparent; background-image: none; color: var(--ink-55); animation: none; }
 
 .btn.primary, .btn.good, .btn.discord { border-color: var(--ink); background: var(--ink); color: var(--bg); }
 .btn.primary:hover:not(:disabled), .btn.good:hover:not(:disabled), .btn.discord:hover:not(:disabled) { background: var(--bg); background-image: none; color: var(--ink); animation: flash var(--dur-flash) var(--ease-hold); }
 .btn.primary:active:not(:disabled), .btn.good:active:not(:disabled), .btn.discord:active:not(:disabled) { border-color: var(--accent); background: var(--accent-deep); color: var(--ink); }
+.btn.ghost:active:not(:disabled) { background: var(--ink-12); color: var(--accent); }
 .btn.primary:disabled, .btn.good:disabled, .btn.discord:disabled { background: transparent; background-image: none; border-color: var(--ink-25); color: var(--ink-55); }
 
 .btn.ghost { border-color: transparent; color: var(--ink-60); }
@@ -164,6 +227,17 @@ code { font: var(--t-meta); padding: 0 var(--sp-1); border: var(--border); }
 .btn.danger:hover:not(:disabled) { background-color: var(--ink-12); background-image: none; }
 .btn.danger:active:not(:disabled) { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 
+/*
+ * Cibles tactiles. Le systeme dessine des boutons de 28 et 24 px ; le doigt en demande 44.
+ * La boite dessinee ne change pas — c'est la zone sensible qui deborde, par un pseudo-element.
+ */
+@media (hover: none) {
+  .btn.sm, .btn.xs, .btn.icon, .pill.action { position: relative; }
+  .btn.sm::after, .btn.xs::after, .btn.icon::after, .pill.action::after {
+    content: ''; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    min-width: 44px; min-height: 44px; width: 100%; height: 100%;
+  }
+}
 .btn.sm { height: 28px; padding: 0 var(--sp-3); font: var(--t-meta); }
 .btn.xs { height: 24px; padding: 0 var(--sp-2); font: var(--t-meta); }
 .btn.lg { height: 56px; padding: 0 var(--sp-6); font: var(--t-ui-l); }
@@ -186,10 +260,12 @@ code { font: var(--t-meta); padding: 0 var(--sp-1); border: var(--border); }
   width: 100%; height: 40px; padding: 0 var(--sp-3);
   background: transparent; border: var(--border-ui); border-radius: 0;
   font: var(--t-ui); letter-spacing: var(--ls-mono); color: var(--ink); caret-color: var(--accent);
-  transition: none; box-shadow: none;
+  box-shadow: none; transition: border-color var(--tap), background var(--tap);
 }
 .input:hover { border-color: var(--ink); }
-.input:focus { outline: none; border-color: var(--accent); }
+/* Pas d'outline: none — l'anneau de :focus-visible double le filet, et un
+   changement de forme se percoit sans distinguer les rouges. */
+.input:focus { border-color: var(--accent); }
 .input:disabled { border-color: var(--ink-25); background-image: none; color: var(--ink-55); cursor: not-allowed; }
 .input.ok { border-color: var(--ink); }
 .input.ko { border-color: var(--ink); background-image: var(--hatch); background-repeat: repeat-x; background-position: bottom; background-size: 8px 4px; }
@@ -203,15 +279,15 @@ input[type="color"].input { padding: 0; height: 40px; }
 /* Interrupteur : un carre qui change de cote. */
 .switch { display: inline-flex; align-items: center; gap: var(--sp-3); cursor: pointer; user-select: none; font: var(--t-meta); letter-spacing: var(--ls-mono); }
 .switch input { position: absolute; opacity: 0; width: 0; height: 0; }
-.switch .track { width: 40px; height: 20px; border: var(--border-ui); position: relative; flex: none; background: transparent; border-radius: 0; transition: none; }
-.switch .track::after { content: ''; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; background: var(--ink-60); transition: none; border-radius: 0; box-shadow: none; }
+.switch .track { width: 40px; height: 20px; border: var(--border-ui); position: relative; flex: none; background: transparent; border-radius: 0; transition: background var(--tap), border-color var(--tap); }
+.switch .track::after { content: ''; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; background: var(--ink-60); border-radius: 0; box-shadow: none; transition: left var(--tap), background var(--tap); }
 .switch input:checked + .track { border-color: var(--ink); background: var(--ink); }
 .switch input:checked + .track::after { left: 23px; background: var(--bg); }
 .switch input:focus-visible + .track { outline: 1px solid var(--accent); outline-offset: 2px; }
 
 /* Segments : des cases, la choisie inversee. */
 .seg { display: inline-flex; border: var(--border-ui); padding: 0; gap: 0; background: transparent; border-radius: 0; }
-.seg button, .seg a { border: 0; border-right: var(--border-ui); background: transparent; color: var(--ink-60); cursor: pointer; height: 28px; padding: 0 var(--sp-3); font: var(--t-meta); letter-spacing: var(--ls-mono); border-radius: 0; transition: none; display: inline-flex; align-items: center; }
+.seg button, .seg a { border: 0; border-right: var(--border-ui); background: transparent; color: var(--ink-60); cursor: pointer; height: 28px; padding: 0 var(--sp-3); font: var(--t-meta); letter-spacing: var(--ls-mono); border-radius: 0; transition: background var(--tap), color var(--tap); display: inline-flex; align-items: center; }
 .seg button:last-child, .seg a:last-child { border-right: 0; }
 .seg button:hover, .seg a:hover { color: var(--ink); background: var(--ink-12); }
 .seg button[aria-pressed="true"], .seg a[aria-pressed="true"] { background: var(--ink); background-image: none; color: var(--bg); box-shadow: none; }
@@ -228,7 +304,7 @@ input[type="range"]::-moz-range-thumb { border: 0; width: 16px; height: 16px; ba
 .pill {
   display: inline-flex; align-items: center; gap: var(--sp-2); height: 24px; padding: 0 var(--sp-2);
   border: var(--border-ui); background: transparent; border-radius: 0;
-  font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); white-space: nowrap;
+  font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); white-space: nowrap; cursor: default;
 }
 .pill.ok { border-color: var(--ink); color: var(--ink); }
 .pill.live { border-color: var(--accent); color: var(--accent); }
@@ -238,6 +314,8 @@ input[type="range"]::-moz-range-thumb { border: 0; width: 16px; height: 16px; ba
 .pill.err { border-color: var(--ink); color: var(--ink); background-image: var(--hatch); padding: 0 var(--sp-1); }
 .pill.err > * { background: var(--bg); padding: 0 var(--sp-1); }
 .dot { width: 8px; height: 8px; background: currentColor; border-radius: 0; box-shadow: none; animation: blink var(--dur-blink) var(--ease-hold) infinite; flex: none; }
+/* Un seul carre de sang par ecran, et c'est celui qui dit que ca tourne. */
+.nav-status .dot, .topbar .dot { background: var(--accent); }
 
 /*
  * Avatar : carre de 48, filet, fond uni.
@@ -393,8 +471,54 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
    Lignes de joueurs (Arena .roster) — CMP 0x05 / 0x07
    -------------------------------------------------------------------------- */
 .roster { display: grid; gap: 0; border: var(--border); }
-.roster-row { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: var(--sp-3); align-items: center; padding: var(--sp-3); border-bottom: var(--border); background: transparent; border-radius: 0; }
+.roster-row { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: var(--sp-3); align-items: center; padding: var(--sp-3); border-bottom: var(--border); background: transparent; border-radius: 0; transition: background var(--tap); }
 .roster-row:last-child { border-bottom: 0; }
-.roster-row:hover { background: var(--ink-06); }
+.roster-row:hover { background: var(--ink-12); }
 .roster-row.dq { color: var(--ink-55); text-decoration: line-through; }
 .roster-row.off { color: var(--ink-55); }
+
+/* --------------------------------------------------------------------------
+   Chargement — CMP « carte-jeu-chargement » et « joueur-chargement » du systeme
+   Jamais d'ecran vide : une forme occupe la place de ce qui arrive, et une
+   bande de dithering la balaie par paliers pour dire que ca travaille.
+   -------------------------------------------------------------------------- */
+.skeleton {
+  display: block; background-color: transparent;
+  background-image: var(--dither-25); background-size: var(--dither-size);
+  animation: sweep 1.2s var(--ease-cut) infinite;
+}
+.skeleton.line { height: 14px; }
+.skeleton.line.short { width: 40%; }
+.skeleton.line.half { width: 60%; }
+.skeleton.title { height: 24px; width: 70%; }
+.skeleton.block { height: 96px; }
+.skeleton.avatar { width: 48px; height: 48px; }
+
+/* Carte en attente : la meme boite que la carte reelle, remplie de formes. */
+.skeleton-card { border: var(--border); padding: var(--sp-4); min-height: 208px; display: grid; gap: var(--sp-6); align-content: space-between; }
+.skeleton-card .head { display: flex; justify-content: space-between; gap: var(--sp-2); }
+.skeleton-row { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: var(--sp-3); align-items: center; padding: var(--sp-3); border-bottom: var(--border); }
+
+/* Attente plein ecran : un cartouche centre qui dit ce qu'on attend. */
+.waiting {
+  display: grid; place-items: center; gap: var(--sp-4); padding: var(--sp-16) var(--margin);
+  font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); text-align: center;
+}
+.waiting .what { font: var(--t-ui); letter-spacing: var(--ls-mono); color: var(--ink); }
+.waiting .frame { position: relative; padding: var(--sp-6) var(--sp-8); border: var(--border); display: grid; gap: var(--sp-3); justify-items: center; }
+
+/* --------------------------------------------------------------------------
+   Icones — trait de 1 px sur une grille de 16, angles droits, currentColor.
+   Les emoji sont dependants de la police et se desaturent en tache : les
+   signes du systeme sont dessines.
+   -------------------------------------------------------------------------- */
+.ico { width: 16px; height: 16px; flex: none; display: inline-block; vertical-align: -2px; color: currentColor; }
+.ico.lg { width: 24px; height: 24px; vertical-align: -5px; }
+.ico.xl { width: 40px; height: 40px; }
+.btn .ico { margin-right: calc(-1 * var(--sp-1)); }
+
+/* --------------------------------------------------------------------------
+   Changement de valeur — une donnee qui bouge le signale, puis se tait.
+   -------------------------------------------------------------------------- */
+@keyframes bump { 0%, 60% { color: var(--accent); } 61%, 100% { color: inherit; } }
+.changed { animation: bump 1.2s var(--ease-hold) 1; }

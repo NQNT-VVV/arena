@@ -3,6 +3,7 @@
 import { Rating } from './Rating';
 import { SyncedMedia } from './SyncedMedia';
 import { Waveform } from './Waveform';
+import { Icon } from '@/components/Icon';
 import { humanBytes } from '@/lib/format';
 import type { DiffusionState, SessionConfig } from '@/lib/types';
 import { useDiffusionClock } from '@/lib/useDiffusionClock';
@@ -53,7 +54,7 @@ export function DiffusionStage({
   if (!card) {
     return (
       <div className={styles.empty}>
-        <span className={styles.icon} aria-hidden="true">🕳️</span>
+        <Icon name="fichier" size="lg" className={styles.icon} />
         <h2>AUCUN RENDU A DIFFUSER</h2>
         <p className="muted">Personne n&apos;a depose de creation pour cette session.</p>
       </div>
@@ -87,7 +88,7 @@ export function DiffusionStage({
             title={audio ? 'Couper le son sur cet appareil' : 'Jouer le son sur cet appareil'}
             onClick={() => onToggleAudio(!audio)}
           >
-            {audio ? '🔊 Son' : '🔇 Muet'}
+            {audio ? <><Icon name="son" />Son</> : <><Icon name="muet" />Muet</>}
           </button>
         )}
       </div>
@@ -107,7 +108,7 @@ export function DiffusionStage({
 
       <div className={styles.media}>
         {!card.inline && card.url && (
-          <a className="btn" href={`${card.url}?dl=1`}>⬇ TELECHARGER POUR OUVRIR</a>
+          <a className="btn" href={`${card.url}?dl=1`}><Icon name="telecharge" />TELECHARGER POUR OUVRIR</a>
         )}
 
         {card.inline && card.kind === 'audio' && card.peaksUrl && diffusion.startedAt && diffusion.endsAt && (
@@ -155,7 +156,7 @@ export function DiffusionStage({
         {card.bytes > 0 && <span>{humanBytes(card.bytes)}</span>}
         <span className="grow" />
         <span className={`${styles.tally} ${everyone ? styles.tallyDone : ''}`}>
-          {diffusion.voted} / {diffusion.eligible} ont note{everyone ? ' ✓' : ''}
+          {diffusion.voted} / {diffusion.eligible} ont note{everyone ? ' · complet' : ''}
         </span>
       </div>
 
