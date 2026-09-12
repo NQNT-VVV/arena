@@ -86,8 +86,8 @@ export function HostClient() {
   // La regie est muette par defaut : l'animateur a presque toujours le grand
   // ecran ouvert a cote, et deux lecteurs decales d'un dixieme font un echo.
   const [audio, setAudio] = useState(false);
-  useEffect(() => { const saved = audioPref.get(); if (saved !== null) setAudio(saved); }, []);
-  const chooseAudio = (on: boolean) => { audioPref.set(on); setAudio(on); };
+  useEffect(() => { const saved = audioPref.get('host'); if (saved !== null) setAudio(saved); }, []);
+  const chooseAudio = (on: boolean) => { audioPref.set('host', on); setAudio(on); };
 
   /**
    * Reprise de la regie.

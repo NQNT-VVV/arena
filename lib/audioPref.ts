@@ -1,20 +1,29 @@
 import { store } from './storage';
 
 /**
- * Le son sort-il de cet appareil ?
+ * Le son sort-il de cette surface, sur cet appareil ?
  *
- * Reglage par appareil, pas par session : la meme personne peut avoir la regie
- * sur son ordinateur et suivre en participant sur son telephone, et ne veut
- * entendre qu'une fois. Une valeur absente signifie « pas encore choisi », et
- * la page applique alors le defaut qui lui convient.
+ * Le reglage est par surface ET par appareil, pas seulement par appareil.
+ *
+ * La regie et l'ecran de projection s'ouvrent presque toujours sur le meme
+ * ordinateur — « Ouvrir l'ecran de projection » est un bouton de la regie, qui
+ * ouvre un second onglet. Avec une seule cle partagee, activer le son d'un cote
+ * l'activait aussi de l'autre au prochain affichage : les deux surfaces jouaient
+ * le meme extrait, avec quelques dizaines de millisecondes d'ecart, et le son
+ * se melangeait.
+ *
+ * Une valeur absente signifie « pas encore choisi » : chaque page applique alors
+ * le defaut qui lui convient — l'ecran parle, la regie se tait.
  */
-const KEY = 'arena.audio';
+export type AudioSurface = 'screen' | 'host' | 'play';
+
+const KEY = (surface: AudioSurface) => `arena.audio.${surface}`;
 
 export const audioPref = {
-  get(): boolean | null {
-    return store.get<boolean | null>(KEY, null);
+  get(surface: AudioSurface): boolean | null {
+    return store.get<boolean | null>(KEY(surface), null);
   },
-  set(on: boolean): void {
-    store.set(KEY, on);
+  set(surface: AudioSurface, on: boolean): void {
+    store.set(KEY(surface), on);
   },
 };

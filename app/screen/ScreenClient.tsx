@@ -37,8 +37,8 @@ export function ScreenClient() {
   // Le grand ecran joue le son par defaut : c'est souvent lui qui est branche
   // sur l'enceinte, ou capture dans le partage d'ecran.
   const [audio, setAudio] = useState(true);
-  useEffect(() => { const saved = audioPref.get(); if (saved !== null) setAudio(saved); }, []);
-  const chooseAudio = (on: boolean) => { audioPref.set(on); setAudio(on); };
+  useEffect(() => { const saved = audioPref.get('screen'); if (saved !== null) setAudio(saved); }, []);
+  const chooseAudio = (on: boolean) => { audioPref.set('screen', on); setAudio(on); };
 
   const attach = useCallback(async (socket: Socket) => {
     if (!code) return;

@@ -49,8 +49,8 @@ export function PlayClient() {
    * enceinte joue deja dans la piece.
    */
   const [audioChoice, setAudioChoice] = useState<boolean | null>(null);
-  useEffect(() => { setAudioChoice(audioPref.get()); }, []);
-  const chooseAudio = (on: boolean) => { audioPref.set(on); setAudioChoice(on); };
+  useEffect(() => { setAudioChoice(audioPref.get('play')); }, []);
+  const chooseAudio = (on: boolean) => { audioPref.set('play', on); setAudioChoice(on); };
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
