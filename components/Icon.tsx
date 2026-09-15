@@ -36,6 +36,8 @@ export type IconName =
   | 'attention'
   | 'fleche-d'
   | 'fleche-b'
+  | 'fleche-h'
+  | 'roue'
   | 'plus'
   | 'telecharge'
   | 'oeil'
@@ -72,6 +74,8 @@ const PATHS: Record<IconName, string> = {
   'attention': 'M7 1h2v2H7zM6 3h4v2H6zM5 5h6v2H5zM4 7h8v2H4zM3 9h10v2H3zM2 11h12v2H2zM7 5h2v4H7zM7 10h2v2H7z',
   'fleche-d': 'M2 7h8v2H2zM9 4h2v2H9zM11 6h2v4h-2zM9 10h2v2H9z',
   'fleche-b': 'M7 2h2v8H7zM4 9h2v2H4zM6 11h4v2H6zM10 9h2v2h-2z',
+  'fleche-h': 'M7 6h2v8H7zM4 5h2v2H4zM6 3h4v2H6zM10 5h2v2h-2z',
+  'roue': 'M2 2h12v12H2zm1 1v10h10V3zM7 3h2v3H7zM7 10h2v3H7zM3 7h3v2H3zM10 7h3v2h-3zM6 6h4v4H6z',
   'plus': 'M7 3h2v10H7zM3 7h10v2H3z',
   'telecharge': 'M7 1h2v7H7zM4 7h2v2H4zM6 9h4v2H6zM10 7h2v2h-2zM2 12h12v2H2z',
   'oeil': 'M5 4h6v1H5zM3 5h2v1H3zM11 5h2v1h-2zM1 6h2v4H1zM13 6h2v4h-2zM3 10h2v1H3zM11 10h2v1h-2zM5 11h6v1H5zM6 6h4v4H6z',

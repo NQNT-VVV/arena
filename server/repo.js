@@ -559,5 +559,174 @@ Object.assign(repo, {
     return selectExpired.all({ retention: retentionBefore, stale: staleBefore }).map(toSession);
   },
 });
+/* ------------------------------------------------------------------ */
+/* La roulette                                                        */
+/* ------------------------------------------------------------------ */
+
+function toWheel(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    name: row.name,
+    note: row.note,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    // Present seulement quand la requete a compte : une roue lue seule ne fait
+    // pas une jointure pour un chiffre dont l'appelant n'a que faire.
+    slots: row.slots === undefined ? undefined : row.slots,
+  };
+}
+
+function toSlot(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    wheelId: row.wheel_id,
+    label: row.label,
+    detail: row.detail,
+    weight: row.weight,
+    points: row.points,
+    chronoMs: row.chrono_ms,
+    position: row.position,
+  };
+}
+
+function toSpin(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    sessionId: row.session_id,
+    wheelId: row.wheel_id,
+    wheelName: row.wheel_name,
+    target: row.target,
+    howMany: row.how_many,
+    shared: !!row.shared,
+    phase: row.phase,
+    seed: row.seed,
+    at: row.at,
+  };
+}
+
+function toFate(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    spinId: row.spin_id,
+    participantId: row.participant_id,
+    pseudo: row.pseudo,
+    label: row.label,
+    detail: row.detail,
+    points: row.points,
+    chronoMs: row.chrono_ms,
+    pointsAppliedAt: row.points_applied_at,
+    chronoAppliedAt: row.chrono_applied_at,
+    position: row.position,
+  };
+}
+
+const insertWheel = db.prepare(`
+  INSERT INTO wheel (id, name, note, created_at, updated_at)
+  VALUES (@id, @name, @note, @createdAt, @updatedAt)
+`);
+const selectWheel = db.prepare('SELECT * FROM wheel WHERE id = ?');
+const selectWheels = db.prepare(`
+  SELECT w.*, (SELECT COUNT(*) FROM wheel_slot s WHERE s.wheel_id = w.id) AS slots
+    FROM wheel w ORDER BY w.updated_at DESC
+`);
+const updateWheelStmt = db.prepare(
+  'UPDATE wheel SET name = @name, note = @note, updated_at = @updatedAt WHERE id = @id',
+);
+const touchWheelStmt = db.prepare('UPDATE wheel SET updated_at = ? WHERE id = ?');
+const deleteWheelStmt = db.prepare('DELETE FROM wheel WHERE id = ?');
+
+const insertSlot = db.prepare(`
+  INSERT INTO wheel_slot (id, wheel_id, label, detail, weight, points, chrono_ms, position)
+  VALUES (@id, @wheelId, @label, @detail, @weight, @points, @chronoMs, @position)
+`);
+const selectSlot = db.prepare('SELECT * FROM wheel_slot WHERE id = ?');
+const selectSlots = db.prepare('SELECT * FROM wheel_slot WHERE wheel_id = ? ORDER BY position');
+const updateSlotStmt = db.prepare(`
+  UPDATE wheel_slot SET label = @label, detail = @detail, weight = @weight,
+         points = @points, chrono_ms = @chronoMs WHERE id = @id
+`);
+const moveSlotStmt = db.prepare('UPDATE wheel_slot SET position = ? WHERE id = ?');
+const deleteSlotStmt = db.prepare('DELETE FROM wheel_slot WHERE id = ?');
+
+const insertSpin = db.prepare(`
+  INSERT INTO spin (id, session_id, wheel_id, wheel_name, target, how_many, shared, phase, seed, at)
+  VALUES (@id, @sessionId, @wheelId, @wheelName, @target, @howMany, @shared, @phase, @seed, @at)
+`);
+const selectSpin = db.prepare('SELECT * FROM spin WHERE id = ?');
+const selectSpins = db.prepare('SELECT * FROM spin WHERE session_id = ? ORDER BY at, id');
+const selectLastSpin = db.prepare(
+  'SELECT * FROM spin WHERE session_id = ? ORDER BY at DESC, id DESC LIMIT 1',
+);
+const countSpins = db.prepare('SELECT COUNT(*) AS n FROM spin WHERE session_id = ?');
+
+const insertFate = db.prepare(`
+  INSERT INTO spin_fate (id, spin_id, participant_id, pseudo, label, detail, points, chrono_ms,
+                         points_applied_at, chrono_applied_at, position)
+  VALUES (@id, @spinId, @participantId, @pseudo, @label, @detail, @points, @chronoMs,
+          @pointsAppliedAt, @chronoAppliedAt, @position)
+`);
+const selectFates = db.prepare('SELECT * FROM spin_fate WHERE spin_id = ? ORDER BY position');
+
+/**
+ * Le total des points tires, par participant, sur toute la session.
+ *
+ * Seuls les sorts REELLEMENT appliques comptent : un sort tire alors que la
+ * phase ne permettait plus d'y toucher reste une consigne, pas une correction
+ * de score. Sans ce filtre, le classement changerait pour un sort que personne
+ * n'a jamais vu s'appliquer.
+ */
+const selectAppliedPoints = db.prepare(`
+  SELECT f.participant_id AS participantId, COALESCE(SUM(f.points), 0) AS points
+    FROM spin_fate f JOIN spin s ON s.id = f.spin_id
+   WHERE s.session_id = ? AND f.points_applied_at IS NOT NULL AND f.participant_id IS NOT NULL
+   GROUP BY f.participant_id
+`);
+
+Object.assign(repo, {
+  // roues
+  addWheel(w) { insertWheel.run({ note: '', ...w }); return toWheel(selectWheel.get(w.id)); },
+  wheel: (id) => toWheel(selectWheel.get(id)),
+  wheels: () => selectWheels.all().map(toWheel),
+  updateWheel: (id, name, note, updatedAt) => updateWheelStmt.run({ id, name, note, updatedAt }).changes,
+  touchWheel: (id, updatedAt) => touchWheelStmt.run(updatedAt, id).changes,
+  removeWheel: (id) => deleteWheelStmt.run(id).changes,
+
+  // cases
+  addSlot(sl) {
+    insertSlot.run({ detail: '', weight: 1, points: 0, chronoMs: 0, ...sl });
+    return toSlot(selectSlot.get(sl.id));
+  },
+  slot: (id) => toSlot(selectSlot.get(id)),
+  slots: (wheelId) => selectSlots.all(wheelId).map(toSlot),
+  updateSlot: (sl) => updateSlotStmt.run(sl).changes,
+  moveSlot: (id, position) => moveSlotStmt.run(position, id).changes,
+  removeSlot: (id) => deleteSlotStmt.run(id).changes,
+
+  // tirages
+  addSpin(sp) { insertSpin.run(sp); return toSpin(selectSpin.get(sp.id)); },
+  spin: (id) => toSpin(selectSpin.get(id)),
+  spins: (sessionId) => selectSpins.all(sessionId).map(toSpin),
+  lastSpin: (sessionId) => toSpin(selectLastSpin.get(sessionId)),
+  countSpins: (sessionId) => countSpins.get(sessionId).n,
+
+  addFate(f) {
+    insertFate.run({
+      detail: '', points: 0, chronoMs: 0, pointsAppliedAt: null, chronoAppliedAt: null, ...f,
+    });
+    return toFate(selectFates.all(f.spinId).find((x) => x.id === f.id));
+  },
+  fates: (spinId) => selectFates.all(spinId).map(toFate),
+
+  /** { participantId: points } — seulement ce qui s'est vraiment applique. */
+  appliedPoints(sessionId) {
+    const out = {};
+    for (const row of selectAppliedPoints.all(sessionId)) out[row.participantId] = row.points;
+    return out;
+  },
+});
 
 module.exports = repo;

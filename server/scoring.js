@@ -17,8 +17,11 @@ const SINGLE = [{ id: '_', label: 'Note', weight: 1 }];
  * @param tally         agregat SQL : { submission_id, criterion_id, n, total }
  * @param voterIds      participants en droit de voter (hors disqualifies)
  * @param config        { criteria, defaultVote, scale, latePolicy, latePenalty }
+ * @param spun          { participantId: points } — les sorts tires a la
+ *                      roulette, deja appliques. Signes : un bonus est
+ *                      positif, un malus negatif.
  */
-function rank({ submissions, tally, voterIds, config }) {
+function rank({ submissions, tally, voterIds, config, spun = {} }) {
   const criteria = config.criteria?.length ? config.criteria : SINGLE;
   const weightTotal = criteria.reduce((sum, c) => sum + c.weight, 0) || 1;
   const voters = new Set(voterIds);
@@ -59,7 +62,17 @@ function rank({ submissions, tally, voterIds, config }) {
     // traite comme les autres.
     const unranked = sub.late && config.latePolicy === 'unranked';
     const penalty = sub.late && config.latePolicy === 'penalty' ? (config.latePenalty ?? 0) : 0;
-    const score = Math.max(0, weighted - penalty);
+
+    /*
+     * Le sort tire a la roulette, a cote de la penalite et jamais melange.
+     *
+     * Les confondre reviendrait a cacher lequel des deux a joue. Une penalite
+     * est une regle annoncee — le depot etait en retard — alors qu'un sort est
+     * un hasard assume. Le classement affiche les deux separement, et chacun
+     * peut savoir ce qui lui est arrive et pourquoi.
+     */
+    const fate = Number(spun[sub.participantId]) || 0;
+    const score = Math.max(0, weighted - penalty + fate);
 
     return {
       submissionId: sub.id,
@@ -71,6 +84,7 @@ function rank({ submissions, tally, voterIds, config }) {
       late: !!sub.late,
       unranked,
       penalty,
+      fate,
       raw: weighted,
       score: unranked ? null : score,
     };

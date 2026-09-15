@@ -29,6 +29,7 @@ const AUTHORS_VISIBLE = new Set(['results', 'archived']);
 
 const config = require('./config');
 const repo = require('./repo');
+const roulette = require('./roulette');
 const { rank } = require('./scoring');
 
 /** Doit rester egal a `BattleServer.CHAIN_TURN_MS`. Les vues ne dependent pas de la classe. */
@@ -287,6 +288,9 @@ function podiumView(session) {
     tally: repo.tally(session.id),
     voterIds: voters.map((p) => p.id),
     config: session.config,
+    // Seuls les sorts REELLEMENT appliques comptent : un tirage fait apres le
+    // devoilement reste une consigne, et le classement ne bouge pas pour lui.
+    spun: repo.appliedPoints(session.id),
   });
 
   const revealed = session.revealedRank ?? 0;
@@ -315,6 +319,7 @@ function podiumView(session) {
         late: row.late,
         unranked: row.unranked,
         penalty: row.penalty,
+        fate: row.fate,
         criteria: row.criteria.map((c) => ({
           id: c.id, label: c.label, average: Math.round(c.average * 100) / 100,
         })),
@@ -329,6 +334,75 @@ function podiumView(session) {
 /* ------------------------------------------------------------------ */
 /* Vues par audience                                                   */
 /* ------------------------------------------------------------------ */
+
+/**
+ * LA ROULETTE, vue de tout le monde.
+ *
+ * Le dernier tirage part aux trois surfaces, en entier. Ce n'est pas un vote :
+ * il n'y a rien a cacher, et tout l'interet est que la salle voie qui a tire
+ * quoi. Le roster est deja public, donc nommer quelqu'un ne revele rien de
+ * plus.
+ *
+ * LE NOMBRE DE TIRAGES EST PUBLIC, et c'est deliberе. Si l'animateur pouvait
+ * relancer en secret jusqu'a obtenir ce qui lui plait, la roue n'aurait plus
+ * aucune autorite. On ne l'empeche pas de relancer — parfois il faut — mais le
+ * compte s'affiche.
+ *
+ * LA GRAINE N'EST PAS ICI. Elle sert a rejouer un tirage conteste, ce qui est
+ * une conversation entre l'animateur et la salle, pas une ligne d'affichage.
+ * `hostView` la porte, lui.
+ */
+function rouletteView(session) {
+  const dernier = repo.lastSpin(session.id);
+  return {
+    spins: repo.countSpins(session.id),
+    last: dernier ? {
+      id: dernier.id,
+      wheelName: dernier.wheelName,
+      target: dernier.target,
+      howMany: dernier.howMany,
+      shared: dernier.shared,
+      phase: dernier.phase,
+      at: dernier.at,
+      fates: repo.fates(dernier.id).map((f) => ({
+        participantId: f.participantId,
+        pseudo: f.pseudo,
+        label: f.label,
+        detail: f.detail,
+        points: f.points,
+        chronoMs: f.chronoMs,
+        /*
+         * Un etat par effet : ils n'obeissent pas a la meme regle, et les
+         * resumer en un seul obligeait les pages a redeviner laquelle avait
+         * joue. Faux veut dire « consigne a respecter », pas « rien ».
+         */
+        pointsApplied: !!f.pointsAppliedAt,
+        chronoApplied: !!f.chronoAppliedAt,
+        position: f.position,
+      })),
+    } : null,
+  };
+}
+
+/** Son propre sort, sur son canal : le telephone l'affiche en grand. */
+function youFateView(session, participant) {
+  const dernier = repo.lastSpin(session.id);
+  if (!dernier) return null;
+  const sien = repo.fates(dernier.id).find((f) => f.participantId === participant.id);
+  if (!sien) return null;
+  return {
+    spinId: dernier.id,
+    wheelName: dernier.wheelName,
+    label: sien.label,
+    detail: sien.detail,
+    points: sien.points,
+    chronoMs: sien.chronoMs,
+    pointsApplied: !!sien.pointsAppliedAt,
+    chronoApplied: !!sien.chronoAppliedAt,
+    at: dernier.at,
+  };
+}
+
 
 /** Socle partage par les trois surfaces. */
 function commonView(session) {
@@ -347,6 +421,7 @@ function commonView(session) {
     diffusion: diffusionView(session),
     podium: podiumView(session),
     chain: chainView(session),
+    roulette: rouletteView(session),
     /** Reference d'horloge : le client s'en sert pour mesurer sa derive. */
     serverNow: Date.now(),
   };
@@ -426,6 +501,32 @@ function hostView(session) {
     isHost: true,
     /** Rendus recus mais pas encore prets a diffuser. */
     pendingSubmissions: repo.countPendingSubmissions(session.id),
+    /**
+     * Les roues, et la graine du dernier tirage.
+     *
+     * Les roues ne dependent d'aucune session : elles se preparent entre deux
+     * soirees. La graine est ici et pas dans la vue commune — elle sert a
+     * rejouer un tirage conteste, ce qui est une conversation entre
+     * l'animateur et la salle, pas une ligne d'affichage.
+     */
+    wheels: repo.wheels(),
+    lastSeed: repo.lastSpin(session.id)?.seed ?? null,
+    /**
+     * Les regles du tirage, envoyees plutot que recopiees.
+     *
+     * La regie doit pouvoir PREVENIR avant un tirage de ce que le mode choisi
+     * ne pourra pas faire : l'apprendre apres ne sert plus a rien, le sort est
+     * deja tombe devant la salle. Elle a donc besoin des memes ensembles de
+     * phases que le serveur. Les lui faire redeclarer serait un miroir, et un
+     * miroir finit par mentir — on les lui donne.
+     */
+    rouletteRules: {
+      pointsPhases: [...roulette.PHASES_POINTS],
+      chronoPhases: [...roulette.PHASES_CHRONO],
+      blindPhases: [...roulette.PHASES_AVEUGLES],
+      pointsMax: roulette.POINTS_MAX,
+      chronoMaxMs: roulette.CHRONO_MAX_MS,
+    },
     roster: [...session.participants.values()]
       .filter((p) => !p.isHost)
       .map((p) => ({
@@ -478,6 +579,8 @@ function youView(session, participant) {
      */
     votes: votesView(session, participant),
     chain: youChainView(session, participant),
+    /** Son propre sort, pour que le telephone l'affiche en grand. */
+    fate: youFateView(session, participant),
   };
 }
 
@@ -498,4 +601,5 @@ module.exports = {
   anonymousCard, diffusionView, podiumView,
   commonView, participantView, hostView, screenView, youView,
   chainView, youChainView,
+  rouletteView, youFateView,
 };

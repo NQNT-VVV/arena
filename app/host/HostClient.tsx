@@ -9,6 +9,7 @@ import { AssetUploader } from '@/components/AssetUploader';
 import { Brand } from '@/components/Brand';
 import { DiffusionStage } from '@/components/DiffusionStage';
 import { Podium } from '@/components/Podium';
+import { RouletteHost } from '@/components/RouletteHost';
 import { Chrono } from '@/components/Chrono';
 import { PhaseRail } from '@/components/PhaseRail';
 import { QrCode } from '@/components/QrCode';
@@ -379,6 +380,19 @@ export function HostClient() {
             </div>
           </div>
         </section>
+
+        {/* LA ROULETTE. Au-dessus du reste : les roues se preparent avant la
+            session, et pendant la creation c'est ce que la regie vient
+            chercher. */}
+        <RouletteHost
+          socket={socket}
+          wheels={state.wheels ?? []}
+          roulette={state.roulette}
+          rules={state.rouletteRules ?? null}
+          lastSeed={state.lastSeed ?? null}
+          phase={phase}
+          roster={state.roster}
+        />
 
         {phase === 'diffusion' && state.diffusion && (
           <section className="card pad col">

@@ -210,6 +210,99 @@ const MIGRATIONS = [
       CREATE INDEX chain_line_session_idx ON chain_line(session_id, id);
     `);
   },
+  /**
+   * LA ROULETTE — un sort tire au hasard, et devant temoin.
+   *
+   * Arena impose des contraintes : c'est sa premisse. La roulette ne fait que
+   * la rendre visible — au lieu que l'animateur decide, on tire.
+   *
+   * DEUX ROUES, et une seule se stocke. Celle des participants se deduit du
+   * roster a l'instant du tirage : la stocker voudrait dire la tenir a jour a
+   * chaque arrivee et chaque depart, pour recalculer ce qu'on sait deja.
+   * Celle des sorts, elle, se prepare entre deux sessions et se reutilise.
+   *
+   * CE QUI EST TIRE EST RECOPIE. Le libelle d'un sort et le pseudo d'un
+   * participant sont dupliques dans le tirage. Une roue renommee, un sort
+   * corrige, un participant parti : rien de tout cela n'a le droit de
+   * reecrire ce qui s'est passe.
+   *
+   * LA GRAINE EST GARDEE. Un tirage qu'on ne peut pas rejouer est un tirage
+   * qu'on ne peut pas defendre. Avec elle, la meme graine et la meme liste
+   * rendent le meme sort, et la salle peut demander a verifier.
+   */
+  function roulette(d) {
+    d.exec(`
+      CREATE TABLE wheel (
+        id         TEXT PRIMARY KEY,
+        name       TEXT NOT NULL,
+        note       TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+
+      CREATE TABLE wheel_slot (
+        id        TEXT PRIMARY KEY,
+        wheel_id  TEXT NOT NULL REFERENCES wheel(id) ON DELETE CASCADE,
+        label     TEXT NOT NULL,
+        detail    TEXT NOT NULL DEFAULT '',
+        -- Un poids fait les sorts rares. Zero retire la case sans l'effacer :
+        -- on prepare une roue en plusieurs fois, on n'aime pas perdre un texte.
+        weight    INTEGER NOT NULL DEFAULT 1,
+        -- L'effet mecanique, s'il y en a un. Zero partout = purement narratif,
+        -- et c'est le defaut : un sort qui ne touche a rien ne peut rien casser.
+        points    INTEGER NOT NULL DEFAULT 0,
+        chrono_ms INTEGER NOT NULL DEFAULT 0,
+        position  INTEGER NOT NULL
+      );
+      CREATE INDEX wheel_slot_order_idx ON wheel_slot(wheel_id, position);
+
+      CREATE TABLE spin (
+        id         TEXT PRIMARY KEY,
+        session_id TEXT NOT NULL REFERENCES session(id) ON DELETE CASCADE,
+        -- Trace, jamais source : la roue peut disparaitre, le tirage reste.
+        wheel_id   TEXT,
+        wheel_name TEXT NOT NULL,
+        -- 'one' | 'some' | 'all' : combien de personnes sont touchees.
+        target     TEXT NOT NULL,
+        how_many   INTEGER NOT NULL DEFAULT 1,
+        -- Le meme sort pour tous, ou un sort chacun.
+        shared     INTEGER NOT NULL DEFAULT 0,
+        phase      TEXT NOT NULL,
+        seed       TEXT NOT NULL,
+        at         INTEGER NOT NULL
+      );
+      CREATE INDEX spin_session_idx ON spin(session_id, at);
+
+      CREATE TABLE spin_fate (
+        id             TEXT PRIMARY KEY,
+        spin_id        TEXT NOT NULL REFERENCES spin(id) ON DELETE CASCADE,
+        -- Le participant peut partir ; son sort garde son pseudo.
+        participant_id TEXT REFERENCES participant(id) ON DELETE SET NULL,
+        pseudo         TEXT NOT NULL,
+        label          TEXT NOT NULL,
+        detail         TEXT NOT NULL DEFAULT '',
+        points         INTEGER NOT NULL DEFAULT 0,
+        chrono_ms      INTEGER NOT NULL DEFAULT 0,
+        /*
+         * Un etat par effet, et non un seul pour les deux.
+         *
+         * Un sort peut couter des points ET donner du temps, et l'un des deux
+         * peut avoir joue sans l'autre : les points ne corrigent plus un
+         * classement devoile, le chrono ne bouge que pour la salle entiere
+         * pendant qu'il court. Un unique drapeau forcait les pages a redeviner
+         * la regle, et une page qui redevine finit par contredire le serveur.
+         *
+         * Nul veut dire « pas applique » : le sort reste alors une consigne, et
+         * l'interface le dit au lieu de faire semblant.
+         */
+        points_applied_at INTEGER,
+        chrono_applied_at INTEGER,
+        position       INTEGER NOT NULL
+      );
+      CREATE INDEX spin_fate_spin_idx ON spin_fate(spin_id, position);
+      CREATE INDEX spin_fate_part_idx ON spin_fate(participant_id);
+    `);
+  },
 ];
 
 const applied = db.pragma('user_version', { simple: true });
