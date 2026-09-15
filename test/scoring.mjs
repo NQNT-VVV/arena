@@ -164,6 +164,74 @@ test('aucun vote du tout : tout le monde a la note par defaut', () => {
   assert.deepEqual(out.map((r) => r.rank), [1, 2]);
 });
 
+/* ------------------------------------------------------------------ */
+/* Le sort tire a la roulette                                          */
+/* ------------------------------------------------------------------ */
+
+test('un sort tire deplace le score, et se lit a part', () => {
+  const out = rank({
+    submissions: [sub('a', 'p1'), sub('b', 'p2')],
+    tally: [vote('a', 2, 9), vote('b', 2, 9)],
+    voterIds: ['p1', 'p2', 'p3'],
+    config: CONFIG,
+    spun: { p1: -2, p2: 1 },
+  });
+  const a = out.find((r) => r.submissionId === 'a');
+  const b = out.find((r) => r.submissionId === 'b');
+
+  // Les deux ont 4,5 de moyenne brute : c'est le sort seul qui les separe.
+  assert.equal(a.raw, 4.5);
+  assert.equal(b.raw, 4.5);
+  assert.equal(a.score, 2.5, 'moins deux');
+  assert.equal(b.score, 5.5, 'plus un');
+  assert.equal(a.fate, -2, 'le sort se lit a part, il ne se cache pas dans le score');
+  assert.equal(b.fate, 1);
+  assert.equal(b.rank, 1, 'et il renverse le classement');
+});
+
+test('sans sort tire, rien ne change et le champ vaut zero', () => {
+  const avec = rank({
+    submissions: [sub('a', 'p1')],
+    tally: [vote('a', 2, 8)],
+    voterIds: ['p1', 'p2', 'p3'],
+    config: CONFIG,
+    spun: {},
+  });
+  const sans = rank({
+    submissions: [sub('a', 'p1')],
+    tally: [vote('a', 2, 8)],
+    voterIds: ['p1', 'p2', 'p3'],
+    config: CONFIG,
+  });
+  assert.equal(avec[0].score, sans[0].score, 'le parametre est facultatif');
+  assert.equal(sans[0].fate, 0);
+});
+
+test('un sort ne se melange jamais avec la penalite de retard', () => {
+  const out = rank({
+    submissions: [sub('a', 'p1', true)],
+    tally: [vote('a', 2, 10)],
+    voterIds: ['p1', 'p2', 'p3'],
+    config: { ...CONFIG, latePolicy: 'penalty', latePenalty: 1 },
+    spun: { p1: -2 },
+  });
+  assert.equal(out[0].penalty, 1, 'la regle annoncee');
+  assert.equal(out[0].fate, -2, 'le hasard assume');
+  assert.equal(out[0].score, 2, '5 brut, moins 1 de retard, moins 2 de sort');
+});
+
+test('un score ne descend jamais sous zero, meme avec un sort ecrasant', () => {
+  const out = rank({
+    submissions: [sub('a', 'p1')],
+    tally: [vote('a', 2, 4)],
+    voterIds: ['p1', 'p2', 'p3'],
+    config: CONFIG,
+    spun: { p1: -20 },
+  });
+  assert.equal(out[0].score, 0);
+});
+
+
 for (const [name, fn] of checks) {
   try { await fn(); passed++; console.log(`  ok   ${name}`); }
   catch (err) { console.error(`  FAIL ${name}\n       ${err.message}`); process.exitCode = 1; }

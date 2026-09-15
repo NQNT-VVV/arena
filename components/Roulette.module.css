@@ -1,0 +1,128 @@
+/*
+ * LA ROULETTE — le rouleau, et les sorts.
+ *
+ * Aucun mouvement fluide : le rouleau avance par crans (`steps`) et s'arrete
+ * net. Le voile de revelation est un dithering de la couleur du fond, jamais un
+ * flou. Le sang ne sert qu'a une chose ici : dire que ca tourne encore.
+ */
+
+/* Modale de revelation 0x0A : voile dither, boite au filet fort, reperes de coin. */
+.veil {
+  position: fixed; inset: 0; z-index: 60;
+  display: grid; place-items: center; padding: var(--margin);
+  background-image: var(--veil); background-size: 4px 4px;
+}
+.panel {
+  position: relative; width: min(880px, 92vw); max-height: 92dvh; overflow: auto;
+  padding: var(--sp-8); background: var(--bg); border: var(--border-strong);
+  display: grid; gap: var(--sp-6); color: var(--ink);
+}
+
+/* Le meme contenu, une fois le voile retire : le tirage reste la consigne en cours. */
+.block { display: grid; gap: var(--sp-4); }
+
+.head {
+  display: flex; align-items: center; gap: var(--sp-2) var(--sp-6); flex-wrap: wrap;
+  font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60);
+}
+.head b { color: var(--ink); font-weight: 400; }
+.head span { display: inline-flex; align-items: center; gap: var(--sp-2); }
+
+/* --------------------------------------------------------------------------
+   Le rouleau
+   -------------------------------------------------------------------------- */
+.window {
+  --step: 56px;
+  position: relative; height: calc(3 * var(--step)); overflow: hidden;
+  border: var(--border-ui); background: var(--ink-06);
+}
+/* Il tourne : c'est la seule chose vivante de l'ecran a cet instant. */
+.window.spinning { border-color: var(--accent); }
+
+.strip {
+  display: grid;
+  transform: translateY(calc(-1 * var(--i) * var(--step)));
+  /* Un palier, pas un glissement : le cran se voit, il ne se suit pas. */
+  transition: transform var(--dur-tap) steps(1, end);
+}
+.strip > span {
+  height: var(--step); display: flex; align-items: center; padding: 0 var(--sp-4);
+  font: var(--t-ui-l); letter-spacing: var(--ls-mono); color: var(--ink-40);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* La ligne du viseur, inversee : c'est elle qu'on lit, avant comme apres l'arret. */
+.strip > span.active { background: var(--ink); color: var(--bg); }
+
+.sight {
+  position: absolute; left: 0; right: 0; top: var(--step); height: var(--step);
+  border-top: var(--border-strong); border-bottom: var(--border-strong); pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .window { --step: 44px; }
+  .strip > span { font: var(--t-ui); letter-spacing: var(--ls-mono); }
+  .panel { padding: var(--sp-4); gap: var(--sp-4); }
+}
+
+/* --------------------------------------------------------------------------
+   Les sorts, devoiles un par un
+   -------------------------------------------------------------------------- */
+.fates { list-style: none; margin: 0; padding: 0; display: grid; border: var(--border); }
+.fate { padding: var(--sp-4); border-bottom: var(--border); }
+.fate:last-child { border-bottom: 0; }
+
+.read { display: grid; gap: var(--sp-2); }
+.who { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); }
+.what {
+  font: var(--t-h2); letter-spacing: var(--ls-display); color: var(--ink);
+  text-transform: uppercase; overflow-wrap: anywhere;
+}
+.detail {
+  margin: 0; font: var(--t-prose); letter-spacing: var(--ls-prose);
+  text-transform: none; color: var(--ink-90); overflow-wrap: anywhere;
+}
+
+/* Une place tenue pour un sort qui n'est pas encore tombe : la liste ne saute pas. */
+.pending { font: var(--t-meta); letter-spacing: .3em; color: var(--ink-55); }
+
+.chips { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+
+.effect {
+  display: inline-flex; align-items: center; height: 24px; padding: 0 var(--sp-2);
+  border: var(--border-ui); font: var(--t-meta); letter-spacing: var(--ls-mono);
+  font-variant-numeric: tabular-nums; color: var(--ink);
+}
+/*
+ * Un effet qui n'a pas joue.
+ *
+ * Hachures et os attenue, comme un temps ecoule : la valeur reste lisible — il
+ * faut bien savoir ce dont il s'agissait — mais rien ne laisse croire qu'elle a
+ * compte.
+ */
+.effect.dead { padding-left: 0; color: var(--ink-55); border-color: var(--ink-25); }
+.effect.dead::before {
+  content: ''; width: 8px; align-self: stretch; margin-right: var(--sp-2);
+  background-image: var(--hatch);
+}
+
+.status {
+  display: inline-flex; align-items: center; height: 24px; padding: 0 var(--sp-2);
+  font: var(--t-meta); letter-spacing: var(--ls-mono);
+  background: var(--ink); color: var(--bg);
+}
+/* Une consigne n'est pas un effet : elle n'a pas l'aplat, elle a le filet. */
+.status.advice { background: transparent; color: var(--ink); border: var(--border-strong); }
+
+/* --------------------------------------------------------------------------
+   Son propre sort, sur le telephone
+   -------------------------------------------------------------------------- */
+.own { display: grid; gap: var(--sp-3); border-color: var(--ink); }
+.own .big {
+  font: var(--t-h1); letter-spacing: var(--ls-display); color: var(--ink);
+  margin: 0; overflow-wrap: anywhere;
+}
+.upshot {
+  margin: 0; font: var(--t-prose); letter-spacing: var(--ls-prose);
+  text-transform: none; color: var(--ink-60);
+  border-top: var(--border); padding-top: var(--sp-3);
+}

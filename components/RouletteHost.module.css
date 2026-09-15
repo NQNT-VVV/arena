@@ -1,0 +1,157 @@
+/*
+ * LA ROULETTE, cote regie.
+ *
+ * Un panneau de preparation : des listes, des champs, aucun spectacle. Ce qui
+ * doit se voir d'un coup d'oeil, c'est l'etat d'une case — muette ou jouable,
+ * et pour quelle part — et ce qu'un mode ne pourra pas faire.
+ */
+
+.wheels { display: grid; gap: var(--gutter); }
+
+.wheel { border: var(--border); display: grid; }
+.wheel.open { border-color: var(--ink); }
+
+/* La ligne d'une roue : tout le bandeau ouvre, pas une poignee de 16 px. */
+.head {
+  display: flex; align-items: center; gap: var(--sp-3); min-height: 44px;
+  padding: var(--sp-2) var(--sp-3); border: 0; background: transparent;
+  color: var(--ink); cursor: pointer; text-align: left;
+  font: var(--t-ui); letter-spacing: var(--ls-mono);
+  transition: background var(--tap);
+}
+.head:hover { background: var(--ink-12); }
+/* Le nom d'une roue est du contenu, pas un libelle : il garde la casse saisie,
+   meme dans un bouton — que le socle met sinon en capitales. */
+.name {
+  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  text-transform: none; letter-spacing: var(--ls-mono);
+}
+
+.tools {
+  display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap;
+  padding: 0 var(--sp-3) var(--sp-2);
+}
+
+.rename {
+  display: grid; gap: var(--sp-3);
+  padding: var(--sp-3); border-top: var(--border);
+}
+
+/* --------------------------------------------------------------------------
+   Les cases d'une roue
+   -------------------------------------------------------------------------- */
+.slots { display: grid; gap: var(--sp-3); padding: var(--sp-3); border-top: var(--border); }
+.summary { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
+
+.list { list-style: none; margin: 0; padding: 0; display: grid; border: var(--border); }
+.row {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--sp-3); align-items: start;
+  padding: var(--sp-3); border-bottom: var(--border);
+}
+.list li:last-child { border-bottom: 0; }
+/*
+ * Une case a zero ne sort jamais, et ca doit se lire sans chercher : dither et
+ * os attenue, comme tout ce qui est hors jeu dans le systeme. Son texte reste
+ * entier — c'est justement pour lui qu'on la garde.
+ */
+.row.mute { background-image: var(--dither-12); background-size: var(--dither-size); color: var(--ink-55); }
+.row.mute .label { color: var(--ink-55); }
+
+.index {
+  font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-55);
+  font-variant-numeric: tabular-nums; padding-top: 3px;
+}
+.text { display: grid; gap: var(--sp-1); min-width: 0; }
+.label { font: var(--t-ui); letter-spacing: var(--ls-mono); color: var(--ink); overflow-wrap: anywhere; }
+.detail {
+  font: var(--t-prose); letter-spacing: var(--ls-prose); text-transform: none;
+  color: var(--ink-60); overflow-wrap: anywhere;
+}
+
+.marks { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.mark {
+  display: inline-flex; align-items: center; height: 24px; padding: 0 var(--sp-2);
+  border: var(--border-ui); font: var(--t-meta); letter-spacing: var(--ls-mono);
+  font-variant-numeric: tabular-nums; color: var(--ink-60); white-space: nowrap;
+}
+/* Ce qui n'a pas joue porte la bande, jamais l'aplat. */
+.mark.advice { padding-left: 0; color: var(--ink); }
+.mark.advice::before {
+  content: ''; width: 8px; align-self: stretch; margin-right: var(--sp-2);
+  background-image: var(--hatch);
+}
+
+.row .tools { padding: 0; justify-content: flex-end; }
+/* Une case en cours de modification prend la ligne entiere : les trois colonnes
+   sont faites pour un resume, pas pour un formulaire. */
+.row .form { grid-column: 1 / -1; }
+
+.add { display: grid; gap: var(--sp-2); border-top: var(--border); padding-top: var(--sp-3); }
+.form { display: grid; gap: var(--sp-3); width: 100%; }
+.three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-2); }
+@media (max-width: 560px) { .three { grid-template-columns: 1fr; } }
+
+.create { width: 100%; }
+
+/* --------------------------------------------------------------------------
+   Le tirage
+   -------------------------------------------------------------------------- */
+.spin {
+  display: grid; gap: var(--sp-4);
+  border: var(--border); padding: var(--sp-4);
+}
+
+/*
+ * Ce qu'un mode ne pourra pas faire, dit AVANT le clic.
+ *
+ * Bande hachuree a gauche, comme tout ce qui ne joue pas dans le systeme : ce
+ * ne sont pas des conseils, ce sont des consequences. Les apprendre apres le
+ * tirage ne sert plus a rien — le sort est deja tombe devant la salle.
+ */
+.warnings { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
+.warnings li {
+  display: grid; grid-template-columns: 8px minmax(0, 1fr); gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3) var(--sp-2) 0; border: 1px solid var(--ink);
+  font: var(--t-prose); letter-spacing: var(--ls-prose); text-transform: none; color: var(--ink);
+}
+.warnings li::before {
+  content: ''; background-image: var(--hatch); margin: calc(-1 * var(--sp-2)) 0;
+}
+
+.outcome {
+  display: grid; gap: var(--sp-2);
+  border-top: var(--border); padding-top: var(--sp-3);
+}
+.outcome p {
+  margin: 0; font: var(--t-prose); letter-spacing: var(--ls-prose);
+  text-transform: none; color: var(--ink-90);
+}
+
+/* --------------------------------------------------------------------------
+   Le dernier tirage, et sa graine
+   -------------------------------------------------------------------------- */
+.last { display: grid; gap: var(--sp-3); border-top: var(--border); padding-top: var(--sp-4); }
+
+.fates { list-style: none; margin: 0; padding: 0; display: grid; border: var(--border); }
+.fates li {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto;
+  gap: var(--sp-3); align-items: center;
+  padding: var(--sp-2) var(--sp-3); border-bottom: var(--border);
+}
+.fates li:last-child { border-bottom: 0; }
+@media (max-width: 560px) { .fates li { grid-template-columns: 1fr; } }
+
+/*
+ * La graine.
+ *
+ * Discrete : elle ne sert que si quelqu'un conteste un tirage. Ce n'est pas un
+ * resultat, c'est une piece a conviction.
+ */
+.seed { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.code {
+  font: var(--t-meta); letter-spacing: 0; text-transform: none; color: var(--ink-60);
+  border: var(--border); padding: var(--sp-1) var(--sp-2); overflow-wrap: anywhere;
+  max-width: 100%;
+}
+.seed .meta { flex-basis: 100%; text-transform: none; letter-spacing: var(--ls-prose); }

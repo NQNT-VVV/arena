@@ -10,6 +10,7 @@ import { AssetPack } from '@/components/AssetPack';
 import { Brand } from '@/components/Brand';
 import { DiffusionStage } from '@/components/DiffusionStage';
 import { Podium } from '@/components/Podium';
+import { OwnFate } from '@/components/Roulette';
 import { Chaine, ChaineLue } from '@/components/Chaine';
 import { Chrono } from '@/components/Chrono';
 import { JoinForm } from '@/components/JoinForm';
@@ -299,6 +300,10 @@ export function PlayClient() {
             <span>Hors classement, decision de l&apos;animateur. Tu peux continuer a suivre la session.</span>
           </p>
         )}
+
+        {/* Son sort, en grand et sans minuterie : il doit rester lisible
+            pendant qu'on cree, pas passer comme un message. */}
+        <OwnFate fate={you?.fate ?? null} />
 
         <section className={`card pad ${styles.stage}`}>{renderStage()}</section>
 

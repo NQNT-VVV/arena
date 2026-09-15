@@ -169,6 +169,14 @@ export interface PodiumRow {
   late?: boolean;
   unranked?: boolean;
   penalty?: number;
+  /**
+   * Le sort tire a la roulette, entier signe.
+   *
+   * A cote de `penalty` et jamais melange avec lui : une penalite est une regle
+   * annoncee, un sort est un hasard assume. Les confondre a l'affichage
+   * reviendrait a cacher lequel des deux a joue.
+   */
+  fate?: number;
   criteria?: { id: string; label: string; average: number }[];
   author?: { id: string; pseudo: string; avatar: string } | null;
   rendition?: RenditionCard | null;
@@ -181,6 +189,141 @@ export interface PodiumState {
   revealed: number;
   complete: boolean;
   rows: PodiumRow[];
+}
+
+/* ------------------------------------------------------------------ */
+/* LA ROULETTE                                                         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Une case de roue.
+ *
+ * Elle ne circule que sur demande (`host:wheel-slots`) : la liste des roues ne
+ * porte que le compte, et une soiree n'a aucune raison de transporter les
+ * quarante cases des roues qu'on n'ouvre pas.
+ */
+export interface WheelSlot {
+  id: string;
+  wheelId: string;
+  label: string;
+  detail: string;
+  /** Zero = la case ne sort jamais, mais son texte reste. */
+  weight: number;
+  /** Effet sur le score, signe. */
+  points: number;
+  /** Effet sur le chrono partage, signe, en millisecondes. */
+  chronoMs: number;
+  position: number;
+}
+
+/** Une roue de sorts : nommee, persistante, preparee entre deux soirees. */
+export interface Wheel {
+  id: string;
+  name: string;
+  note: string;
+  createdAt: number;
+  updatedAt: number;
+  /** Nombre de cases seulement. La liste se demande. */
+  slots?: number;
+}
+
+export type SpinTarget = 'one' | 'some' | 'all';
+
+/** Le sort d'une personne, recopie au moment du tirage et jamais reecrit. */
+export interface Fate {
+  /** Null quand la personne a quitte la session : son pseudo, lui, survit. */
+  participantId: string | null;
+  pseudo: string;
+  label: string;
+  detail: string;
+  points: number;
+  chronoMs: number;
+  /*
+   * Un etat par effet.
+   *
+   * Ils n'obeissent pas a la meme regle — les points ne corrigent plus un
+   * classement devoile, le chrono ne bouge que pour la salle entiere pendant
+   * qu'il court — et un drapeau unique obligeait les pages a redeviner laquelle
+   * des deux avait joue. Faux veut dire « consigne a respecter ».
+   */
+  pointsApplied: boolean;
+  chronoApplied: boolean;
+  position: number;
+}
+
+/** Un tirage, tel que les trois surfaces le recoivent. La graine n'y est pas. */
+export interface Spin {
+  id: string;
+  wheelName: string;
+  target: SpinTarget;
+  howMany: number;
+  /** Vrai = une seule case pour tout le monde. */
+  shared: boolean;
+  phase: Phase;
+  at: number;
+  /** Dans l'ordre de `position` : c'est l'ordre du devoilement. */
+  fates: Fate[];
+}
+
+/**
+ * LA ROULETTE, vue de tout le monde.
+ *
+ * `spins` est public et doit rester affiche : une roue qu'on peut relancer en
+ * secret n'a aucune autorite.
+ */
+export interface RouletteState {
+  spins: number;
+  last: Spin | null;
+}
+
+/** Son propre sort, sur le canal personnel. */
+export interface YouFate {
+  spinId: string;
+  wheelName: string;
+  label: string;
+  detail: string;
+  points: number;
+  chronoMs: number;
+  pointsApplied: boolean;
+  chronoApplied: boolean;
+  at: number;
+}
+
+/**
+ * Accuse de `host:spin` : ce que le tirage a fait, et ce qu'il n'a pas fait.
+ *
+ * Ces trois-la ne sont nulle part ailleurs — ni dans l'etat commun, ni dans la
+ * vue de la regie — et sans elles le panneau laisserait croire qu'un malus a
+ * joue alors qu'il reste une consigne.
+ */
+/**
+ * Les regles du tirage, envoyees par le serveur plutot que recopiees ici.
+ *
+ * La regie doit pouvoir prevenir AVANT un tirage de ce que le mode choisi ne
+ * pourra pas faire. Elle a donc besoin des memes ensembles de phases que le
+ * serveur — et un miroir declare a la main finit par mentir. Present sur
+ * `hostView` seulement : l'ecran et le telephone lisent des etats deja
+ * tranches, ils n'ont aucune regle a appliquer.
+ */
+export interface RouletteRules {
+  /** Phases ou les points corrigent encore un score. */
+  pointsPhases: Phase[];
+  /** Phases ou le chrono court encore. */
+  chronoPhases: Phase[];
+  /** Phases ou le vote est encore aveugle : rien n'a ete entendu. */
+  blindPhases: Phase[];
+  pointsMax: number;
+  chronoMaxMs: number;
+}
+
+export interface SpinAck {
+  /** Le chrono a-t-il vraiment bouge, et de combien. */
+  chronoMs: number;
+  chronoApplicable: boolean;
+  pointsApplicables: boolean;
+  /** La roue avait moins de cases que de personnes : elle a recommence un tour. */
+  epuise: boolean;
+  spins: number;
 }
 
 export interface BattleState {
@@ -198,11 +341,24 @@ export interface BattleState {
   diffusion: DiffusionState | null;
   podium: PodiumState | null;
   chain: ChainState;
+  roulette: RouletteState;
   serverNow: number;
   isHost?: boolean;
   isScreen?: boolean;
   /** Regie seulement : rendus recus mais pas encore prets a diffuser. */
   pendingSubmissions?: number;
+  /** Regie seulement : les roues ne dependent d'aucune session. */
+  wheels?: Wheel[];
+  /** Regie seulement : les regles du tirage, pour prevenir avant de lancer. */
+  rouletteRules?: RouletteRules;
+  /**
+   * Regie seulement : la graine du dernier tirage.
+   *
+   * Elle n'est pas dans la vue commune — elle sert a rejouer un tirage
+   * conteste, ce qui est une conversation entre l'animateur et la salle, pas
+   * une ligne d'affichage.
+   */
+  lastSeed?: string | null;
 }
 
 export type SubmissionStatus = 'pending' | 'transcoding' | 'ready' | 'failed';
@@ -275,6 +431,8 @@ export interface You {
   votes: Record<string, Record<string, number>>;
   /** Null pour un createur : la chaine ne le concerne pas. */
   chain: YouChain | null;
+  /** Son propre sort, pour que le telephone l'affiche en grand. Null s'il n'en a pas. */
+  fate: YouFate | null;
 }
 
 /** Carte de visite renvoyee par `GET /api/session/:code`. */

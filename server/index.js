@@ -118,6 +118,7 @@ function guard(cb, fn) {
 }
 
 const views = require('./views');
+const repo = require('./repo');
 
 io.on('connection', (socket) => {
   /**
@@ -212,6 +213,80 @@ io.on('connection', (socket) => {
       return { state: views.hostView(session) };
     }));
   }
+
+  /**
+   * LA ROULETTE.
+   *
+   * Un bloc a part, parce que ces actions ne rendent pas une session mais une
+   * roue, une case ou un tirage : la table d'actions republie
+   * `hostView(session)` a partir de ce qu'elle recoit, et ces methodes-la n'ont
+   * pas de session a lui donner.
+   *
+   * Elles exigent tout de meme le jeton d'animateur. Les roues ne dependent
+   * d'aucune session — elles se preparent entre deux soirees — mais il n'y a
+   * qu'un animateur, et detenir ce jeton donne deja tout le reste.
+   */
+  const rouletteActions = {
+    'host:wheel-create': (code, p) => battle.createWheel(code, socket.data.hostToken, p),
+    'host:wheel-rename': (code, p) => battle.renameWheel(code, socket.data.hostToken, p),
+    'host:wheel-remove': (code, p) => battle.removeWheel(code, socket.data.hostToken, p),
+    'host:slot-add': (code, p) => battle.addSlot(code, socket.data.hostToken, p),
+    'host:slot-edit': (code, p) => battle.editSlot(code, socket.data.hostToken, p),
+    'host:slot-remove': (code, p) => battle.removeSlot(code, socket.data.hostToken, p),
+    'host:slot-move': (code, p) => battle.moveSlot(code, socket.data.hostToken, p),
+  };
+
+  for (const [event, action] of Object.entries(rouletteActions)) {
+    socket.on(event, (payload = {}, cb) => guard(cb, () => {
+      const code = socket.data.code;
+      if (!code || socket.data.role !== 'host') {
+        throw Object.assign(new Error('Cette socket ne pilote aucune session.'), { expected: true });
+      }
+      const result = action(code, payload);
+      return { result, state: views.hostView(battle.require(code)) };
+    }));
+  }
+
+  /** Les cases d'une roue, a la demande : la liste n'en porte que le compte. */
+  socket.on('host:wheel-slots', (payload = {}, cb) => guard(cb, () => {
+    const code = socket.data.code;
+    if (!code || socket.data.role !== 'host') {
+      throw Object.assign(new Error('Cette socket ne pilote aucune session.'), { expected: true });
+    }
+    battle.requireHost(code, socket.data.hostToken);
+    // `?? null` plutot que `undefined` : better-sqlite3 refuse un parametre
+    // indefini et repondrait « erreur interne » la ou une liste vide suffit.
+    const wheelId = payload?.wheelId ?? null;
+    return { wheelId, slots: wheelId ? repo.slots(wheelId) : [] };
+  }));
+
+  /**
+   * Faire tourner la roue.
+   *
+   * `battle.spin` diffuse lui-meme aux trois surfaces : l'ecran pour devoiler,
+   * les telephones pour que chacun lise son sort, la regie pour qu'elle sache
+   * ce qu'elle vient de declencher. L'accuse ne sert qu'a rendre a la regie ce
+   * que le tirage a decide de faire ou pas — le chrono a-t-il bouge, la roue
+   * s'est-elle epuisee.
+   */
+  socket.on('host:spin', (payload = {}, cb) => guard(cb, () => {
+    const code = socket.data.code;
+    if (!code || socket.data.role !== 'host') {
+      throw Object.assign(new Error('Cette socket ne pilote aucune session.'), { expected: true });
+    }
+    const tirage = battle.spin(code, socket.data.hostToken, payload);
+    return {
+      spin: tirage.spin,
+      fates: tirage.fates,
+      chronoMs: tirage.chronoMs,
+      chronoApplicable: tirage.chronoApplicable,
+      pointsApplicables: tirage.pointsApplicables,
+      epuise: tirage.epuise,
+      spins: tirage.tirages,
+      state: views.hostView(battle.require(code)),
+    };
+  }));
+
 
   /* ---------------------------- participant --------------------------- */
 

@@ -124,6 +124,71 @@ Trois choses valent d'etre sues :
 
 ---
 
+## La roulette
+
+Arena impose des contraintes : c'est sa premisse. La roulette ne fait que la
+rendre visible — au lieu que l'animateur decide, on tire.
+
+**Deux roues, dont une seule se stocke.** Celle des participants se deduit du
+trombinoscope a l'instant du tirage ; la stocker voudrait dire la tenir a jour a
+chaque arrivee et chaque depart pour recalculer ce qu'on sait deja. Celle des
+sorts est nommee, persistante, et se prepare entre deux sessions.
+
+**Trois cibles, deux distributions.** Une personne, plusieurs, ou tout le monde ;
+et soit le meme sort pour tous, soit un sort chacun. Un sort chacun est tire
+*sans remise* : c'est bien « differents » au sens strict. Quand la roue a moins
+de cases que la salle a de monde, elle recommence un tour et le dit — sans quoi
+deux sorts identiques passeraient pour une coincidence.
+
+**Un poids par case, et des cases muettes.** Un poids eleve rend un sort
+frequent, un poids a zero le retire du tirage sans effacer son texte : on prepare
+une roue en plusieurs fois, et on n'aime pas perdre une formule trouvee la
+semaine derniere. Une case vide — « rien du tout » — est ce qui donne a la
+roulette sa tension.
+
+### Ce qui s'applique vraiment
+
+Un sort porte un texte, et parfois un effet mecanique. Les deux effets
+n'obeissent pas a la meme regle, et chacun porte donc son propre etat. Quand un
+effet ne s'applique pas, le sort reste une **consigne**, et l'interface le dit au
+lieu de faire semblant.
+
+| Effet | S'applique |
+|---|---|
+| Le texte | toujours. C'est le defaut, et c'est le plus sur : il ne peut rien casser. |
+| Les points | jusqu'a la diffusion incluse. Passe le devoilement, le classement ne se reecrit plus pour un sort que personne n'a vu tomber. |
+| Le chrono | seulement pour la salle entiere avec le meme sort, et seulement pendant que le chrono court. |
+
+La restriction du chrono n'est pas une prudence : **Arena n'a pas d'horloge
+individuelle**. Le chrono est partage par toute la salle, et pretendre l'avancer
+pour une seule personne serait mentir a l'ecran. La regie previent donc avant le
+tirage, pas apres.
+
+Les points entrent dans le calcul par un champ distinct de la penalite de
+retard, et les deux ne se melangent jamais : une penalite est une regle annoncee,
+un sort est un hasard assume. Le classement, comme l'export, montre lequel a
+joue.
+
+### Ce qui rend la roue defendable
+
+**La graine est gardee.** Un tirage qu'on ne peut pas rejouer est un tirage qu'on
+ne peut pas defendre. La meme graine et la meme liste rendent le meme sort : la
+regie peut refaire le tirage devant qui le contexte. Elle n'est visible que
+d'elle — c'est une conversation avec la salle, pas une ligne d'affichage.
+
+**Les tirages se comptent, et le compte s'affiche sur l'ecran.** On n'empeche pas
+l'animateur de relancer, parfois il faut ; mais s'il pouvait le faire en secret
+jusqu'a obtenir ce qui lui plait, la roue n'aurait plus aucune autorite.
+
+**Ce qui est tire est recopie.** Le libelle d'un sort et le pseudo d'un
+participant sont dupliques dans le tirage. Une roue renommee, un sort corrige,
+une roue supprimee, un participant parti : rien n'a le droit de reecrire ce qui
+s'est passe.
+
+**L'animateur n'est pas dans la roue** — il la tourne. Un disqualifie non plus.
+Les spectateurs sont dehors par defaut, puisqu'ils ne concourent pas, mais
+l'animateur peut les inclure pour un gag qui ne touche a aucun score.
+
 ## Le chrono fait autorite
 
 Une session ne stocke jamais « il reste douze minutes » mais « la creation
@@ -213,6 +278,14 @@ fuiter tout le monde d'un coup.
 **Le trombinoscope reste public.** Savoir qui participe ne dit rien de qui a
 fait quoi. C'est la correspondance rendu → auteur qui est protegee ; masquer la
 liste des presents priverait le lobby de son interet sans rien proteger.
+
+**La roulette peut le casser, et ce n'est pas reparable.** Un sort individuel du
+genre « tu dois inclure un sample de vache » se reconnait a la diffusion : qui
+entend la vache sait qui c'est. Ce n'est pas un defaut d'implementation, c'est
+inherent a une contrainte individuelle dans un jeu a vote aveugle. Aucune ligne
+de code ne peut l'empecher — seul l'animateur peut choisir. La regie le previent
+donc avant chaque tirage par personne lance pendant que le vote est encore
+aveugle, et les sorts collectifs, eux, ne posent pas la question.
 
 **Le nom du fichier est cache.** « beat-alexis-v3.wav » annulerait tout le
 reste du dispositif. Pendant la diffusion, un rendu se telecharge sous le nom

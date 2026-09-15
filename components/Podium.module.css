@@ -68,3 +68,19 @@
   font: var(--t-prose); letter-spacing: var(--ls-prose); text-transform: none;
   white-space: pre-wrap; max-height: 40vh; overflow: auto; color: var(--ink-90);
 }
+
+/*
+ * Le sort tire a la roulette, distinct de la penalite.
+ *
+ * Encadre et nomme, la ou la penalite n'est qu'un « −1 » dans la ligne de
+ * metadonnees : ce ne sont pas deux variantes d'une meme chose. Une penalite
+ * vient d'une regle annoncee, un sort vient du hasard, et le classement doit
+ * dire lequel a joue.
+ */
+.fate {
+  display: inline-flex; align-items: center; height: 20px; margin-left: var(--sp-2);
+  padding: 0 var(--sp-1); border: var(--border-ui); color: var(--ink);
+  font: var(--t-meta); letter-spacing: var(--ls-mono); font-variant-numeric: tabular-nums;
+  vertical-align: middle;
+}
+.large .fate { height: 24px; margin-left: var(--sp-3); }

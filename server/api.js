@@ -409,7 +409,10 @@ function mount(app, battle) {
     // En mono-critere, la colonne du critere repeterait la note : on ne detaille
     // que lorsqu'un bareme a plusieurs axes a montrer.
     const criteria = session.config.criteria.length ? session.config.criteria : [];
-    const header = ['rang', 'pseudo', 'note', ...criteria.map((c) => c.label), 'votants', 'attendus', 'hors_delai', 'penalite', 'fichier'];
+// `sort` a cote de `penalite`, et jamais melange : une penalite est une regle
+    // annoncee, un sort est un hasard assume. Sans cette colonne, une session ou
+    // la roue a bouge un score s'exporte avec une note qu'on ne peut pas recomposer.
+    const header = ['rang', 'pseudo', 'note', ...criteria.map((c) => c.label), 'votants', 'attendus', 'hors_delai', 'penalite', 'sort', 'fichier'];
     const lines = [header.join(';')];
 
     for (const row of podium.rows) {
@@ -422,6 +425,7 @@ function mount(app, battle) {
         row.expected,
         row.late ? 'oui' : 'non',
         row.penalty || '',
+        row.fate || '',
         row.filename ?? '',
       ].map(cell).join(';'));
     }

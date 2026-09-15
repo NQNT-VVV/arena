@@ -19,6 +19,7 @@ const { EventEmitter } = require('events');
 
 const config = require('./config');
 const repo = require('./repo');
+const roulette = require('./roulette');
 const storage = require('./storage');
 const views = require('./views');
 const {
@@ -1204,6 +1205,96 @@ class BattleServer {
     for (const p of session.participants.values()) {
       if (p.spectator) this.publishYou(session, p);
     }
+  }
+
+  /* ---------------------------- la roulette ---------------------- */
+
+  /**
+   * LA ROULETTE — un sort tire au hasard, et devant temoin.
+   *
+   * Arena impose des contraintes : c'est sa premisse. La roulette la rend
+   * visible — au lieu que l'animateur decide, on tire.
+   *
+   * Le module `roulette.js` fait le tirage et n'en sait pas plus. Ici on fait
+   * les deux choses qu'il ne peut pas faire : verifier que l'appelant est
+   * l'animateur, et appliquer ce qui touche a la session — le chrono, puis la
+   * diffusion vers les trois surfaces.
+   *
+   * LES ROUES NE DEPENDENT D'AUCUNE SESSION. On les prepare entre deux
+   * soirees, on les reutilise. Le jeton d'animateur d'une session quelconque
+   * suffit donc a les piloter : il n'y a qu'un animateur, et le detenir donne
+   * deja tout le reste.
+   */
+  wheels(code, token) {
+    this.requireHost(code, token);
+    return repo.wheels();
+  }
+
+  createWheel(code, token, payload) {
+    this.requireHost(code, token);
+    return roulette.creerRoue(payload);
+  }
+
+  renameWheel(code, token, payload) {
+    this.requireHost(code, token);
+    return roulette.renommerRoue(payload);
+  }
+
+  removeWheel(code, token, payload) {
+    this.requireHost(code, token);
+    return roulette.supprimerRoue(payload);
+  }
+
+  addSlot(code, token, payload) {
+    this.requireHost(code, token);
+    return roulette.ajouterCase(payload);
+  }
+
+  editSlot(code, token, payload) {
+    this.requireHost(code, token);
+    return roulette.modifierCase(payload);
+  }
+
+  removeSlot(code, token, payload) {
+    this.requireHost(code, token);
+    return roulette.retirerCase(payload);
+  }
+
+  moveSlot(code, token, payload) {
+    this.requireHost(code, token);
+    return roulette.deplacerCase(payload);
+  }
+
+  /**
+   * Faire tourner la roue.
+   *
+   * Le tirage est fait et ecrit par `roulette.js`, graine comprise. Il reste
+   * deux gestes qui appartiennent a la session :
+   *
+   * LE CHRONO. Il est partage par toute la salle — Arena n'a pas d'horloge
+   * individuelle — donc un sort de temps ne s'applique que s'il vise tout le
+   * monde avec le meme effet. `addTime` est reutilise tel quel plutot que
+   * re-ecrit : c'est lui qui sait distinguer une creation en pause d'une
+   * fenetre de grace, et dupliquer ce savoir le ferait diverger.
+   *
+   * LA DIFFUSION. Le tirage part aux trois surfaces d'un coup : l'ecran pour
+   * le devoiler, les telephones pour que chacun lise son sort, la regie pour
+   * qu'elle sache ce qu'elle vient de declencher.
+   */
+  spin(code, token, payload = {}) {
+    const s = this.requireHost(code, token);
+    const tirage = roulette.tirer(s, payload);
+
+    if (tirage.chronoApplicable && tirage.chronoMs) {
+      // `addTime` republie deja : on le laisse faire, et on republiera une
+      // seconde fois avec le tirage. Deux etats successifs valent mieux qu'un
+      // chrono qui bouge sans que personne sache pourquoi.
+      this.addTime(code, token, tirage.chronoMs);
+    }
+
+    this.publish(s);
+    for (const p of s.participants.values()) this.publishYou(s, p);
+    return tirage;
   }
 
   /* --------------------------- presence -------------------------- */

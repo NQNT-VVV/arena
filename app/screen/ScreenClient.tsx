@@ -9,6 +9,7 @@ import { Brand } from '@/components/Brand';
 import { DiffusionStage } from '@/components/DiffusionStage';
 import { ChaineLue } from '@/components/Chaine';
 import { Podium } from '@/components/Podium';
+import { RouletteScreen } from '@/components/Roulette';
 import { Chrono } from '@/components/Chrono';
 import { JoinForm } from '@/components/JoinForm';
 import { QrCode } from '@/components/QrCode';
@@ -120,6 +121,9 @@ export function ScreenClient() {
         <span>SALLE {state.code}</span>
         <span>RENDU {media.icon} · {media.label}</span>
         <span>{PHASE_LABELS[state.phase]}</span>
+        {/* Le compte des tirages est sur l'ecran de la salle, pas seulement en
+            regie : une roue qu'on relance en secret n'a aucune autorite. */}
+        {state.roulette.spins > 0 && <span>TIRAGES {hex(state.roulette.spins)}</span>}
         <span className="seats" aria-label={`${state.counts.connected} sujets en ligne sur ${state.counts.participants}`}>
           {Array.from({ length: Math.max(state.counts.participants, 1) }, (_, i) => (
             <span key={i} className={i < state.counts.connected ? 'on' : ''} />
@@ -175,6 +179,14 @@ export function ScreenClient() {
         <div className={styles.wide}>
           <span className={styles.bigIcon}>CLASSEMENT FINAL · {hex(state.podium.total ?? 0)} RENDUS</span>
           <Podium podium={state.podium} large ratings={ratings} />
+        </div>
+      )}
+
+      {/* LA ROULETTE. Le devoilement passe par un voile, puis le tirage reste
+          sur la page : c'est la consigne en cours, on doit pouvoir la relire. */}
+      {state.roulette.last && (
+        <div className={styles.wide}>
+          <RouletteScreen roulette={state.roulette} roster={state.roster} />
         </div>
       )}
 

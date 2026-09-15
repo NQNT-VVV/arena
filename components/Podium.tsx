@@ -82,6 +82,19 @@ export function Podium({
                 {hex(row.voters ?? 0)} / {hex(row.expected ?? 0)} VOTES
                 {row.late && ' · HORS DELAI'}
                 {row.penalty ? ` · −${row.penalty}` : ''}
+                {/*
+                  * Le sort ne se melange pas a la penalite.
+                  *
+                  * Une penalite est une regle annoncee — le depot etait en
+                  * retard. Un sort est un hasard assume. Les additionner dans
+                  * la meme mention cacherait lequel des deux a joue, et c'est
+                  * precisement ce que chacun vient verifier sur sa ligne.
+                  */}
+                {row.fate ? (
+                  <span className={styles.fate}>
+                    SORT {row.fate > 0 ? '+' : '−'}{Math.abs(row.fate)}
+                  </span>
+                ) : null}
               </span>
               {row.criteria && row.criteria.length > 1 && (
                 <span className={styles.criteria}>
