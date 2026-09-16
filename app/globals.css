@@ -52,6 +52,17 @@
 .media-choice button[aria-pressed='true'] { background: var(--ink); background-image: none; color: var(--bg); }
 .media-choice button[aria-pressed='true'] .ico { color: var(--bg); }
 
+/*
+ * Le grain s'eteint pendant la revelation de la roulette.
+ *
+ * Un bruit statique plein cadre neutralise les macroblocs non reecrits meme sur
+ * une image gelee : c'est une taxe de debit permanente, exactement la ou il
+ * faut des bits pour les aretes des tres grandes glyphes. `.grain` est rendu en
+ * frere de niveau racine, hors de la scene : la regle ne peut etre que globale,
+ * et elle est declaree comme telle.
+ */
+body.reveal-on .grain { display: none; }
+
 /* --------------------------------------------------------------------------
    Grand ecran : lisible a cinq metres, 40 % de vide
    -------------------------------------------------------------------------- */

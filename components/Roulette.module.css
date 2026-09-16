@@ -1,24 +1,251 @@
 /*
- * LA ROULETTE — le rouleau, et les sorts.
+ * LA ROULETTE — le champ, et le mot.
  *
- * Aucun mouvement fluide : le rouleau avance par crans (`steps`) et s'arrete
- * net. Le voile de revelation est un dithering de la couleur du fond, jamais un
- * flou. Le sang ne sert qu'a une chose ici : dire que ca tourne encore.
+ * Aucune `transition` ici, pas une seule, pas meme en `steps()` : chaque
+ * changement d'etat est une bascule de classe, donc un repeint instantane. Le
+ * marqueur ne se deplace pas, il change d'hote. La seule animation employee est
+ * `flash`, deja au socle.
+ *
+ * Rien ne translate non plus. Un ruban qui defile par `transform` est promu en
+ * couche par le navigateur et recompose tout le bloc a chaque cran : bon marche
+ * pour le compositeur, ruineux pour l'encodeur, qui recoit du mouvement
+ * plein-fenetre. L'optimisation habituelle est le mauvais choix sur ce medium.
  */
 
 /* Modale de revelation 0x0A : voile dither, boite au filet fort, reperes de coin. */
 .veil {
   position: fixed; inset: 0; z-index: 60;
-  display: grid; place-items: center; padding: var(--margin);
+  display: grid; place-items: center; padding: var(--sp-12);
   background-image: var(--veil); background-size: 4px 4px;
 }
-.panel {
-  position: relative; width: min(880px, 92vw); max-height: 92dvh; overflow: auto;
-  padding: var(--sp-8); background: var(--bg); border: var(--border-strong);
-  display: grid; gap: var(--sp-6); color: var(--ink);
+
+/*
+ * LA SCENE.
+ *
+ * Deviation declaree sur la largeur de 0x0A (max 440, ecrite pour une modale de
+ * telephone) : un videoprojecteur n'est pas un telephone, et le GUIDE assigne
+ * deja --t-display « jusqu'a 205 px » a cet ecran.
+ *
+ * Deviation declaree sur l'epaisseur des filets, 3 px au lieu de 1. Le 1 px du
+ * systeme n'est pas une valeur de gout, c'est « le trait le plus fin qui reste
+ * visible » : sur la chaine 1920 -> 720p -> 480p il livre 0,45 px et disparait.
+ * Garder l'intention oblige a changer le nombre.
+ *
+ * GEOMETRIE FIXE de la premiere a la derniere image : seuls les remplissages et
+ * le texte changent. Un changement de gabarit est un changement plein cadre,
+ * donc une image-cle arrachee a l'encodeur.
+ */
+.stage {
+  --stage-rule: 3px solid var(--ink);
+  position: relative;
+  width: min(1792px, 94vw);
+  /*
+   * Hauteur POSEE, et non subie.
+   *
+   * Un gabarit qui change entre deux images est un changement plein cadre,
+   * donc une image-cle arrachee a l'encodeur au pire moment. Les rangees du
+   * tableau absorbent tout ce qui varie ; les cinq autres bandes ne bougent
+   * jamais d'un pixel, de la premiere image a la derniere.
+   */
+  height: calc(100dvh - 2 * var(--sp-12));
+  padding: var(--sp-8);
+  background: var(--bg); color: var(--ink);
+  border: var(--stage-rule);
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto auto;
+  gap: var(--sp-6);
+  overflow: hidden;
 }
 
-/* Le meme contenu, une fois le voile retire : le tirage reste la consigne en cours. */
+.legende {
+  display: grid; gap: var(--sp-1);
+  font: var(--t-ui-l); letter-spacing: var(--ls-mono); color: var(--ink-60);
+}
+.legende b { color: var(--ink); font-weight: 400; }
+.legende .rappel { font: var(--t-ui); letter-spacing: var(--ls-mono); }
+
+.filet { height: 0; border-top: var(--border); }
+
+/* --------------------------------------------------------------------------
+   LE CHAMP — les sujets
+   -------------------------------------------------------------------------- */
+
+/*
+ * Le tableau montre TOUJOURS la salle en entier : c'est ce qu'une roue cesse
+ * de faire au-dela de huit noms. Les rangees se partagent la hauteur libre et
+ * sont plafonnees a la hauteur de plaque : rien n'est jamais coupe, et la
+ * derniere personne voit toujours son sort.
+ */
+.tableau {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  gap: var(--sp-4);
+  min-height: 0;
+  max-height: calc(var(--rangs) * var(--plaque-h) + (var(--rangs) - 1) * var(--sp-4));
+}
+
+.plaque {
+  padding: var(--sp-4); border: var(--stage-rule);
+  display: grid; align-content: center; gap: var(--sp-2);
+  overflow: hidden; contain: layout paint;
+}
+.plaque .nom {
+  font: var(--t-h1); letter-spacing: var(--ls-display);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.plaque .sort {
+  font: var(--t-ui-l); letter-spacing: var(--ls-mono); color: var(--ink-60);
+  overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+}
+/* Buzzer 0x02, etat « presse » : le sang dit ce qui vit, et une seule chose a la fois. */
+.plaque.marque { background: var(--accent-deep); border-color: var(--accent); }
+/* L'arret : inversion pleine d'os, et le sang quitte l'ecran. */
+.plaque.tiree {
+  background: var(--ink); color: var(--bg); border-color: var(--ink);
+  animation: flash var(--dur-flash) var(--ease-hold) 1;
+}
+.plaque.tiree .sort { color: var(--bg); }
+
+/*
+ * Une grande salle : le pseudo passe au cran du dessous et la plaque ne porte
+ * plus qu'une puce d'effet. Un libelle a 27 px sur une plaque de 110 px serait
+ * de la bouillie sur le rung 480p, et l'appariement complet vit ailleurs — la
+ * carte persistante, et le telephone de chacun.
+ */
+.tableau.dense .plaque { padding: var(--sp-2) var(--sp-3); }
+.tableau.dense .plaque .nom { font: var(--t-h2); letter-spacing: var(--ls-display); }
+.tableau.dense .plaque .sort { font: var(--t-ui); letter-spacing: var(--ls-mono); -webkit-line-clamp: 1; }
+
+/* Au-dela de 24 sujets la scene n'a plus que deux registres : une bande de noms. */
+.tableau.ligne {
+  display: flex; flex-wrap: wrap; gap: var(--sp-2); align-content: center; max-height: none;
+}
+.tableau.ligne .plaque {
+  padding: var(--sp-1) var(--sp-2); border: var(--border-ui);
+}
+.tableau.ligne .plaque .nom { font: var(--t-ui); letter-spacing: var(--ls-mono); }
+.tableau.ligne .plaque .sort { display: none; }
+
+/* --------------------------------------------------------------------------
+   LE CHAMP — les cases
+   -------------------------------------------------------------------------- */
+
+/*
+ * Progression 0x09 fermee : un cran par case, LARGE EN PROPORTION DE SON POIDS.
+ * Sans cela un champ de cases egales annoncerait « une chance sur douze »
+ * pendant que la regie affiche 40 %.
+ *
+ * Deviation declaree : 16 px de haut au lieu des 8 px de 0x09, meme
+ * arithmetique que les filets — 8 px livrent 3,6 px a 480p. Le gap de 4 px est
+ * conserve tel quel.
+ */
+.reglette { display: flex; gap: var(--sp-1); height: 16px; }
+.reglette > i { flex: var(--w) 1 0; min-width: 4px; border: var(--border-ui); }
+.reglette > i.marque { background: var(--accent-deep); border-color: var(--accent); }
+.reglette > i.tiree {
+  background: var(--ink); border-color: var(--ink);
+  animation: flash var(--dur-flash) var(--ease-hold) 1;
+}
+/* Sans remise, rendu visible : une case consommee s'eteint. */
+.reglette > i.usee {
+  border-color: var(--ink-25);
+  background-image: var(--dither-25); background-size: var(--dither-size);
+}
+
+/* --------------------------------------------------------------------------
+   LE MOT — la seule chose qui change
+   -------------------------------------------------------------------------- */
+
+/*
+ * N'importe quelle image isolee du flux doit porter un mot lisible : un
+ * spectateur qui decroche trois secondes retrouve l'information sans rien
+ * reconstituer.
+ */
+.mot {
+  border: var(--stage-rule); padding: var(--sp-8);
+  /* Meme raison que la scene : la boite est posee, c'est son contenu qui change. */
+  height: clamp(200px, 33vh, 360px);
+  display: grid; align-content: center; gap: var(--sp-4);
+  overflow: hidden; contain: layout paint;
+}
+/* Quelque chose est encore en train de se decider. */
+.mot.vivant { border-color: var(--accent); }
+.mot .sur { font: var(--t-ui-l); letter-spacing: var(--ls-mono); color: var(--ink-60); }
+.mot .texte { overflow-wrap: anywhere; margin: 0; }
+
+/*
+ * Le palier de taille est discret et se calcule sans mesurer : l'echelle du
+ * systeme l'est, l'ajustement doit l'etre aussi. Le second terme n'invente
+ * aucun jeton — il met simplement --fs-6 en boite quand le pseudo est long,
+ * plutot que de le laisser deborder de la scene.
+ */
+.mot .texte.s1 {
+  font: var(--t-display); letter-spacing: var(--ls-display);
+  font-size: min(var(--fs-6), calc(96vw / var(--signes)));
+}
+.mot .texte.s2 { font: var(--t-data); letter-spacing: var(--ls-mono); }
+.mot .texte.s3 { font: var(--t-ui-l); letter-spacing: var(--ls-mono); }
+
+.mot .chips { gap: var(--sp-3); }
+.mot .chips .effect, .mot .chips .status {
+  height: 40px; padding: 0 var(--sp-3); font: var(--t-ui); letter-spacing: var(--ls-mono);
+}
+
+.pied { font: var(--t-ui); letter-spacing: var(--ls-mono); color: var(--ink-60); }
+
+/* --------------------------------------------------------------------------
+   PENDANT LA DIFFUSION — un bandeau, jamais un voile
+   -------------------------------------------------------------------------- */
+
+/*
+ * ON NE COUPE JAMAIS UN RENDU EN COURS DE JUGEMENT. Un tirage est autorise
+ * pendant la diffusion, et un voile plein cadre couvrirait la video que la
+ * salle est en train de noter. Meme chronologie, memes durees, meme code : la
+ * scene descend en bas de cadre et le tableau se replie sur une plaque.
+ */
+.veil.bandeau {
+  inset: auto 0 0 0; padding: 0; display: block;
+  background-image: none;
+}
+/*
+ * 300 px et non 280 : la ligne de contexte, la reglette, le nom, le mot sur deux
+ * lignes et les puces d'effet ne tiennent pas dans 280 sans que quelque chose
+ * soit coupe — et couper est exactement ce qu'on repare ici.
+ */
+.bandeau .stage {
+  width: 100%; height: 300px; max-height: 300px;
+  padding: var(--sp-4) var(--margin);
+  border: 0; border-top: var(--stage-rule);
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: var(--sp-3);
+}
+/* Une seule ligne de contexte : le bandeau vit sur un rendu, il n'en prend pas deux. */
+.bandeau .legende { display: block; font: var(--t-ui); letter-spacing: var(--ls-mono); }
+.bandeau .legende .rappel { font: inherit; letter-spacing: var(--ls-mono); }
+
+.bandeau .rang { display: grid; grid-template-columns: minmax(240px, 380px) minmax(0, 1fr); gap: var(--sp-6); min-height: 0; }
+.bandeau .mot {
+  border: 0; padding: 0; height: auto; gap: var(--sp-2); align-content: start;
+}
+.bandeau .mot .sur { font: var(--t-ui); letter-spacing: var(--ls-mono); }
+/* Le libelle tient en deux lignes, ou il est coupe : on ne pousse pas hors cadre. */
+.bandeau .mot .texte {
+  font: var(--t-data); letter-spacing: var(--ls-mono);
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+}
+.bandeau .mot .chips .effect, .bandeau .mot .chips .status { height: 32px; font: var(--t-meta); letter-spacing: var(--ls-mono); }
+.bandeau .plaque { border: var(--border-strong); }
+.bandeau .plaque .nom {
+  font: var(--t-h2); letter-spacing: var(--ls-display);
+  white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+}
+
+/* --------------------------------------------------------------------------
+   APRES LE VOILE — la carte persistante
+   -------------------------------------------------------------------------- */
+
+/* Le tirage reste la consigne en cours : on doit pouvoir le relire. */
 .block { display: grid; gap: var(--sp-4); }
 
 .head {
@@ -28,45 +255,6 @@
 .head b { color: var(--ink); font-weight: 400; }
 .head span { display: inline-flex; align-items: center; gap: var(--sp-2); }
 
-/* --------------------------------------------------------------------------
-   Le rouleau
-   -------------------------------------------------------------------------- */
-.window {
-  --step: 56px;
-  position: relative; height: calc(3 * var(--step)); overflow: hidden;
-  border: var(--border-ui); background: var(--ink-06);
-}
-/* Il tourne : c'est la seule chose vivante de l'ecran a cet instant. */
-.window.spinning { border-color: var(--accent); }
-
-.strip {
-  display: grid;
-  transform: translateY(calc(-1 * var(--i) * var(--step)));
-  /* Un palier, pas un glissement : le cran se voit, il ne se suit pas. */
-  transition: transform var(--dur-tap) steps(1, end);
-}
-.strip > span {
-  height: var(--step); display: flex; align-items: center; padding: 0 var(--sp-4);
-  font: var(--t-ui-l); letter-spacing: var(--ls-mono); color: var(--ink-40);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-/* La ligne du viseur, inversee : c'est elle qu'on lit, avant comme apres l'arret. */
-.strip > span.active { background: var(--ink); color: var(--bg); }
-
-.sight {
-  position: absolute; left: 0; right: 0; top: var(--step); height: var(--step);
-  border-top: var(--border-strong); border-bottom: var(--border-strong); pointer-events: none;
-}
-
-@media (max-width: 640px) {
-  .window { --step: 44px; }
-  .strip > span { font: var(--t-ui); letter-spacing: var(--ls-mono); }
-  .panel { padding: var(--sp-4); gap: var(--sp-4); }
-}
-
-/* --------------------------------------------------------------------------
-   Les sorts, devoiles un par un
-   -------------------------------------------------------------------------- */
 .fates { list-style: none; margin: 0; padding: 0; display: grid; border: var(--border); }
 .fate { padding: var(--sp-4); border-bottom: var(--border); }
 .fate:last-child { border-bottom: 0; }
@@ -82,8 +270,12 @@
   text-transform: none; color: var(--ink-90); overflow-wrap: anywhere;
 }
 
-/* Une place tenue pour un sort qui n'est pas encore tombe : la liste ne saute pas. */
-.pending { font: var(--t-meta); letter-spacing: .3em; color: var(--ink-55); }
+/* La bande des pseudos, quand un seul sort vaut pour tout le monde. */
+.tous { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.tous span {
+  padding: var(--sp-1) var(--sp-2); border: var(--border-ui);
+  font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink);
+}
 
 .chips { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
 
@@ -125,4 +317,16 @@
   margin: 0; font: var(--t-prose); letter-spacing: var(--ls-prose);
   text-transform: none; color: var(--ink-60);
   border-top: var(--border); padding-top: var(--sp-3);
+}
+
+/* --------------------------------------------------------------------------
+   Ecrans etroits — la scene existe aussi sur un ordinateur portable
+   -------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .veil { padding: var(--sp-4); }
+  .stage { padding: var(--sp-4); gap: var(--sp-4); height: calc(100dvh - 2 * var(--sp-4)); }
+  .mot { padding: var(--sp-4); height: clamp(140px, 28vh, 260px); }
+  .plaque .nom { font: var(--t-h2); letter-spacing: var(--ls-display); }
+  .plaque .sort { font: var(--t-meta); letter-spacing: var(--ls-mono); }
+  .legende { font: var(--t-ui); letter-spacing: var(--ls-mono); }
 }

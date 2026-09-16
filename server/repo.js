@@ -604,6 +604,11 @@ function toSpin(row) {
     phase: row.phase,
     seed: row.seed,
     at: row.at,
+    // Le champ tel qu'il etait au moment du tirage. `json()` rend le repli sur
+    // une ligne d'avant la migration 10, qui ne le sait pas.
+    pool: json(row.pool, []),
+    slots: json(row.slots, []),
+    spent: !!row.spent,
   };
 }
 
@@ -620,6 +625,8 @@ function toFate(row) {
     chronoMs: row.chrono_ms,
     pointsAppliedAt: row.points_applied_at,
     chronoAppliedAt: row.chrono_applied_at,
+    poolIndex: row.pool_index,
+    slotIndex: row.slot_index,
     position: row.position,
   };
 }
@@ -653,8 +660,10 @@ const moveSlotStmt = db.prepare('UPDATE wheel_slot SET position = ? WHERE id = ?
 const deleteSlotStmt = db.prepare('DELETE FROM wheel_slot WHERE id = ?');
 
 const insertSpin = db.prepare(`
-  INSERT INTO spin (id, session_id, wheel_id, wheel_name, target, how_many, shared, phase, seed, at)
-  VALUES (@id, @sessionId, @wheelId, @wheelName, @target, @howMany, @shared, @phase, @seed, @at)
+  INSERT INTO spin (id, session_id, wheel_id, wheel_name, target, how_many, shared, phase, seed, at,
+                    pool, slots, spent)
+  VALUES (@id, @sessionId, @wheelId, @wheelName, @target, @howMany, @shared, @phase, @seed, @at,
+          @pool, @slots, @spent)
 `);
 const selectSpin = db.prepare('SELECT * FROM spin WHERE id = ?');
 const selectSpins = db.prepare('SELECT * FROM spin WHERE session_id = ? ORDER BY at, id');
@@ -665,9 +674,9 @@ const countSpins = db.prepare('SELECT COUNT(*) AS n FROM spin WHERE session_id =
 
 const insertFate = db.prepare(`
   INSERT INTO spin_fate (id, spin_id, participant_id, pseudo, label, detail, points, chrono_ms,
-                         points_applied_at, chrono_applied_at, position)
+                         points_applied_at, chrono_applied_at, pool_index, slot_index, position)
   VALUES (@id, @spinId, @participantId, @pseudo, @label, @detail, @points, @chronoMs,
-          @pointsAppliedAt, @chronoAppliedAt, @position)
+          @pointsAppliedAt, @chronoAppliedAt, @poolIndex, @slotIndex, @position)
 `);
 const selectFates = db.prepare('SELECT * FROM spin_fate WHERE spin_id = ? ORDER BY position');
 
@@ -707,7 +716,10 @@ Object.assign(repo, {
   removeSlot: (id) => deleteSlotStmt.run(id).changes,
 
   // tirages
-  addSpin(sp) { insertSpin.run(sp); return toSpin(selectSpin.get(sp.id)); },
+  addSpin(sp) {
+    insertSpin.run({ pool: '[]', slots: '[]', spent: 0, ...sp });
+    return toSpin(selectSpin.get(sp.id));
+  },
   spin: (id) => toSpin(selectSpin.get(id)),
   spins: (sessionId) => selectSpins.all(sessionId).map(toSpin),
   lastSpin: (sessionId) => toSpin(selectLastSpin.get(sessionId)),
@@ -715,7 +727,8 @@ Object.assign(repo, {
 
   addFate(f) {
     insertFate.run({
-      detail: '', points: 0, chronoMs: 0, pointsAppliedAt: null, chronoAppliedAt: null, ...f,
+      detail: '', points: 0, chronoMs: 0, pointsAppliedAt: null, chronoAppliedAt: null,
+      poolIndex: -1, slotIndex: -1, ...f,
     });
     return toFate(selectFates.all(f.spinId).find((x) => x.id === f.id));
   },

@@ -313,6 +313,16 @@ function tirer(session, {
   const pointsApplicables = PHASES_POINTS.has(session.phase);
   const chronoApplicable = PHASES_CHRONO.has(session.phase) && target === 'all' && shared;
 
+  /*
+   * Le champ est fige avec le tirage.
+   *
+   * Une roue se modifie entre deux soirees, et un participant s'en va : relire
+   * l'un ou l'autre plus tard donnerait un champ qui n'est pas celui dans
+   * lequel on a tire. C'est la meme raison qui fait recopier les libelles.
+   *
+   * Et c'est `monde` qui est fige, pas le trombinoscope : lui seul a ecarte
+   * l'animateur, les disqualifies, et les spectateurs quand ils sont dehors.
+   */
   const spin = repo.addSpin({
     id: uuid(),
     sessionId: session.id,
@@ -324,6 +334,9 @@ function tirer(session, {
     phase: session.phase,
     seed: graine,
     at: now,
+    pool: JSON.stringify(monde.map((p) => p.pseudo)),
+    slots: JSON.stringify(cases.map((c) => ({ label: c.label, weight: c.weight }))),
+    spent: epuise ? 1 : 0,
   });
 
   const fates = sorts.map(({ participant, caseTiree }, i) => repo.addFate({
@@ -345,6 +358,10 @@ function tirer(session, {
      */
     pointsAppliedAt: (caseTiree.points !== 0 && pointsApplicables) ? now : null,
     chronoAppliedAt: (caseTiree.chronoMs !== 0 && chronoApplicable) ? now : null,
+    // Ou le sort est tombe dans chaque champ : c'est ce qui permet a l'ecran
+    // de montrer le tirage au lieu de le raconter.
+    poolIndex: monde.indexOf(participant),
+    slotIndex: cases.findIndex((c) => c.id === caseTiree.id),
     position: i,
   }));
 

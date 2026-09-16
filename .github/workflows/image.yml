@@ -47,6 +47,7 @@ jobs:
           npm run test:spectators
           npm run test:chaine
           npm run test:roulette
+          npm run test:reveal
 
       - name: Build Next
         run: SESSION_SECRET=ci-only npm run build

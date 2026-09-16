@@ -1321,6 +1321,17 @@ class BattleServer {
     session.screenSockets.add(socket.id);
     socket.data.code = session.code;
     socket.data.role = 'screen';
+    /*
+     * L'ecran republie en s'attachant, comme les deux autres surfaces.
+     *
+     * Il etait la seule a ne pas le faire, et l'accuse de `screen:attach` n'est
+     * pas lu : l'ecran attendait donc une diffusion. Tant que quelqu'un
+     * pilotait, elle arrivait dans la seconde et le defaut restait invisible ;
+     * un ecran branche sur une session au repos, lui, restait sur
+     * « CHARGEMENT » indefiniment. C'est le cas du videoprojecteur allume avant
+     * que l'animateur touche a quoi que ce soit.
+     */
+    this.publish(session);
   }
 
   attachParticipant(socket, session, participant) {
