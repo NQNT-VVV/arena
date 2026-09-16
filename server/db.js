@@ -303,6 +303,37 @@ const MIGRATIONS = [
       CREATE INDEX spin_fate_part_idx ON spin_fate(participant_id);
     `);
   },
+  /**
+   * Le champ du tirage : ce qui POUVAIT sortir, et pas seulement ce qui est sorti.
+   *
+   * La revelation ne montrait qu'une liste de noms prise dans le trombinoscope,
+   * faute de mieux : la charge ne portait rien d'autre qui ressemble a une
+   * liste. Le suspense suivait donc les donnees disponibles, pas le drame — et
+   * en mode collectif, ou personne n'est tire, il n'y avait strictement rien a
+   * animer.
+   *
+   * Pire, le trombinoscope n'est pas le vivier : il ne filtre ni les
+   * disqualifies ni les spectateurs, que `eligibles()` ecarte. L'ecran montrait
+   * donc des noms qui ne pouvaient pas sortir. Un faux temoignage.
+   *
+   * On fige donc au tirage ce qui etait en jeu — les sujets, et les cases avec
+   * leurs poids. Fige, parce qu'une roue se modifie entre deux tirages et qu'un
+   * tirage passe ne se reecrit pas ; c'est la meme raison qui fait recopier les
+   * libelles dans `spin_fate`.
+   */
+  function champDuTirage(d) {
+    d.exec(`
+      ALTER TABLE spin ADD COLUMN pool   TEXT NOT NULL DEFAULT '[]';
+      ALTER TABLE spin ADD COLUMN slots  TEXT NOT NULL DEFAULT '[]';
+      -- La roue avait-elle moins de cases que la salle de monde ?
+      ALTER TABLE spin ADD COLUMN spent  INTEGER NOT NULL DEFAULT 0;
+
+      -- Ou chaque sort est tombe, dans l'un et l'autre champ. -1 pour les
+      -- tirages anterieurs a cette migration, qui ne le savent pas.
+      ALTER TABLE spin_fate ADD COLUMN pool_index INTEGER NOT NULL DEFAULT -1;
+      ALTER TABLE spin_fate ADD COLUMN slot_index INTEGER NOT NULL DEFAULT -1;
+    `);
+  },
 ];
 
 const applied = db.pragma('user_version', { simple: true });

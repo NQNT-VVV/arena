@@ -1,11 +1,15 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Icon } from '@/components/Icon';
+import { clock } from '@/lib/clock';
+import { PHASE_LABELS } from '@/lib/format';
 import { hex } from '@/lib/hex';
+import { destinataires, revelation, type Frame } from '@/lib/reveal';
 import { effectsOf, modeOf, statusOf } from '@/lib/roulette';
-import type { Fate, RosterEntry, RouletteState, YouFate } from '@/lib/types';
+import type { Fate, Phase, RouletteState, Spin, YouFate } from '@/lib/types';
+import type { PhaseClock } from '@/lib/usePhaseClock';
 
 import styles from './Roulette.module.css';
 
@@ -13,23 +17,17 @@ import styles from './Roulette.module.css';
  * LA ROULETTE — ce que la salle en voit, et ce que chacun en lit.
  *
  * Quelqu'un est tire, un sort est tire. Le tirage appartient au serveur ; ces
- * deux surfaces ne font que le devoiler, dans l'ordre ou il est arrive.
+ * deux surfaces ne font que le devoiler.
  *
- * LE ROULEAU N'EST PAS UNE ROUE DE FETE FORAINE. Une roue qui decelere demande
- * un mouvement fluide, que le systeme interdit — et une deceleration promet
- * toujours la meme chose : que le hasard hesite. Un rouleau qui defile par
- * crans et s'arrete net ne promet rien. C'est plus sec, et beaucoup plus proche
- * de ce qui se joue.
+ * DEUX REGISTRES, TOUJOURS LES DEUX A L'ECRAN. Le champ montre tout ce qui
+ * pouvait sortir — une plaque par personne, un cran par case, large en
+ * proportion de son poids — et il est muet. Le mot porte en tres grand ce qui
+ * est pointe a l'instant, et c'est la seule chose qui change.
+ *
+ * Toute la choregraphie vit dans `lib/reveal.ts`, sans React et sans horloge :
+ * ce composant ne fait que rendre l'image dont c'est l'heure. Il n'en deduit
+ * rien, et c'est ce qui permet de la tester sans navigateur.
  */
-
-/** Un cran, puis un autre. En dessous de 60 ms l'oeil ne distingue plus les noms. */
-const STEP_MS = 70;
-/** Assez de crans pour qu'on ne puisse pas suivre le defilement des yeux. */
-const MIN_STEPS = 18;
-/** Le temps de lire un sort avant que le suivant arrive. */
-const FATE_MS = 1300;
-/** Le temps de recopier une consigne avant que le voile tombe. */
-const HOLD_MS = 5000;
 
 /* ------------------------------------------------------------------ */
 /* L'ecran                                                            */
@@ -38,171 +36,335 @@ const HOLD_MS = 5000;
 /**
  * Le devoilement, sur le grand ecran.
  *
- * Deux temps. Le voile pendant la revelation : le rouleau tourne, s'arrete, et
- * les sorts tombent un par un — sept malus affiches d'un coup ne se lisent pas,
- * ils s'oublient. Puis le voile se retire et le tirage reste sur la page, parce
- * que c'est la consigne en cours et qu'on doit pouvoir la relire.
+ * Deux temps. La scene pendant la revelation, puis le tirage reste sur la page,
+ * parce que c'est la consigne en cours et qu'on doit pouvoir la relire.
  *
  * L'enchainement est entierement local : une seule charge arrive du serveur, et
- * c'est la page qui la deroule.
+ * c'est la page qui la deroule — mais elle la deroule depuis `spin.at`, une
+ * heure serveur. Deux ecrans branches a deux instants differents affichent donc
+ * le meme palier au meme moment.
  */
-export function RouletteScreen({ roulette, roster }: { roulette: RouletteState; roster: RosterEntry[] }) {
+export function RouletteScreen({ roulette, phase, chrono }: {
+  roulette: RouletteState;
+  phase: Phase;
+  chrono: PhaseClock;
+}) {
   const spin = roulette.last;
 
-  const [strip, setStrip] = useState<string[]>([]);
-  const [step, setStep] = useState(0);
-  const [revealed, setRevealed] = useState(0);
+  const [k, setK] = useState(0);
   const [veil, setVeil] = useState(false);
+  const [reduit, setReduit] = useState(false);
 
   /*
-   * Le tirage deja la a l'ouverture de la page ne se rejoue pas.
+   * La preference se relit, elle ne se capture pas.
    *
-   * Un ecran qui se reconnecte — cable debranche, onglet recharge — recoit
-   * l'etat complet et redevoilerait un sort d'il y a dix minutes, voile
-   * compris, par-dessus la diffusion en cours. La valeur initiale d'une
-   * reference est celle du premier rendu : c'est exactement cette distinction.
+   * Une source OBS peut etre rechargee avec d'autres reglages, et la page reste
+   * ouverte des heures : lire la requete media une seule fois au montage
+   * repondrait longtemps avec une reponse perimee.
    */
-  const knownRef = useRef<string | null>(roulette.last?.id ?? null);
+  useEffect(() => {
+    const mq = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+    if (!mq) return;
+    setReduit(mq.matches);
+    const onChange = () => setReduit(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
   /*
-   * Le tirage et la salle passent par des references.
+   * Le tirage passe par une reference.
    *
-   * Les mettre en dependances relancerait le devoilement a chaque
-   * republication de l'etat — quelqu'un qui se connecte, un rendu qui arrive —
-   * en pleine revelation. Seul le changement de tirage declenche quelque chose.
+   * Le mettre en dependance relancerait le devoilement a chaque republication
+   * de l'etat — quelqu'un qui se connecte, un rendu qui arrive — en pleine
+   * revelation. Seul le changement d'identifiant declenche quelque chose.
    */
   const spinRef = useRef(spin);
   spinRef.current = spin;
-  const rosterRef = useRef(roster);
-  rosterRef.current = roster;
 
   useEffect(() => {
-    const current = spinRef.current;
-    if (!current) return;
+    const s = spinRef.current;
+    if (!s) return;
+    const r = revelation(s, reduit);
 
     /*
-     * Le rouleau, et son arrivee.
+     * UNE SEULE REGLE, ET ELLE CORRIGE TROIS CHOSES A LA FOIS.
      *
-     * L'arrivee est calculee d'abord : le rouleau avance ensuite d'un cran a la
-     * fois jusqu'a elle, et le dernier cran EST l'arret. Rien ne ralentit, rien
-     * ne glisse — la seule facon de s'arreter net est de ne jamais avoir
-     * commence a freiner.
+     * L'ecoule se mesure contre `spin.at`, une heure serveur, sur une horloge
+     * deja alignee. Au-dela du total, l'etat est pose et il n'y a pas de voile :
+     * un tirage d'il y a dix minutes ne se rejoue pas par-dessus une diffusion.
+     * En deca, on entre dans la choregraphie a l'ecoule.
+     *
+     * Consequences : le premier tirage de la session se joue — une garde de
+     * rejeu par reference avalait exactement celui-la, puisque le composant
+     * n'etait monte qu'a son arrivee ; deux ecrans sont en phase ; une source
+     * creee au changement de scene ne rate pas la revelation en cours.
+     *
+     * AUCUNE MARGE DE TOLERANCE : elle remettrait deux ecrans hors phase.
      */
-    const names = rosterRef.current.length
-      ? rosterRef.current.map((p) => p.pseudo)
-      : current.fates.map((f) => f.pseudo);
-    const wanted = current.fates[0]?.pseudo ?? names[0];
-    let stop = MIN_STEPS;
-    for (let i = MIN_STEPS; i < MIN_STEPS + names.length; i++) {
-      if (names[i % names.length] === wanted) { stop = i; break; }
-    }
-    // Une ligne vide en tete pour que le cran courant tombe au milieu, deux de
-    // rab en queue pour que la fenetre ait toujours de quoi afficher.
-    setStrip(['', ...Array.from({ length: stop + 2 }, (_, i) => names[i % names.length])]);
-    setStep(0);
-    setRevealed(0);
-
-    if (current.id === knownRef.current) {
-      // Deja connu : on l'affiche entier, sans spectacle.
-      setStep(stop);
-      setRevealed(current.fates.length);
+    const fini = () => {
+      setK(r.frames.length - 1);
       setVeil(false);
-      return;
-    }
-    setVeil(true);
-
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    let reel: ReturnType<typeof setInterval> | undefined;
-
-    const reveal = () => {
-      setRevealed(1);
-      for (let i = 2; i <= current.fates.length; i++) {
-        timers.push(setTimeout(() => setRevealed(i), (i - 1) * FATE_MS));
-      }
-      timers.push(setTimeout(
-        () => setVeil(false),
-        Math.max(0, current.fates.length - 1) * FATE_MS + HOLD_MS,
-      ));
+      // Le grain revient des que la scene se retire, et non au prochain tirage.
+      document.body.classList.remove('reveal-on');
     };
 
-    // Mouvement reduit : le rouleau saute a son arrivee. Le devoilement un par
-    // un reste — ce n'est pas du decor, c'est la lecture.
-    const reduced = typeof window !== 'undefined'
-      && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (clock.now() - s.at >= r.totalMs) { fini(); return; }
 
-    if (reduced || names.length < 2) {
-      setStep(stop);
-      reveal();
-    } else {
-      let i = 0;
-      reel = setInterval(() => {
-        i += 1;
-        setStep(i);
-        if (i >= stop) { clearInterval(reel); reveal(); }
-      }, STEP_MS);
-    }
+    setVeil(true);
+    /*
+     * Le grain est eteint pendant la revelation.
+     *
+     * Un bruit statique plein cadre neutralise les macroblocs non reecrits meme
+     * sur une image gelee : c'est une taxe de debit permanente, exactement la
+     * ou il faut des bits pour les aretes des grandes glyphes. `.grain` est un
+     * frere de niveau racine, donc c'est une mutation globale, et elle est
+     * declaree comme telle.
+     */
+    document.body.classList.add('reveal-on');
+
+    let raf = 0;
+    /*
+     * requestAnimationFrame, et pas setInterval.
+     *
+     * Une source OBS passee en arriere-plan voit ses minuteurs brides a 1 Hz :
+     * un rouleau cadence par setInterval continuerait d'avancer d'un cran par
+     * seconde et ressortirait dephase. Avec des horodatages absolus, la reprise
+     * se recale d'elle-meme. Et l'etat n'est ecrit que lorsque l'image change :
+     * une trentaine de rendus pour tout un mode, pas soixante par seconde.
+     */
+    const tick = () => {
+      const ecoule = clock.now() - s.at;
+      if (ecoule >= r.totalMs) { fini(); return; }
+      let i = r.at.length - 1;
+      while (i > 0 && r.at[i] > ecoule) i--;
+      setK((p) => (p === i ? p : i));
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
 
     return () => {
-      if (reel) clearInterval(reel);
-      timers.forEach((t) => clearTimeout(t));
+      cancelAnimationFrame(raf);
+      document.body.classList.remove('reveal-on');
     };
-  }, [spin?.id]);
+  }, [spin?.id, reduit]);
 
-  if (!spin) return null;
-  const spinning = veil && step > 0 && revealed === 0;
+  const plan = useMemo(() => (spin ? revelation(spin, reduit) : null), [spin?.id, reduit]);
 
-  const body = (
-    <>
-      <header className={styles.head}>
-        <span><Icon name="roue" />LA ROULETTE · <b>{spin.wheelName}</b></span>
-        <span className="grow" />
-        <span>{modeOf(spin)}</span>
-        {/* Le compte est public : une roue qu'on relance en secret n'a aucune
-            autorite. Il est sur l'ecran de la salle, pas seulement en regie. */}
-        <span>TIRAGES <b className="tnum">{hex(roulette.spins)}</b></span>
-      </header>
+  if (!spin || !plan) return null;
+  if (!veil) return <BlocPersistant spin={spin} roulette={roulette} />;
 
-      {veil && (
-        <div className={`${styles.window} ${spinning ? styles.spinning : ''}`} aria-hidden="true">
-          <div className={styles.strip} style={{ ['--i' as string]: step }}>
-            {strip.map((name, i) => (
-              <span key={`${i}-${name}`} className={i === step + 1 ? styles.active : ''}>{name}</span>
-            ))}
-          </div>
-          <div className={styles.sight} />
-        </div>
-      )}
-
-      <ol className={styles.fates}>
-        {spin.fates.map((f, i) => (
-          <li key={`${f.pseudo}-${f.position}`} className={styles.fate}>
-            {i < revealed
-              ? <FateRead fate={f} />
-              : <span className={styles.pending} aria-label="Sort non encore devoile">— — —</span>}
-          </li>
-        ))}
-      </ol>
-    </>
-  );
-
-  if (!veil) return <section className={`card pad ${styles.block}`}>{body}</section>;
+  const frame = plan.frames[Math.min(k, plan.frames.length - 1)];
+  const bandeau = phase === 'diffusion';
 
   return (
-    <div className={styles.veil}>
-      <div className={`${styles.panel} corners`} role="status" aria-live="polite">
-        {body}
+    <div className={`${styles.veil} ${bandeau ? styles.bandeau : ''}`}>
+      {/*
+        La scene ne s'annonce pas.
+        Une region vivante qui change vingt-cinq fois en huit secondes noie un
+        lecteur d'ecran au lieu de l'informer. Le resultat est annonce une fois,
+        par la carte qui reste — et par le telephone de l'interesse.
+      */}
+      <section className={`${styles.stage} corners`} aria-live="off">
+        <Legende spin={spin} roulette={roulette} phase={phase} chrono={chrono} bandeau={bandeau} />
+        {bandeau ? (
+          <>
+            <Reglette spin={spin} frame={frame} />
+            <div className={styles.rang}>
+              <PlaqueSeule spin={spin} frame={frame} />
+              <Mot spin={spin} frame={frame} />
+            </div>
+          </>
+        ) : (
+          <>
+            <hr className={styles.filet} />
+            <Plaques spin={spin} frame={frame} />
+            <Reglette spin={spin} frame={frame} />
+            <Mot spin={spin} frame={frame} />
+            <p className={styles.pied}>{frame.pied}</p>
+          </>
+        )}
         <span className="corner-b" aria-hidden="true" />
-      </div>
+      </section>
     </div>
   );
 }
 
+/**
+ * La ligne de contexte : quelle roue, quel mode, ou en est la salle.
+ *
+ * Le voile confisque l'ecran quelques secondes : `TIRAGES` et le chrono sont
+ * repris ici, sans quoi ils disparaitraient en pleine creation. Le bandeau, lui,
+ * n'a qu'une ligne a donner — il vit sur un rendu qu'on est en train de juger.
+ */
+function Legende({ spin, roulette, phase, chrono, bandeau }: {
+  spin: Spin; roulette: RouletteState; phase: Phase; chrono: PhaseClock; bandeau: boolean;
+}) {
+  const rappel = [
+    chrono.kind === 'creation' ? `CREATION ${chrono.label}`
+      : chrono.kind === 'grace' ? `DEPOT ${chrono.label}`
+        : PHASE_LABELS[phase],
+    // Le compte est public : une roue qu'on relance en secret n'a aucune autorite.
+    `TIRAGES ${hex(roulette.spins)}`,
+    spin.spent ? 'LA ROUE A REFAIT UN TOUR' : null,
+  ].filter(Boolean).join(' · ');
+
+  const tete = (
+    <span><Icon name="roue" /> LA ROULETTE · <b>{spin.wheelName.toUpperCase()}</b> · {modeOf(spin)}</span>
+  );
+
+  if (bandeau) return <div className={styles.legende}>{tete}<span className={styles.rappel}> · {rappel}</span></div>;
+  return (
+    <div className={styles.legende}>
+      {tete}
+      <span className={styles.rappel}>{rappel}</span>
+    </div>
+  );
+}
+
+/**
+ * Le champ des sujets.
+ *
+ * Une roue au-dela de huit noms ne montre plus la salle ; le tableau la montre
+ * toujours en entier. Les colonnes et la hauteur de rangee sont posees ici
+ * plutot que laissees a `auto-fit` : c'est ce qui garantit qu'aucune plaque ne
+ * sort du cadre sur un videoprojecteur, y compris la derniere.
+ */
+function Plaques({ spin, frame }: { spin: Spin; frame: Frame }) {
+  const n = frame.plaques.length;
+  if (!n) return <div className={styles.tableau} />;
+
+  const ligne = n > 24;
+  const cols = ligne ? 1 : n <= 3 ? n : n <= 8 ? Math.ceil(n / 2) : n <= 18 ? 6 : 8;
+  const rangs = Math.ceil(n / cols);
+  const hauteur = rangs >= 3 ? '112px' : rangs === 2 ? '160px' : '320px';
+  // Au-dela de huit, la plaque retrecit : mieux vaut un cran de moins qu'un nom coupe.
+  const dense = n > 8;
+  const noms = spin.pool.length ? spin.pool : spin.fates.map((f) => f.pseudo);
+
+  return (
+    <div
+      className={`${styles.tableau} ${ligne ? styles.ligne : ''} ${dense ? styles.dense : ''}`}
+      style={{ '--cols': cols, '--rangs': rangs, '--plaque-h': hauteur } as React.CSSProperties}
+    >
+      {frame.plaques.map((etat, i) => (
+        <div key={`${i}-${noms[i]}`} className={`${styles.plaque} ${etat === 'vide' ? '' : styles[etat]}`}>
+          <span className={styles.nom}>{(noms[i] ?? '').toUpperCase()}</span>
+          {frame.sorts[i] && <span className={styles.sort}>{frame.sorts[i]}</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Le meme champ, replie sur une plaque : le bandeau ne mange pas la diffusion. */
+function PlaqueSeule({ spin, frame }: { spin: Spin; frame: Frame }) {
+  const noms = spin.pool.length ? spin.pool : spin.fates.map((f) => f.pseudo);
+  const surLeChamp = frame.champ === 'tableau' && frame.marque !== null;
+  const etat = surLeChamp ? 'marque' : frame.plaques.some((p) => p === 'tiree') ? 'tiree' : 'vide';
+  const nom = surLeChamp ? (noms[frame.marque as number] ?? '') : destinataires(spin);
+
+  return (
+    <div className={`${styles.plaque} ${etat === 'vide' ? '' : styles[etat]}`}>
+      <span className={styles.nom}>{nom.toUpperCase()}</span>
+    </div>
+  );
+}
+
+/**
+ * Le champ des cases.
+ *
+ * Un cran par case, large en proportion de son poids : sans cela, le champ
+ * annoncerait des chances egales pendant que la regie affiche « POIDS 5 · 40 % ».
+ */
+function Reglette({ spin, frame }: { spin: Spin; frame: Frame }) {
+  if (!frame.crans.length) return null;
+  return (
+    <div className={styles.reglette} aria-hidden="true">
+      {frame.crans.map((etat, i) => (
+        <i
+          key={i}
+          className={etat === 'libre' ? '' : styles[etat]}
+          style={{ '--w': Math.max(1, spin.slots[i]?.weight ?? 1) } as React.CSSProperties}
+        />
+      ))}
+    </div>
+  );
+}
+
+/** Le mot : la seule chose qui change, et la seule qu'on lit. */
+function Mot({ spin, frame }: { spin: Spin; frame: Frame }) {
+  const fate = frame.vedette !== null ? spin.fates[frame.vedette] : null;
+  const effects = fate ? effectsOf(fate) : [];
+  const status = statusOf(effects);
+
+  return (
+    <div className={`${styles.mot} ${frame.vivant ? styles.vivant : ''}`}>
+      <span className={styles.sur}>{frame.sur}</span>
+      <p
+        className={`${styles.texte} ${styles[frame.taille]}`}
+        style={{ '--signes': Math.max(1, frame.texte.length) } as React.CSSProperties}
+      >
+        {frame.texte}
+      </p>
+      {frame.chips && fate && (
+        <span className={styles.chips}>
+          {effects.map((e) => (
+            <span key={e.text} className={`${styles.effect} ${e.applied ? '' : styles.dead}`}>{e.text}</span>
+          ))}
+          <span className={`${styles.status} ${status.advice ? styles.advice : ''}`}>{status.short}</span>
+        </span>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Le tirage, une fois la scene retiree.
+ *
+ * C'est l'etat le plus vu de toute la fonctionnalite : dix minutes de phase
+ * contre sept secondes de revelation. Quand un seul sort vaut pour tout le
+ * monde, la liste rend UNE ligne et la bande des pseudos — la meme `Fate` par
+ * personne donne sinon sept lignes rigoureusement identiques en --t-h2.
+ */
+function BlocPersistant({ spin, roulette }: { spin: Spin; roulette: RouletteState }) {
+  const memeSort = spin.shared && spin.fates.length > 1;
+
+  return (
+    <section className={`card pad ${styles.block}`} role="status" aria-live="polite">
+      <header className={styles.head}>
+        <span><Icon name="roue" />LA ROULETTE · <b>{spin.wheelName}</b></span>
+        <span className="grow" />
+        <span>{modeOf(spin)}</span>
+        <span>TIRAGES <b className="tnum">{hex(roulette.spins)}</b></span>
+      </header>
+
+      {memeSort ? (
+        <div className={styles.fates}>
+          <div className={styles.fate}>
+            <FateRead fate={spin.fates[0]} anonyme />
+            <span className={styles.tous}>
+              {spin.fates.map((f) => <span key={`${f.pseudo}-${f.position}`}>{f.pseudo}</span>)}
+            </span>
+          </div>
+        </div>
+      ) : (
+        <ol className={styles.fates}>
+          {spin.fates.map((f) => (
+            <li key={`${f.pseudo}-${f.position}`} className={styles.fate}><FateRead fate={f} /></li>
+          ))}
+        </ol>
+      )}
+    </section>
+  );
+}
+
 /** Un sort devoile : qui, quoi, et ce que ca fait vraiment. */
-function FateRead({ fate }: { fate: Fate }) {
+function FateRead({ fate, anonyme = false }: { fate: Fate; anonyme?: boolean }) {
   const effects = effectsOf(fate);
   const status = statusOf(effects);
   return (
-    <div className={`${styles.read} pop-in`}>
-      <span className={styles.who}>{fate.pseudo}</span>
+    <div className={styles.read}>
+      <span className={styles.who}>{anonyme ? 'POUR TOUTE LA SALLE' : fate.pseudo}</span>
       <span className={styles.what}>{fate.label}</span>
       {fate.detail && <span className={styles.detail}>{fate.detail}</span>}
       <span className={styles.chips}>

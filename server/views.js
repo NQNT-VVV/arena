@@ -364,6 +364,17 @@ function rouletteView(session) {
       shared: dernier.shared,
       phase: dernier.phase,
       at: dernier.at,
+      /*
+       * Le champ, pour que l'ecran MONTRE le tirage au lieu de le raconter.
+       *
+       * `pool` est l'ordre stable de `eligibles()`, donc le champ des sujets
+       * est le meme d'un tirage a l'autre dans une session : la salle apprend
+       * la roue. `slots` porte les poids, sans quoi un champ de cases egales
+       * mentirait sur les chances.
+       */
+      pool: dernier.pool,
+      slots: dernier.slots,
+      spent: dernier.spent,
       fates: repo.fates(dernier.id).map((f) => ({
         participantId: f.participantId,
         pseudo: f.pseudo,
@@ -378,6 +389,8 @@ function rouletteView(session) {
          */
         pointsApplied: !!f.pointsAppliedAt,
         chronoApplied: !!f.chronoAppliedAt,
+        poolIndex: f.poolIndex,
+        slotIndex: f.slotIndex,
         position: f.position,
       })),
     } : null,

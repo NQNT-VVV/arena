@@ -248,7 +248,22 @@ export interface Fate {
    */
   pointsApplied: boolean;
   chronoApplied: boolean;
+  /*
+   * Ou le sort est tombe dans chaque champ fige du tirage.
+   *
+   * Des index, et non les textes : deux cases peuvent porter le meme libelle,
+   * deux pseudos peuvent se ressembler. `-1` veut dire « tirage d'avant le
+   * champ » — l'ecran affiche alors l'etat pose sans rien inventer.
+   */
+  poolIndex: number;
+  slotIndex: number;
   position: number;
+}
+
+/** Une case de la roue, recopiee au tirage : son texte et son poids. */
+export interface SpinSlot {
+  label: string;
+  weight: number;
 }
 
 /** Un tirage, tel que les trois surfaces le recoivent. La graine n'y est pas. */
@@ -261,6 +276,23 @@ export interface Spin {
   shared: boolean;
   phase: Phase;
   at: number;
+  /*
+   * LE CHAMP, fige au tirage.
+   *
+   * `pool` est l'ordre stable de `eligibles()` : sans l'animateur, sans les
+   * disqualifies, sans les spectateurs quand ils sont dehors. L'ecran montre
+   * donc ce qui pouvait sortir, et jamais le trombinoscope — qui contient des
+   * gens que la roue ne pouvait pas designer.
+   *
+   * `slots` porte les poids, sans quoi un champ de cases egales mentirait sur
+   * les chances pendant que la regie affiche « POIDS 5 · 40 % ».
+   *
+   * Vides pour un tirage d'avant la migration 10.
+   */
+  pool: string[];
+  slots: SpinSlot[];
+  /** La roue a manque de cases et a refait un tour : des sorts se repetent. */
+  spent: boolean;
   /** Dans l'ordre de `position` : c'est l'ordre du devoilement. */
   fates: Fate[];
 }

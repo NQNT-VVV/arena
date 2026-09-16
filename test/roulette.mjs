@@ -33,6 +33,7 @@ const roulette = require('../server/roulette.js');
 const { RouletteError } = roulette;
 const views = require('../server/views.js');
 const repo = require('../server/repo.js');
+const db = require('../server/db.js');
 
 const fakeIo = () => ({ sent: [], to(room) { const s = this; return { emit(ev, p) { s.sent.push({ room, ev, p }); } }; } });
 
@@ -397,6 +398,140 @@ test('le chrono ne bouge que pour la salle entiere, et pendant qu’il court', (
   const tard = ouvrir({ createurs: 3, phase: 'diffusion' });
   const apres = roulette.tirer(tard.session, { wheelId: w.id, target: 'all', shared: true });
   assert.equal(apres.chronoApplicable, false, 'le chrono ne court plus');
+});
+
+/* ------------------------------------------------------------------ */
+/* Le champ, fige avec le tirage                                       */
+/* ------------------------------------------------------------------ */
+
+/*
+ * L'ecran MONTRE le tirage au lieu de le raconter : une plaque par personne qui
+ * pouvait sortir, un cran par case, large en proportion de son poids. Rien de
+ * tout cela n'est deductible apres coup — une roue se repondere entre deux
+ * soirees, un participant s'en va — donc tout est recopie a l'instant du
+ * tirage, et ces verifications portent sur cette recopie.
+ */
+
+test('le champ des sujets est le vivier, jamais le trombinoscope', () => {
+  const { session, gens } = ouvrir({ createurs: 3, spectateurs: 1 });
+  const w = roue('Champ', MALUS);
+  const t = roulette.tirer(session, { wheelId: w.id, target: 'one' });
+
+  const roster = views.screenView(session).roster.map((p) => p.pseudo);
+  const vue = views.screenView(session).roulette.last;
+
+  assert.deepEqual(vue.pool, ['CREATEUR1', 'CREATEUR2', 'CREATEUR3'], 'l’ordre stable de eligibles()');
+  assert.ok(roster.includes('JUGE1'), 'le spectateur est bien dans le trombinoscope');
+  assert.ok(!vue.pool.includes('JUGE1'), 'mais pas dans la roue : il ne pouvait pas sortir');
+  assert.notDeepEqual(vue.pool, roster, 'le champ n’est pas le roster');
+  void gens; void t;
+});
+
+test('un disqualifie ne figure pas dans le champ, et l’animateur non plus', () => {
+  const { session, gens } = ouvrir({ createurs: 3 });
+  gens.C2.participant.disqualified = 1;
+  const w = roue('Champ sans DQ', MALUS);
+  roulette.tirer(session, { wheelId: w.id, target: 'one' });
+
+  const vue = views.screenView(session).roulette.last;
+  assert.deepEqual(vue.pool, ['CREATEUR1', 'CREATEUR3']);
+  assert.equal(vue.pool.length, roulette.eligibles(session).length);
+});
+
+test('un spectateur inclus entre dans le champ : il pouvait sortir', () => {
+  const { session } = ouvrir({ createurs: 2, spectateurs: 1 });
+  const w = roue('Champ avec juge', MALUS);
+  roulette.tirer(session, { wheelId: w.id, target: 'one', includeSpectators: true });
+
+  const vue = views.screenView(session).roulette.last;
+  assert.deepEqual(vue.pool, ['CREATEUR1', 'CREATEUR2', 'JUGE1']);
+});
+
+test('les cases arrivent avec leurs poids : un champ egal mentirait sur les chances', () => {
+  const { session } = ouvrir({ createurs: 2 });
+  const w = roue('Pondere', [
+    { label: 'Tres probable', weight: 40 },
+    { label: 'Rare', weight: 1 },
+    { label: 'Jamais', weight: 0 },
+  ]);
+  roulette.tirer(session, { wheelId: w.id, target: 'one' });
+
+  const vue = views.screenView(session).roulette.last;
+  assert.deepEqual(vue.slots, [
+    { label: 'Tres probable', weight: 40 },
+    { label: 'Rare', weight: 1 },
+  ], 'les cases jouables, avec leur poids, et la case morte absente');
+});
+
+test('une roue a une seule case jouable donne un champ de un', () => {
+  const { session } = ouvrir({ createurs: 3 });
+  const w = roue('Unique', [{ label: 'Le seul sort', weight: 3 }]);
+  roulette.tirer(session, { wheelId: w.id, target: 'all', shared: true });
+
+  const vue = views.screenView(session).roulette.last;
+  assert.equal(vue.slots.length, 1, 'rien n’a ete tire sur les cases : rien ne doit etre dramatise');
+  assert.equal(vue.slots[0].weight, 3);
+});
+
+test('chaque sort sait ou il est tombe, dans les deux champs', () => {
+  const { session } = ouvrir({ createurs: 5 });
+  const w = roue('Index', MALUS);
+  roulette.tirer(session, { wheelId: w.id, target: 'some', howMany: 3 });
+
+  const vue = views.screenView(session).roulette.last;
+  for (const f of vue.fates) {
+    assert.equal(vue.pool[f.poolIndex], f.pseudo, 'le sujet designe est bien celui du champ');
+    assert.equal(vue.slots[f.slotIndex].label, f.label, 'la case tiree est bien celle du champ');
+  }
+  // Des index, et non des recherches par texte : deux cases peuvent porter le
+  // meme libelle, deux pseudos peuvent se ressembler.
+  assert.equal(new Set(vue.fates.map((f) => f.poolIndex)).size, 3, 'jamais deux fois la meme personne');
+});
+
+test('le meme sort pour tous : un seul index de case, partout', () => {
+  const { session } = ouvrir({ createurs: 4 });
+  const w = roue('Collectif', MALUS);
+  roulette.tirer(session, { wheelId: w.id, target: 'all', shared: true });
+
+  const vue = views.screenView(session).roulette.last;
+  assert.equal(new Set(vue.fates.map((f) => f.slotIndex)).size, 1);
+  assert.deepEqual(
+    vue.fates.map((f) => f.poolIndex).sort((a, b) => a - b),
+    [0, 1, 2, 3],
+    'toute la salle, chacun a sa place',
+  );
+});
+
+test('la roue qui refait un tour le dit, et ca survit au rechargement', () => {
+  const { session } = ouvrir({ createurs: 5 });
+  const w = roue('Courte', [{ label: 'A' }, { label: 'B' }]);
+  const t = roulette.tirer(session, { wheelId: w.id, target: 'all', shared: false });
+
+  assert.equal(t.epuise, true, 'cinq personnes pour deux cases');
+  assert.equal(repo.spin(t.spin.id).spent, true, 'l’epuisement est en base');
+  assert.equal(views.screenView(session).roulette.last.spent, true, 'et il arrive a l’ecran');
+
+  const calme = ouvrir({ createurs: 2 });
+  const large = roue('Large', MALUS);
+  roulette.tirer(calme.session, { wheelId: large.id, target: 'all', shared: false });
+  assert.equal(views.screenView(calme.session).roulette.last.spent, false);
+});
+
+test('un tirage d’avant le champ s’affiche pose, et se tait sur ce qu’il ignore', () => {
+  const { session } = ouvrir({ createurs: 2 });
+  const w = roue('Ancienne', MALUS);
+  const t = roulette.tirer(session, { wheelId: w.id, target: 'one' });
+
+  // Ce que la migration 10 laisse a une ligne ecrite avant elle.
+  db.prepare('UPDATE spin SET pool = ?, slots = ?, spent = 0 WHERE id = ?').run('[]', '[]', t.spin.id);
+  db.prepare('UPDATE spin_fate SET pool_index = -1, slot_index = -1 WHERE spin_id = ?').run(t.spin.id);
+
+  const vue = views.screenView(session).roulette.last;
+  assert.deepEqual(vue.pool, []);
+  assert.deepEqual(vue.slots, []);
+  assert.equal(vue.fates[0].poolIndex, -1);
+  assert.equal(vue.fates[0].slotIndex, -1);
+  assert.equal(vue.fates[0].label.length > 0, true, 'le sort, lui, reste lisible');
 });
 
 /* ------------------------------------------------------------------ */

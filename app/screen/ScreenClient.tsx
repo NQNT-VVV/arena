@@ -182,13 +182,16 @@ export function ScreenClient() {
         </div>
       )}
 
-      {/* LA ROULETTE. Le devoilement passe par un voile, puis le tirage reste
-          sur la page : c'est la consigne en cours, on doit pouvoir la relire. */}
-      {state.roulette.last && (
-        <div className={styles.wide}>
-          <RouletteScreen roulette={state.roulette} roster={state.roster} />
-        </div>
-      )}
+      {/*
+        LA ROULETTE, montee sans condition.
+        Le composant rend `null` tant qu'aucun tirage n'est arrive ; le monter a
+        l'arrivee du premier tirage ferait manquer celui-la, et seulement
+        celui-la — le seul qu'il fallait jouer. La revelation se cale sur
+        `spin.at`, pas sur ce que la page a deja vu.
+      */}
+      <div className={styles.wide}>
+        <RouletteScreen roulette={state.roulette} phase={state.phase} chrono={chrono} />
+      </div>
 
       {/* Ce que les spectateurs ont ecrit pendant la creation. Sur l'ecran de
           la salle, quelqu'un finit toujours par le lire a voix haute. */}
