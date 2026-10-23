@@ -2,7 +2,7 @@
   "name": "arena",
   "version": "0.1.0",
   "private": true,
-  "description": "Arena \u2014 battles creatives : l'animateur impose des contraintes, les participants creent contre la montre, tout le monde note en aveugle.",
+  "description": "Arena — battles creatives : l'animateur impose des contraintes, les participants creent contre la montre, tout le monde note en aveugle.",
   "type": "commonjs",
   "main": "server/index.js",
   "engines": {
@@ -45,6 +45,12 @@
     "test:spectators": "node test/spectators.mjs",
     "pretest:podium": "node scripts/check-node.js",
     "test:podium": "node test/podium.mjs",
+    "pretest:rebuild-pur": "node scripts/check-node.js",
+    "test:rebuild-pur": "node test/rebuild-pur.mjs",
+    "pretest:rebuild-e2e": "node scripts/check-node.js",
+    "test:rebuild-e2e": "node --no-warnings test/rebuild-e2e.mjs",
+    "pretest:manches-migration": "node scripts/check-node.js",
+    "test:manches-migration": "node test/manches-migration.mjs",
     "pretest": "node scripts/check-node.js",
     "test": "node test/e2e.mjs"
   },

@@ -21,7 +21,10 @@ const config = require('./config');
 const repo = require('./repo');
 const roulette = require('./roulette');
 const storage = require('./storage');
+const transcode = require('./transcode');
 const views = require('./views');
+const analyse = require('./analyse');
+const { attribuer, attribuerUn } = require('./attribution');
 const {
   uuid, uniqueCode, newToken, hashToken, tokenMatches,
   pickAvatar, cleanPseudo, cleanText, clamp, shuffle,
@@ -49,7 +52,9 @@ const TRANSITIONS = {
   creation:  ['upload', 'archived'],
   upload:    ['diffusion', 'archived'],
   diffusion: ['results', 'archived'],
-  results:   ['archived'],
+  // `results -> creation` est la manche suivante, et elle seule : la regle du
+  // nombre de manches restantes est tenue par `nextRound`, seul a l'emprunter.
+  results:   ['creation', 'archived'],
   archived:  [],
 };
 
@@ -81,6 +86,9 @@ const MIN_DURATION_MS = 60 * 1000;
 const MAX_DURATION_MS = 12 * 60 * 60 * 1000;
 const MAX_GRACE_MS = 30 * 60 * 1000;
 const MAX_ALERTS = 8;
+/** Au-dela, une soiree ne tient plus dans une soiree. */
+const MAX_ROUNDS = 10;
+const MODES = new Set(['battle', 'rebuild']);
 const MAX_CRITERIA = 6;
 
 /**
@@ -144,6 +152,13 @@ function sanitizeConfig(raw = {}, base = config.defaults) {
       1024 * 1024,
       config.limits.maxFileBytes,
     ),
+    /**
+     * `battle` : tout le monde cree sur la meme consigne. `rebuild` : chacun
+     * recoit un extrait different et le reconstruit (Rebuild The Track).
+     */
+    mode: MODES.has(merged.mode) ? merged.mode : 'battle',
+    /** Nombre de manches. Le classement general est la moyenne des manches. */
+    rounds: clamp(Math.round(num(merged.rounds, 1)), 1, MAX_ROUNDS),
   };
 }
 
@@ -255,6 +270,9 @@ class BattleServer {
       this.sessions.set(live.code, live);
       this.arm(live);
     }
+    // Une analyse interrompue par un redemarrage reprend : sinon l'extrait
+    // resterait « en cours » pour toujours, sans tempo ni tonalite.
+    for (const e of repo.analysesEnAttente()) this.analyser(e.id);
   }
 
   /* --------------------------- lecture --------------------------- */
@@ -401,6 +419,7 @@ class BattleServer {
 
     s.participants.set(participant.id, participant);
     repo.logEvent(s.id, 'participant:joined', { pseudo: name, spectator: !!spectator });
+    if (!spectator) this.servirRetardataire(s, participant);
     // Pas de diffusion ici : la socket n'est pas encore enregistree, et l'etat
     // montrerait le nouvel arrivant deja inscrit mais deja hors ligne. C'est
     // `attachParticipant()` qui diffuse, une fois la presence connue.
@@ -618,13 +637,19 @@ class BattleServer {
   /** LOBBY -> CREATION : le chrono part. */
   start(code, token) {
     const s = this.requireHost(code, token);
+    this.exigerTransition(s, 'creation');
+    this.exigerExtraits(s);
     const now = Date.now();
-    return this.setPhase(s, 'creation', {
+    this.distribuer(s, now);
+    this.setPhase(s, 'creation', {
       startedAt: now,
       createEndAt: now + s.config.durationMs,
       pausedAt: null,
       remainingMs: null,
     });
+    // L'extrait est sur le canal personnel : l'etat commun ne le porte pas.
+    this.publishToutLeMonde(s);
+    return s;
   }
 
   pause(code, token) {
@@ -949,6 +974,25 @@ class BattleServer {
       }
     }
 
+    if (copyAssets) {
+      // Les extraits suivent les elements imposes : une soiree Rebuild se
+      // rejoue souvent avec le meme lot, et leur tempo et leur tonalite —
+      // parfois corriges a la main — valent d'etre gardes.
+      for (const e of repo.extraits(src.id)) {
+        const id = uuid();
+        const ext = e.storageKey.match(/\.[a-z0-9]{1,8}$/i)?.[0] ?? '';
+        const key = `sessions/${live.id}/extraits/${id}${ext}`;
+        await storage.put(key, storage.createReadStream(e.storageKey));
+        repo.addExtrait({
+          id, sessionId: live.id, filename: e.filename, storageKey: key, bytes: e.bytes,
+          mime: e.mime, position: e.position, createdAt: now,
+        });
+        repo.ecrireAnalyse(id, { bpm: e.bpm, tonalite: e.tonalite, analyse: e.analyse });
+        if (e.bpmSource === 'manuel') repo.majBpm(id, e.bpm);
+        if (e.tonaliteSource === 'manuel') repo.majTonalite(id, e.tonalite);
+      }
+    }
+
     repo.logEvent(live.id, 'session:duplicated', { from: src.code, assets: copyAssets });
     return { session: live, hostToken };
   }
@@ -1204,6 +1248,293 @@ class BattleServer {
     this.publish(session);
     for (const p of session.participants.values()) {
       if (p.spectator) this.publishYou(session, p);
+    }
+  }
+
+  /* ------------------------------ manches ------------------------- */
+
+  /** Refuse une transition avant d'avoir rien ecrit, plutot qu'apres. */
+  exigerTransition(session, to) {
+    if (!(TRANSITIONS[session.phase] || []).includes(to)) {
+      throw new BattleError(`Impossible de passer de « ${session.phase} » a « ${to} ».`);
+    }
+  }
+
+  /**
+   * MANCHE SUIVANTE : RESULTATS -> CREATION.
+   *
+   * La meme session, le meme code, la meme adresse d'ecran dans OBS : seuls
+   * les rendus, les votes, la diffusion et le chrono repartent de zero. Les
+   * participants restent, les spectateurs aussi.
+   *
+   * Trois conditions, toutes pour la meme raison — ne rien perdre d'une
+   * manche jouee : il reste une manche ; le classement de celle-ci a ete
+   * entierement devoile ; et il est fige AVANT que la session change de
+   * manche, avec les votants de ce moment-la.
+   *
+   * `durationMs` regle le chrono de la manche qui s'ouvre : la consigne veut
+   * pouvoir fixer la duree avant chaque manche, et les reglages generaux sont
+   * figes depuis le premier lancement.
+   */
+  nextRound(code, token, { durationMs } = {}) {
+    const s = this.requireHost(code, token);
+    if (s.phase !== 'results') throw new BattleError('La manche suivante se lance depuis le classement.');
+    const total = s.config.rounds ?? 1;
+    const round = s.round ?? 1;
+    if (round >= total) throw new BattleError(`C’etait la derniere manche (${total}/${total}).`);
+    if (!views.mancheDevoilee(s)) throw new BattleError('Devoilez tout le classement avant de lancer la manche suivante.');
+    this.exigerTransition(s, 'creation');
+    this.exigerExtraits(s);
+
+    repo.figerManche(s.id, round, views.rangsManche(s));
+
+    const duree = durationMs === undefined || durationMs === null
+      ? s.config.durationMs
+      : clamp(Math.round(num(durationMs, s.config.durationMs)), MIN_DURATION_MS, MAX_DURATION_MS);
+    const now = Date.now();
+    s.patch({ round: round + 1, config: { ...s.config, durationMs: duree } });
+    repo.logEvent(s.id, 'round:next', { round: round + 1, durationMs: duree });
+    this.distribuer(s, now);
+
+    this.setPhase(s, 'creation', {
+      startedAt: now,
+      createEndAt: now + duree,
+      pausedAt: null,
+      remainingMs: null,
+      graceEndAt: null,
+      endedAt: null,
+      order: [],
+      cursor: 0,
+      revealedRank: null,
+      diffusionStartedAt: null,
+      diffusionEndsAt: null,
+      diffusionAdvanceAt: null,
+    });
+    /*
+     * Chaque telephone recoit son etat personnel neuf : son extrait de la
+     * manche, mais surtout un rendu VIDE. Sans cela, un participant verrait
+     * encore « rendu depose » — celui de la manche precedente — et croirait
+     * n'avoir rien a faire.
+     */
+    this.publishToutLeMonde(s);
+    return s;
+  }
+
+  /** L'etat commun, et l'etat personnel de chacun. */
+  publishToutLeMonde(session) {
+    for (const p of session.participants.values()) this.publishYou(session, p);
+  }
+
+  /* ------------------------- Rebuild The Track ---------------------- */
+
+  /** Ceux qui recoivent un extrait : ni l'animateur, ni un spectateur, ni un mis hors classement. */
+  static createurs(session) {
+    return [...session.participants.values()].filter((p) => !p.isHost && !p.spectator && !p.disqualified);
+  }
+
+  /** En Rebuild, on ne lance pas une manche sans rien a reconstruire. */
+  exigerExtraits(session) {
+    if ((session.config.mode ?? 'battle') !== 'rebuild') return;
+    if (!repo.extraits(session.id).length) {
+      throw new BattleError('Deposez au moins un extrait avant de lancer la manche.');
+    }
+  }
+
+  /**
+   * Distribue les extraits de la manche courante.
+   *
+   * Le tirage est fait par `attribution.js` ; ici, on lui donne l'historique
+   * des manches precedentes — pour que personne ne retombe sur un extrait deja
+   * reconstruit, et que les neufs passent en premier — puis on ecrit.
+   */
+  distribuer(session, now = Date.now()) {
+    if ((session.config.mode ?? 'battle') !== 'rebuild') return;
+    const round = session.round ?? 1;
+    const historique = repo.toutesAttributions(session.id).filter((a) => a.round < round);
+    const tirage = attribuer({
+      extraits: repo.extraits(session.id).map((e) => e.id),
+      participants: BattleServer.createurs(session).map((p) => p.id),
+      historique,
+    });
+    repo.effacerAttributions(session.id, round);
+    for (const [participantId, extraitId] of tirage) {
+      repo.attribuer({ sessionId: session.id, round, participantId, extraitId, at: now });
+    }
+    repo.logEvent(session.id, 'extraits:distribues', { round, n: tirage.size });
+  }
+
+  /**
+   * Un extrait pour qui arrive en cours de manche.
+   *
+   * Seulement pendant la creation ou le depot, et sans toucher aux autres :
+   * redistribuer toute la manche changerait l'extrait de gens qui ont deja
+   * commence a travailler dessus.
+   */
+  servirRetardataire(session, participant, now = Date.now()) {
+    if ((session.config.mode ?? 'battle') !== 'rebuild') return;
+    if (!BattleServer.SUBMIT_PHASES.has(session.phase)) return;
+    if (repo.attributionDe(session.id, participant.id)) return;
+    const round = session.round ?? 1;
+    const extraitId = attribuerUn({
+      extraits: repo.extraits(session.id).map((e) => e.id),
+      participantId: participant.id,
+      manche: repo.attributions(session.id),
+      historique: repo.toutesAttributions(session.id).filter((a) => a.round < round),
+    });
+    if (!extraitId) return;
+    repo.attribuer({ sessionId: session.id, round, participantId: participant.id, extraitId, at: now });
+    repo.logEvent(session.id, 'extrait:retardataire', { pseudo: participant.pseudo });
+  }
+
+  /**
+   * L'animateur change l'extrait d'un participant.
+   *
+   * Le hasard decide, mais il peut mal decider : un extrait que quelqu'un
+   * connait par coeur, un fichier abime. Pendant la creation et le depot
+   * seulement — passe ce cap, le rendu existe et renvoie a son extrait.
+   */
+  reattribuer(code, token, { participantId, extraitId } = {}) {
+    const s = this.requireHost(code, token);
+    if (!BattleServer.SUBMIT_PHASES.has(s.phase)) {
+      throw new BattleError('Un extrait ne se change que pendant la creation.');
+    }
+    const p = s.participants.get(String(participantId || ''));
+    if (!p || p.isHost || p.spectator) throw new BattleError('Participant introuvable.', 404);
+    const e = repo.extrait(String(extraitId || ''));
+    if (!e || e.sessionId !== s.id) throw new BattleError('Extrait introuvable.', 404);
+    repo.attribuer({ sessionId: s.id, round: s.round ?? 1, participantId: p.id, extraitId: e.id, at: Date.now() });
+    repo.logEvent(s.id, 'extrait:reattribue', { pseudo: p.pseudo, extrait: e.filename });
+    this.publish(s);
+    this.publishYou(s, p);
+    return s;
+  }
+
+  /** Un extrait se depose a tout moment, sauf session archivee : on prepare la manche suivante pendant celle-ci. */
+  openExtraitSlot(code, token) {
+    const session = this.requireHost(code, token);
+    if (session.phase === 'archived') throw new BattleError('La session est archivee.');
+    const totals = repo.extraitTotals(session.id);
+    const slots = config.limits.maxExtraits - totals.n;
+    const budget = config.limits.maxExtraitsBytes - totals.bytes;
+    if (slots <= 0) throw new BattleError(`Pas plus de ${config.limits.maxExtraits} extraits par session.`, 413);
+    if (budget <= 0) throw new BattleError('Le poids total des extraits est atteint.', 413);
+    return { session, slots, budget, nextPosition: totals.last + 1 };
+  }
+
+  recordExtrait(session, e) {
+    const saved = repo.addExtrait({ ...e, sessionId: session.id, createdAt: Date.now() });
+    repo.logEvent(session.id, 'extrait:ajoute', { filename: saved.filename, bytes: saved.bytes });
+    this.analyser(saved.id);
+    return saved;
+  }
+
+  /**
+   * Corrige le tempo ou la tonalite d'un extrait.
+   *
+   * `null` efface la valeur, qui redevient « inconnue » ; un nombre ou une
+   * tonalite la fixe a la main, et l'analyse ne l'ecrasera plus.
+   */
+  editExtrait(code, token, { extraitId, bpm, tonalite } = {}) {
+    const s = this.requireHost(code, token);
+    const e = repo.extrait(String(extraitId || ''));
+    if (!e || e.sessionId !== s.id) throw new BattleError('Extrait introuvable.', 404);
+    if (bpm !== undefined) {
+      if (bpm === null || bpm === '') {
+        repo.majBpm(e.id, null);
+      } else {
+        const n = Number(bpm);
+        if (!Number.isFinite(n) || n < 30 || n > 300) throw new BattleError('Un tempo va de 30 a 300 BPM.', 400);
+        repo.majBpm(e.id, Math.round(n * 10) / 10);
+      }
+    }
+    if (tonalite !== undefined) {
+      if (tonalite === null || tonalite === '') {
+        repo.majTonalite(e.id, null);
+      } else {
+        const t = analyse.lireTonalite(tonalite);
+        if (!t) throw new BattleError('Tonalite illisible : ecrivez par exemple C#m, F#, Bb ou « A minor ».', 400);
+        repo.majTonalite(e.id, t);
+      }
+    }
+    repo.logEvent(s.id, 'extrait:corrige', { filename: e.filename });
+    this.publishExtraits(s);
+    return repo.extrait(e.id);
+  }
+
+  /**
+   * Retire un extrait — seulement s'il n'a jamais servi.
+   *
+   * Un extrait joue porte l'histoire d'une manche : le rendu qui le
+   * reconstruit y renvoie, et le classement de la manche aussi. Le retirer
+   * apres coup effacerait cette trace sans rien reparer.
+   */
+  removeExtrait(code, token, extraitId) {
+    const s = this.requireHost(code, token);
+    const e = repo.extrait(String(extraitId || ''));
+    if (!e || e.sessionId !== s.id) throw new BattleError('Extrait introuvable.', 404);
+    if (repo.toutesAttributions(s.id).some((a) => a.extraitId === e.id)) {
+      throw new BattleError('Cet extrait a deja ete attribue : il reste, pour l’historique de la manche.');
+    }
+    repo.removeExtrait(e.id);
+    repo.logEvent(s.id, 'extrait:retire', { filename: e.filename });
+    return { session: s, extrait: e };
+  }
+
+  /** Relance l'analyse d'un extrait, a la demande de l'animateur. */
+  reanalyser(code, token, extraitId) {
+    const s = this.requireHost(code, token);
+    const e = repo.extrait(String(extraitId || ''));
+    if (!e || e.sessionId !== s.id) throw new BattleError('Extrait introuvable.', 404);
+    this.analyser(e.id);
+    return s;
+  }
+
+  /**
+   * File d'analyse : une a la fois.
+   *
+   * Decoder deux minutes d'audio et calculer quelques milliers de FFT prend
+   * une seconde ou deux ; en lancer quarante en parallele quand l'animateur
+   * depose son lot ferait tousser le serveur au moment ou il sert la salle.
+   * La file est une promesse chainee : rien a operer, rien a perdre — un
+   * redemarrage reprend ce qui etait en attente.
+   */
+  analyser(extraitId) {
+    repo.marquerAnalyse(extraitId, 'attente');
+    this.fileAnalyse = (this.fileAnalyse ?? Promise.resolve())
+      .then(() => this.analyserMaintenant(extraitId))
+      .catch((err) => console.warn(`[arena] analyse : ${err.message}`));
+    return this.fileAnalyse;
+  }
+
+  async analyserMaintenant(extraitId) {
+    const e = repo.extrait(extraitId);
+    if (!e) return;
+    repo.marquerAnalyse(e.id, 'en_cours');
+    try {
+      if (!(await transcode.ffmpegAvailable())) throw new Error('ffmpeg indisponible');
+      const r = await analyse.analyserFichier(e.storageKey, {
+        storage, run: transcode.run, pipeToFile: transcode.pipeToFile, ffmpeg: config.transcode.ffmpeg,
+      });
+      repo.ecrireAnalyse(e.id, { ...r, analyse: 'faite' });
+    } catch (err) {
+      // Les valeurs deja la (saisies a la main) restent : `ecrireAnalyse` ne
+      // touche jamais a une source manuelle.
+      repo.ecrireAnalyse(e.id, { bpm: null, tonalite: null, analyse: 'echec' });
+      console.warn(`[arena] analyse de « ${e.filename} » impossible : ${err.message}`);
+    }
+    const s = [...this.sessions.values()].find((x) => x.id === e.sessionId);
+    if (s) this.publishExtraits(s);
+  }
+
+  /**
+   * Un extrait a change : la regie le voit, et ceux qui l'ont recu aussi —
+   * leur telephone affiche son tempo et sa tonalite.
+   */
+  publishExtraits(session) {
+    this.publish(session);
+    for (const a of repo.attributions(session.id)) {
+      const p = session.participants.get(a.participantId);
+      if (p) this.publishYou(session, p);
     }
   }
 

@@ -48,6 +48,7 @@ function toSession(row) {
     diffusionEndsAt: row.diffusion_ends_at,
     diffusionAdvanceAt: row.diffusion_advance_at,
     revealedRank: row.revealed_rank,
+    round: row.round ?? 1,
     touchedAt: row.touched_at,
   };
 }
@@ -95,6 +96,7 @@ const SESSION_COLUMNS = {
   diffusionEndsAt: 'diffusion_ends_at',
   diffusionAdvanceAt: 'diffusion_advance_at',
   revealedRank: 'revealed_rank',
+  round: 'round',
 };
 
 const JSON_FIELDS = new Set(['config', 'order']);
@@ -305,17 +307,32 @@ function toSubmission(row) {
     status: row.status,
     renditions: json(row.renditions, null),
     error: row.error,
+    round: row.round ?? 1,
   };
 }
 
 const insertSubmission = db.prepare(`
-  INSERT INTO submission (id, session_id, participant_id, rendition_id, original_key, original_bytes,
+  INSERT INTO submission (id, session_id, participant_id, round, rendition_id, original_key, original_bytes,
                           original_mime, filename, kind, inline, text_body, uploaded_at, late,
                           replaced_count, status)
-  VALUES (@id, @sessionId, @participantId, @renditionId, @originalKey, @originalBytes,
+  VALUES (@id, @sessionId, @participantId, (SELECT round FROM session WHERE id = @sessionId),
+          @renditionId, @originalKey, @originalBytes,
           @originalMime, @filename, @kind, @inline, @textBody, @uploadedAt, @late,
           0, @status)
 `);
+
+/**
+ * LA MANCHE, DANS LES REQUETES ET NULLE PART AILLEURS.
+ *
+ * Toutes les lectures de rendus et de votes d'une session portent sur une
+ * manche : celle qu'on leur donne, sinon la manche courante de la session. Le
+ * filtre est ecrit ici, en SQL, et pas dans les appelants : `battle.js` et
+ * `views.js` continuent de demander « les rendus de la session » et recoivent
+ * ceux de la manche en cours, sans qu'aucune de leurs lignes ait change. C'est
+ * ce qui a permis d'ajouter des manches sans toucher a la diffusion, au vote
+ * ni au classement — et donc sans risquer de les casser.
+ */
+const MANCHE = 'COALESCE(@round, (SELECT round FROM session WHERE id = @sessionId))';
 
 const updateSubmissionStmt = db.prepare(`
   UPDATE submission
@@ -329,12 +346,14 @@ const updateSubmissionStmt = db.prepare(`
 const selectSubmission = db.prepare('SELECT * FROM submission WHERE id = ?');
 const selectSubmissionByRendition = db.prepare('SELECT * FROM submission WHERE rendition_id = ?');
 const selectSubmissionByParticipant = db.prepare(
-  'SELECT * FROM submission WHERE session_id = ? AND participant_id = ?',
+  `SELECT * FROM submission WHERE session_id = @sessionId AND participant_id = @participantId AND round = ${MANCHE}`,
 );
-const selectSubmissions = db.prepare('SELECT * FROM submission WHERE session_id = ? ORDER BY uploaded_at');
+const selectSubmissions = db.prepare(
+  `SELECT * FROM submission WHERE session_id = @sessionId AND round = ${MANCHE} ORDER BY uploaded_at`,
+);
 const deleteSubmissionStmt = db.prepare('DELETE FROM submission WHERE id = ?');
 const setSubmissionStatusStmt = db.prepare('UPDATE submission SET status = ?, renditions = ?, error = ? WHERE id = ?');
-const submittedIdsStmt = db.prepare('SELECT participant_id FROM submission WHERE session_id = ?');
+const submittedIdsStmt = db.prepare(`SELECT participant_id FROM submission WHERE session_id = @sessionId AND round = ${MANCHE}`);
 
 Object.assign(repo, {
   addSubmission(sub) {
@@ -393,8 +412,10 @@ Object.assign(repo, {
 
   submission: (id) => toSubmission(selectSubmission.get(id)),
   submissionByRendition: (renditionId) => toSubmission(selectSubmissionByRendition.get(renditionId)),
-  submissionOf: (sessionId, participantId) => toSubmission(selectSubmissionByParticipant.get(sessionId, participantId)),
-  submissions: (sessionId) => selectSubmissions.all(sessionId).map(toSubmission),
+  /** Le rendu d'un participant dans une manche (la courante par defaut). */
+  submissionOf: (sessionId, participantId, round = null) => toSubmission(selectSubmissionByParticipant.get({ sessionId, participantId, round })),
+  /** Les rendus d'une manche (la courante par defaut). */
+  submissions: (sessionId, round = null) => selectSubmissions.all({ sessionId, round }).map(toSubmission),
   removeSubmission: (id) => deleteSubmissionStmt.run(id).changes,
   setSubmissionStatus: (id, status, renditions = null, error = null) =>
     setSubmissionStatusStmt.run(status, renditions ? JSON.stringify(renditions) : null, error, id),
@@ -406,8 +427,8 @@ Object.assign(repo, {
    * des rendus n'a pas a etre chargee pour afficher « 7 / 12 » et cocher des
    * noms dans le trombinoscope.
    */
-  submittedParticipantIds: (sessionId) =>
-    submittedIdsStmt.all(sessionId).map((r) => r.participant_id),
+  submittedParticipantIds: (sessionId, round = null) =>
+    submittedIdsStmt.all({ sessionId, round }).map((r) => r.participant_id),
 });
 
 /* ------------------------------------------------------------------ */
@@ -434,7 +455,8 @@ const finishJobStmt = db.prepare("UPDATE media_job SET status = @status, error =
 const requeueRunningStmt = db.prepare("UPDATE media_job SET status = 'queued', updated_at = ? WHERE status = 'running'");
 const deleteJobsOfStmt = db.prepare('DELETE FROM media_job WHERE submission_id = ?');
 const countPendingStmt = db.prepare(`
-  SELECT COUNT(*) AS n FROM submission WHERE session_id = ? AND status IN ('pending', 'transcoding')
+  SELECT COUNT(*) AS n FROM submission
+   WHERE session_id = @sessionId AND round = ${MANCHE} AND status IN ('pending', 'transcoding')
 `);
 
 Object.assign(repo, {
@@ -448,7 +470,7 @@ Object.assign(repo, {
   requeueRunningJobs: () => requeueRunningStmt.run(Date.now()).changes,
   removeJobsOf: (submissionId) => deleteJobsOfStmt.run(submissionId).changes,
   /** Rendus pas encore prets a etre diffuses. */
-  countPendingSubmissions: (sessionId) => countPendingStmt.get(sessionId).n,
+  countPendingSubmissions: (sessionId, round = null) => countPendingStmt.get({ sessionId, round }).n,
 });
 
 /* ------------------------------------------------------------------ */
@@ -469,7 +491,11 @@ const upsertVoteStmt = db.prepare(`
   DO UPDATE SET value = excluded.value, at = excluded.at
 `);
 
-const selectVotesOf = db.prepare('SELECT submission_id, criterion_id, value FROM vote WHERE session_id = ? AND voter_id = ?');
+const selectVotesOf = db.prepare(`
+  SELECT v.submission_id, v.criterion_id, v.value
+    FROM vote v JOIN submission s ON s.id = v.submission_id
+   WHERE v.session_id = @sessionId AND v.voter_id = @voterId AND s.round = ${MANCHE}
+`);
 const countVotersStmt = db.prepare('SELECT COUNT(DISTINCT voter_id) AS n FROM vote WHERE submission_id = ?');
 const deleteVotesOfStmt = db.prepare('DELETE FROM vote WHERE submission_id = ?');
 
@@ -481,10 +507,10 @@ const deleteVotesOfStmt = db.prepare('DELETE FROM vote WHERE submission_id = ?')
  * participants, au moment precis ou tout le monde attend le podium.
  */
 const tallyStmt = db.prepare(`
-  SELECT submission_id, criterion_id, COUNT(*) AS n, SUM(value) AS total
-    FROM vote
-   WHERE session_id = ?
-   GROUP BY submission_id, criterion_id
+  SELECT v.submission_id, v.criterion_id, COUNT(*) AS n, SUM(v.value) AS total
+    FROM vote v JOIN submission s ON s.id = v.submission_id
+   WHERE v.session_id = @sessionId AND s.round = ${MANCHE}
+   GROUP BY v.submission_id, v.criterion_id
 `);
 
 Object.assign(repo, {
@@ -500,9 +526,9 @@ Object.assign(repo, {
   },
 
   /** Ce qu'un votant a deja donne : { submissionId: { criterionId: valeur } }. */
-  votesOf(sessionId, voterId) {
+  votesOf(sessionId, voterId, round = null) {
     const out = {};
-    for (const row of selectVotesOf.all(sessionId, voterId)) {
+    for (const row of selectVotesOf.all({ sessionId, voterId, round })) {
       (out[row.submission_id] ??= {})[row.criterion_id] = row.value;
     }
     return out;
@@ -510,7 +536,7 @@ Object.assign(repo, {
 
   countVoters: (submissionId) => countVotersStmt.get(submissionId).n,
   removeVotesOf: (submissionId) => deleteVotesOfStmt.run(submissionId).changes,
-  tally: (sessionId) => tallyStmt.all(sessionId),
+  tally: (sessionId, round = null) => tallyStmt.all({ sessionId, round }),
 });
 
 /* ------------------------------------------------------------------ */
@@ -604,6 +630,7 @@ function toSpin(row) {
     phase: row.phase,
     seed: row.seed,
     at: row.at,
+    round: row.round ?? 1,
     // Le champ tel qu'il etait au moment du tirage. `json()` rend le repli sur
     // une ligne d'avant la migration 10, qui ne le sait pas.
     pool: json(row.pool, []),
@@ -661,14 +688,15 @@ const deleteSlotStmt = db.prepare('DELETE FROM wheel_slot WHERE id = ?');
 
 const insertSpin = db.prepare(`
   INSERT INTO spin (id, session_id, wheel_id, wheel_name, target, how_many, shared, phase, seed, at,
-                    pool, slots, spent)
+                    pool, slots, spent, round)
   VALUES (@id, @sessionId, @wheelId, @wheelName, @target, @howMany, @shared, @phase, @seed, @at,
-          @pool, @slots, @spent)
+          @pool, @slots, @spent, (SELECT round FROM session WHERE id = @sessionId))
 `);
 const selectSpin = db.prepare('SELECT * FROM spin WHERE id = ?');
 const selectSpins = db.prepare('SELECT * FROM spin WHERE session_id = ? ORDER BY at, id');
+// Le dernier tirage de la MANCHE : une manche neuve s'ouvre sans roue a l'ecran.
 const selectLastSpin = db.prepare(
-  'SELECT * FROM spin WHERE session_id = ? ORDER BY at DESC, id DESC LIMIT 1',
+  `SELECT * FROM spin WHERE session_id = @sessionId AND round = ${MANCHE} ORDER BY at DESC, id DESC LIMIT 1`,
 );
 const countSpins = db.prepare('SELECT COUNT(*) AS n FROM spin WHERE session_id = ?');
 
@@ -681,7 +709,8 @@ const insertFate = db.prepare(`
 const selectFates = db.prepare('SELECT * FROM spin_fate WHERE spin_id = ? ORDER BY position');
 
 /**
- * Le total des points tires, par participant, sur toute la session.
+ * Le total des points tires, par participant, sur une manche — un sort ne
+ * deborde pas sur la manche suivante.
  *
  * Seuls les sorts REELLEMENT appliques comptent : un sort tire alors que la
  * phase ne permettait plus d'y toucher reste une consigne, pas une correction
@@ -691,7 +720,8 @@ const selectFates = db.prepare('SELECT * FROM spin_fate WHERE spin_id = ? ORDER 
 const selectAppliedPoints = db.prepare(`
   SELECT f.participant_id AS participantId, COALESCE(SUM(f.points), 0) AS points
     FROM spin_fate f JOIN spin s ON s.id = f.spin_id
-   WHERE s.session_id = ? AND f.points_applied_at IS NOT NULL AND f.participant_id IS NOT NULL
+   WHERE s.session_id = @sessionId AND s.round = ${MANCHE}
+     AND f.points_applied_at IS NOT NULL AND f.participant_id IS NOT NULL
    GROUP BY f.participant_id
 `);
 
@@ -722,7 +752,7 @@ Object.assign(repo, {
   },
   spin: (id) => toSpin(selectSpin.get(id)),
   spins: (sessionId) => selectSpins.all(sessionId).map(toSpin),
-  lastSpin: (sessionId) => toSpin(selectLastSpin.get(sessionId)),
+  lastSpin: (sessionId, round = null) => toSpin(selectLastSpin.get({ sessionId, round })),
   countSpins: (sessionId) => countSpins.get(sessionId).n,
 
   addFate(f) {
@@ -735,10 +765,137 @@ Object.assign(repo, {
   fates: (spinId) => selectFates.all(spinId).map(toFate),
 
   /** { participantId: points } — seulement ce qui s'est vraiment applique. */
-  appliedPoints(sessionId) {
+  appliedPoints(sessionId, round = null) {
     const out = {};
-    for (const row of selectAppliedPoints.all(sessionId)) out[row.participantId] = row.points;
+    for (const row of selectAppliedPoints.all({ sessionId, round })) out[row.participantId] = row.points;
     return out;
+  },
+});
+
+
+/* ------------------------------------------------------------------ */
+/* Rebuild The Track : extraits et attributions                        */
+/* ------------------------------------------------------------------ */
+
+function toExtrait(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    sessionId: row.session_id,
+    filename: row.filename,
+    storageKey: row.storage_key,
+    bytes: row.bytes,
+    mime: row.mime,
+    position: row.position,
+    bpm: row.bpm,
+    bpmSource: row.bpm_source,
+    tonalite: row.tonalite,
+    tonaliteSource: row.tonalite_source,
+    analyse: row.analyse,
+    createdAt: row.created_at,
+  };
+}
+
+const insertExtrait = db.prepare(`
+  INSERT INTO extrait (id, session_id, filename, storage_key, bytes, mime, position, created_at)
+  VALUES (@id, @sessionId, @filename, @storageKey, @bytes, @mime, @position, @createdAt)
+`);
+const selectExtrait = db.prepare('SELECT * FROM extrait WHERE id = ?');
+const selectExtraits = db.prepare('SELECT * FROM extrait WHERE session_id = ? ORDER BY position, created_at');
+const deleteExtraitStmt = db.prepare('DELETE FROM extrait WHERE id = ?');
+const extraitTotalsStmt = db.prepare(
+  'SELECT COUNT(*) AS n, COALESCE(SUM(bytes), 0) AS bytes, COALESCE(MAX(position), -1) AS last FROM extrait WHERE session_id = ?',
+);
+
+/**
+ * Ce que l'animateur saisit a la main l'emporte, toujours.
+ *
+ * L'analyse automatique ecrit avec `source = 'auto'`, mais seulement la ou
+ * aucune valeur manuelle n'existe : une tonalite corrigee par quelqu'un qui a
+ * l'oreille ne doit pas etre ecrasee par un calcul qui se trompe une fois sur
+ * trois.
+ */
+const ecrireAnalyseStmt = db.prepare(`
+  UPDATE extrait SET
+    bpm             = CASE WHEN bpm_source = 'manuel' THEN bpm ELSE @bpm END,
+    bpm_source      = CASE WHEN bpm_source = 'manuel' THEN 'manuel' WHEN @bpm IS NULL THEN NULL ELSE 'auto' END,
+    tonalite        = CASE WHEN tonalite_source = 'manuel' THEN tonalite ELSE @tonalite END,
+    tonalite_source = CASE WHEN tonalite_source = 'manuel' THEN 'manuel' WHEN @tonalite IS NULL THEN NULL ELSE 'auto' END,
+    analyse         = @analyse
+  WHERE id = @id
+`);
+const marquerAnalyseStmt = db.prepare('UPDATE extrait SET analyse = ? WHERE id = ?');
+const selectAnalysesEnAttente = db.prepare("SELECT * FROM extrait WHERE analyse IN ('attente', 'en_cours') ORDER BY created_at");
+
+/** Fixe a la main, ou efface (`null`) pour rendre la main a l'analyse. */
+const majBpmStmt = db.prepare("UPDATE extrait SET bpm = @bpm, bpm_source = CASE WHEN @bpm IS NULL THEN NULL ELSE 'manuel' END WHERE id = @id");
+const majTonaliteStmt = db.prepare("UPDATE extrait SET tonalite = @tonalite, tonalite_source = CASE WHEN @tonalite IS NULL THEN NULL ELSE 'manuel' END WHERE id = @id");
+
+const insertAttribution = db.prepare(`
+  INSERT INTO attribution (session_id, round, participant_id, extrait_id, at)
+  VALUES (@sessionId, @round, @participantId, @extraitId, @at)
+  ON CONFLICT(session_id, round, participant_id) DO UPDATE SET extrait_id = excluded.extrait_id, at = excluded.at
+`);
+const selectAttributions = db.prepare(`SELECT * FROM attribution WHERE session_id = @sessionId AND round = ${MANCHE}`);
+const selectToutesAttributions = db.prepare('SELECT * FROM attribution WHERE session_id = ? ORDER BY round, at');
+const selectAttributionDe = db.prepare(
+  `SELECT * FROM attribution WHERE session_id = @sessionId AND participant_id = @participantId AND round = ${MANCHE}`,
+);
+const deleteAttributionsStmt = db.prepare('DELETE FROM attribution WHERE session_id = ? AND round = ?');
+
+const insertMancheStmt = db.prepare(`
+  INSERT INTO manche_resultat (session_id, round, participant_id, score, rank)
+  VALUES (@sessionId, @round, @participantId, @score, @rank)
+`);
+const deleteMancheStmt = db.prepare('DELETE FROM manche_resultat WHERE session_id = ? AND round = ?');
+const selectManchesStmt = db.prepare('SELECT * FROM manche_resultat WHERE session_id = ? ORDER BY round, rank');
+
+const toAttribution = (row) => (row ? {
+  sessionId: row.session_id,
+  round: row.round,
+  participantId: row.participant_id,
+  extraitId: row.extrait_id,
+  at: row.at,
+} : null);
+
+Object.assign(repo, {
+  addExtrait(e) {
+    insertExtrait.run(e);
+    return toExtrait(selectExtrait.get(e.id));
+  },
+  extrait: (id) => toExtrait(selectExtrait.get(id)),
+  extraits: (sessionId) => selectExtraits.all(sessionId).map(toExtrait),
+  extraitTotals: (sessionId) => extraitTotalsStmt.get(sessionId),
+  removeExtrait: (id) => deleteExtraitStmt.run(id).changes,
+  ecrireAnalyse: (id, { bpm = null, tonalite = null, analyse }) => ecrireAnalyseStmt.run({ id, bpm, tonalite, analyse }).changes,
+  marquerAnalyse: (id, analyse) => marquerAnalyseStmt.run(analyse, id).changes,
+  analysesEnAttente: () => selectAnalysesEnAttente.all().map(toExtrait),
+  majBpm: (id, bpm) => majBpmStmt.run({ id, bpm }).changes,
+  majTonalite: (id, tonalite) => majTonaliteStmt.run({ id, tonalite }).changes,
+
+  attribuer: (a) => insertAttribution.run(a),
+  /** Les attributions d'une manche (la courante par defaut). */
+  attributions: (sessionId, round = null) => selectAttributions.all({ sessionId, round }).map(toAttribution),
+  toutesAttributions: (sessionId) => selectToutesAttributions.all(sessionId).map(toAttribution),
+  attributionDe: (sessionId, participantId, round = null) =>
+    toAttribution(selectAttributionDe.get({ sessionId, participantId, round })),
+  effacerAttributions: (sessionId, round) => deleteAttributionsStmt.run(sessionId, round).changes,
+
+  /** Fige le classement d'une manche. Rejouer la meme manche remplace, n'ajoute pas. */
+  figerManche: (sessionId, round, rows) => db.transaction(() => {
+    deleteMancheStmt.run(sessionId, round);
+    for (const r of rows) {
+      insertMancheStmt.run({ sessionId, round, participantId: r.participantId, score: r.score ?? null, rank: r.rank ?? null });
+    }
+  })(),
+  /** Les manches figees : [{ round, rows: [{ participantId, score, rank }] }], dans l'ordre. */
+  manchesFigees(sessionId) {
+    const parManche = new Map();
+    for (const row of selectManchesStmt.all(sessionId)) {
+      if (!parManche.has(row.round)) parManche.set(row.round, []);
+      parManche.get(row.round).push({ participantId: row.participant_id, score: row.score, rank: row.rank });
+    }
+    return [...parManche.entries()].sort((a, b) => a[0] - b[0]).map(([round, rows]) => ({ round, rows }));
   },
 });
 

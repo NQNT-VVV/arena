@@ -334,14 +334,160 @@ const MIGRATIONS = [
       ALTER TABLE spin_fate ADD COLUMN slot_index INTEGER NOT NULL DEFAULT -1;
     `);
   },
+
+  /**
+   * Les manches, et Rebuild The Track.
+   *
+   * Une session jouait une seule manche : un rendu par participant, garanti par
+   * `UNIQUE(session_id, participant_id)`. Plusieurs manches dans la MEME
+   * session — plutot qu'une session par manche — gardent un seul code a
+   * rejoindre et une seule adresse d'ecran dans OBS, ce qui est tout l'enjeu
+   * pour un stream. Il faut donc qu'un rendu sache a quelle manche il
+   * appartient.
+   *
+   * SQLite ne sait pas retirer une contrainte d'unicite : la table est
+   * reconstruite, selon la procedure documentee (creer, copier, supprimer,
+   * renommer). Les rendus existants deviennent ceux de la manche 1, et leurs
+   * identifiants ne changent pas — les votes et les travaux de transcodage qui
+   * les designent restent valides.
+   *
+   * Cette migration doit tourner cles etrangeres COUPEES : avec elles, un
+   * `DROP TABLE` commence par un `DELETE` implicite, et la cascade emporterait
+   * tous les votes de toutes les sessions. Le lanceur s'en charge, et verifie
+   * l'integrite avant de les rallumer.
+   */
+  function manches(d) {
+    d.exec(`
+      ALTER TABLE session ADD COLUMN round INTEGER NOT NULL DEFAULT 1;
+
+      CREATE TABLE submission_manches (
+        id             TEXT PRIMARY KEY,
+        session_id     TEXT NOT NULL REFERENCES session(id) ON DELETE CASCADE,
+        participant_id TEXT NOT NULL REFERENCES participant(id) ON DELETE CASCADE,
+        round          INTEGER NOT NULL DEFAULT 1,
+        rendition_id   TEXT NOT NULL UNIQUE,
+        original_key   TEXT,
+        original_bytes INTEGER NOT NULL DEFAULT 0,
+        original_mime  TEXT,
+        text_body      TEXT,
+        uploaded_at    INTEGER NOT NULL,
+        late           INTEGER NOT NULL DEFAULT 0,
+        replaced_count INTEGER NOT NULL DEFAULT 0,
+        status         TEXT NOT NULL DEFAULT 'pending',
+        renditions     TEXT,
+        error          TEXT,
+        kind           TEXT NOT NULL DEFAULT 'other',
+        inline         INTEGER NOT NULL DEFAULT 0,
+        filename       TEXT,
+        UNIQUE(session_id, participant_id, round)
+      );
+      INSERT INTO submission_manches (id, session_id, participant_id, round, rendition_id, original_key,
+        original_bytes, original_mime, text_body, uploaded_at, late, replaced_count, status, renditions,
+        error, kind, inline, filename)
+      SELECT id, session_id, participant_id, 1, rendition_id, original_key,
+        original_bytes, original_mime, text_body, uploaded_at, late, replaced_count, status, renditions,
+        error, kind, inline, filename
+      FROM submission;
+      DROP TABLE submission;
+      ALTER TABLE submission_manches RENAME TO submission;
+      CREATE INDEX submission_session_idx ON submission(session_id, round);
+
+      -- Un sort de roulette vaut pour la manche ou il a ete tire.
+      ALTER TABLE spin ADD COLUMN round INTEGER NOT NULL DEFAULT 1;
+
+      /* ------------------------------------------------------------ */
+      /* Rebuild The Track : les extraits a reconstruire               */
+      /* ------------------------------------------------------------ */
+
+      CREATE TABLE extrait (
+        id              TEXT PRIMARY KEY,
+        session_id      TEXT NOT NULL REFERENCES session(id) ON DELETE CASCADE,
+        filename        TEXT NOT NULL,
+        storage_key     TEXT NOT NULL,
+        bytes           INTEGER NOT NULL,
+        mime            TEXT NOT NULL,
+        position        INTEGER NOT NULL,
+        -- Nuls tant qu'ils ne sont pas connus. La source dit d'ou ils viennent :
+        -- une valeur saisie par l'animateur n'est jamais ecrasee par l'analyse.
+        bpm             REAL,
+        bpm_source      TEXT,
+        tonalite        TEXT,
+        tonalite_source TEXT,
+        -- 'attente' | 'en_cours' | 'faite' | 'echec'
+        analyse         TEXT NOT NULL DEFAULT 'attente',
+        created_at      INTEGER NOT NULL
+      );
+      CREATE INDEX extrait_session_idx ON extrait(session_id, position);
+
+      /*
+       * Qui reconstruit quoi, a chaque manche.
+       *
+       * La clef primaire fait qu'un participant n'a qu'un extrait par manche :
+       * c'est la base qui le garantit, pas le tirage.
+       */
+      CREATE TABLE attribution (
+        session_id     TEXT NOT NULL REFERENCES session(id) ON DELETE CASCADE,
+        round          INTEGER NOT NULL,
+        participant_id TEXT NOT NULL REFERENCES participant(id) ON DELETE CASCADE,
+        extrait_id     TEXT NOT NULL REFERENCES extrait(id) ON DELETE CASCADE,
+        at             INTEGER NOT NULL,
+        PRIMARY KEY (session_id, round, participant_id)
+      );
+      CREATE INDEX attribution_extrait_idx ON attribution(extrait_id);
+
+      /*
+       * Le classement de chaque manche, fige quand on passe a la suivante.
+       *
+       * On pourrait le recalculer a partir des rendus et des votes, qui restent
+       * en base. Mais le calcul compte les votants ABSENTS (ils recoivent la
+       * note par defaut), et la liste des votants change d'une manche a
+       * l'autre : un spectateur arrive en manche 2 modifierait les scores de la
+       * manche 1, a posteriori. Le classement est donc fige au moment ou la
+       * manche se termine, avec les votants de ce moment-la.
+       */
+      CREATE TABLE manche_resultat (
+        session_id     TEXT NOT NULL REFERENCES session(id) ON DELETE CASCADE,
+        round          INTEGER NOT NULL,
+        participant_id TEXT NOT NULL REFERENCES participant(id) ON DELETE CASCADE,
+        -- Nul pour un rendu hors classement : il a ete ecoute, pas classe.
+        score          REAL,
+        rank           INTEGER,
+        PRIMARY KEY (session_id, round, participant_id)
+      );
+    `);
+  },
 ];
 
-const applied = db.pragma('user_version', { simple: true });
-for (let v = applied; v < MIGRATIONS.length; v++) {
-  db.transaction(() => {
-    MIGRATIONS[v](db);
-    db.pragma(`user_version = ${v + 1}`);
-  })();
+/**
+ * Les migrations tournent cles etrangeres coupees.
+ *
+ * Reconstruire une table referencee — `submission`, par `vote` et `media_job` —
+ * passe par un `DROP TABLE`, qui avec les cles actives supprime d'abord toutes
+ * les lignes et declenche les cascades. Le pragma n'a d'effet qu'en dehors
+ * d'une transaction : il est donc pose ici, autour des migrations, et
+ * l'integrite est verifiee avant de le rallumer. Une seule ligne orpheline et
+ * le serveur refuse de demarrer, plutot que de servir une base incoherente.
+ */
+function migrer() {
+  const appliquee = db.pragma('user_version', { simple: true });
+  if (appliquee >= MIGRATIONS.length) return;
+  db.pragma('foreign_keys = OFF');
+  try {
+    for (let v = appliquee; v < MIGRATIONS.length; v++) {
+      db.transaction(() => {
+        MIGRATIONS[v](db);
+        db.pragma(`user_version = ${v + 1}`);
+      })();
+    }
+    const orphelins = db.pragma('foreign_key_check');
+    if (orphelins.length) {
+      throw new Error(`Migration : ${orphelins.length} ligne(s) orpheline(s), premiere dans « ${orphelins[0].table} ».`);
+    }
+  } finally {
+    db.pragma('foreign_keys = ON');
+  }
 }
+
+migrer();
 
 module.exports = db;

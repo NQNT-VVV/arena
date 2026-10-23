@@ -200,6 +200,14 @@ io.on('connection', (socket) => {
     'host:reveal': (s, p) => battle.reveal(s, socket.data.hostToken, { all: p?.all === true }),
     'host:archive': (s) => battle.archive(s, socket.data.hostToken),
     'host:disqualify': (s, p) => battle.setDisqualified(s, socket.data.hostToken, p?.participantId, p?.on),
+    // Manches et Rebuild The Track.
+    'host:next-round': (s, p) => battle.nextRound(s, socket.data.hostToken, { durationMs: p?.durationMs }),
+    'host:extrait-edit': (s, p) => {
+      battle.editExtrait(s, socket.data.hostToken, p);
+      return battle.require(s);
+    },
+    'host:extrait-reattribuer': (s, p) => battle.reattribuer(s, socket.data.hostToken, p),
+    'host:extrait-analyser': (s, p) => battle.reanalyser(s, socket.data.hostToken, p?.extraitId),
   };
 
   for (const [event, action] of Object.entries(hostActions)) {

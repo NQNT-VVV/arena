@@ -208,6 +208,92 @@ function mount(app, battle) {
     });
   }));
 
+  /* ---------------------------------------------------------------- */
+  /* Rebuild The Track : les extraits                                  */
+  /* ---------------------------------------------------------------- */
+
+  /**
+   * Depot d'extraits par l'animateur.
+   *
+   * Meme chemin que les elements imposes : les octets vont du reseau au
+   * stockage sans passer par la memoire, plafonds appliques pendant le flux.
+   * Une difference : un extrait doit etre du son. Un fichier qui n'en est pas
+   * est retire aussitot et nomme dans la reponse, plutot que d'etre attribue a
+   * quelqu'un qui decouvrirait en pleine manche qu'il a recu un PDF.
+   */
+  app.post('/api/session/:code/extraits', guard(async (req, res) => {
+    const { session, slots, budget, nextPosition } = battle.openExtraitSlot(req.params.code, tokenOf(req));
+
+    let position = nextPosition;
+    const { files: written } = await receiveFiles(req, {
+      maxFiles: slots,
+      maxBytes: budget,
+      maxTotalBytes: budget,
+      onFile: async ({ stream, filename }) => {
+        const id = uuid();
+        const name = safeFilename(filename);
+        const ext = mime.safeExtension(name);
+        const slot = position++;
+        const key = `sessions/${session.id}/extraits/${id}${ext}`;
+        const { bytes } = await storage.put(key, stream);
+        return { id, key, bytes, filename: name, position: slot };
+      },
+      cleanup: (records) => Promise.all(records.map((r) => storage.remove(r.key).catch(() => {}))),
+    });
+
+    const refused = [];
+    let added = 0;
+    for (const record of written) {
+      const identity = mime.identify(await files.readHead(record.key), record.filename);
+      if (identity.kind !== 'audio') {
+        await storage.remove(record.key).catch(() => {});
+        refused.push({ filename: record.filename, reason: 'ce n’est pas un fichier audio' });
+        continue;
+      }
+      battle.recordExtrait(session, {
+        id: record.id,
+        filename: record.filename,
+        storageKey: record.key,
+        bytes: record.bytes,
+        mime: identity.mime,
+        position: record.position,
+      });
+      added += 1;
+    }
+
+    battle.publish(session);
+    res.json({ ok: true, added, refused, extraits: views.extraitsView(session) });
+  }));
+
+  app.delete('/api/session/:code/extraits/:extraitId', guard(async (req, res) => {
+    const { session, extrait } = battle.removeExtrait(req.params.code, tokenOf(req), req.params.extraitId);
+    await storage.remove(extrait.storageKey).catch(() => {});
+    battle.publish(session);
+    res.json({ ok: true, extraits: views.extraitsView(session) });
+  }));
+
+  /**
+   * Ecoute ou telechargement d'un extrait.
+   *
+   * Le lien est signe et ne part que vers l'animateur et vers ceux a qui
+   * l'extrait a ete attribue : chacun reconstruit le sien, et rien n'oblige a
+   * mettre tous les extraits a portee de tout le monde. `?dl=1` force le
+   * telechargement — c'est le fichier qu'on glisse dans son logiciel.
+   */
+  app.get('/api/extrait/:extraitId', guard(async (req, res) => {
+    const extrait = repo.extrait(req.params.extraitId);
+    if (!extrait || !verifyMedia(config.secret, `extrait:${extrait.id}`, req.query.k)) {
+      return res.status(404).json({ error: 'Extrait introuvable.' });
+    }
+    await files.sendStored(req, res, {
+      key: extrait.storageKey,
+      filename: extrait.filename,
+      identity: { mime: extrait.mime, source: 'bytes' },
+      forceDownload: req.query.dl === '1',
+      cacheSeconds: 3600,
+    });
+  }));
+
   /**
    * Pack complet.
    *
