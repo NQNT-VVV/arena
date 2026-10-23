@@ -48,6 +48,8 @@ jobs:
           npm run test:chaine
           npm run test:roulette
           npm run test:reveal
+          npm run test:rebuild-pur
+          npm run test:manches-migration
 
       - name: Build Next
         run: SESSION_SECRET=ci-only npm run build
@@ -63,6 +65,7 @@ jobs:
           npm run test:discord
           npm run test:podium
           npm run test:roulette-e2e
+          npm run test:rebuild-e2e
           npm test
 
       - uses: docker/setup-buildx-action@v3

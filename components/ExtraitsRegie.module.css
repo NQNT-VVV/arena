@@ -1,0 +1,42 @@
+/* Extraits de Rebuild The Track, cote regie : une ligne par fichier, filets d'un pixel. */
+.liste { list-style: none; margin: 0; padding: 0; display: grid; border: var(--border); }
+.ligne { display: grid; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border-bottom: var(--border); }
+.ligne:last-child { border-bottom: 0; }
+
+.entete { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.nom { font: var(--t-ui); letter-spacing: var(--ls-mono); overflow-wrap: anywhere; flex: 1 1 200px; min-width: 0; }
+/* Les controles natifs, en sombre : sans cela, une barre blanche par extrait. */
+.lecteur { width: 100%; height: 32px; color-scheme: dark; }
+
+.champs { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--sp-3); }
+.champ { display: grid; gap: var(--sp-1); }
+.champ .input { min-width: 0; }
+
+.pied { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); flex-wrap: wrap; }
+
+/* Pas assez d'extraits : une bande de trame, pas une couleur — rien ici n'est vivant. */
+.alerte {
+  margin: 0; padding: var(--sp-2) var(--sp-3) var(--sp-2) var(--sp-6); position: relative;
+  border: var(--border-ui); font: var(--t-prose); letter-spacing: var(--ls-prose);
+}
+.alerte::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 8px; background-image: var(--hatch); }
+
+/*
+ * Qui reconstruit quoi : une ligne par createur, le pseudo entier. La grille
+ * du trombinoscope coupait les pseudos a trois lettres.
+ */
+.attributions { display: grid; border: var(--border); }
+.attribution { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: var(--sp-3); align-items: center; padding: var(--sp-2) var(--sp-3); border-bottom: var(--border); }
+.attribution:last-child { border-bottom: 0; }
+.qui { font: var(--t-ui); letter-spacing: var(--ls-mono); overflow-wrap: anywhere; }
+.attribution select { width: 100%; min-width: 0; }
+
+/*
+ * Une tonalite se lit a la casse pres : « Gm » est sol MINEUR, « GM » se lit
+ * sol majeur. Le champ du socle passe en capitales ; celui-ci, jamais.
+ */
+.tonalite { text-transform: none; }
+
+@media (max-width: 640px) {
+  .champs { grid-template-columns: minmax(0, 1fr); }
+}

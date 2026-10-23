@@ -124,6 +124,50 @@ Trois choses valent d'etre sues :
 
 ---
 
+## Les manches, et Rebuild The Track
+
+Une session peut se jouer en **plusieurs manches** (jusqu'a dix), dans la meme
+session : un seul code, une seule adresse d'ecran dans OBS, les participants et
+les spectateurs restent. Entre deux manches, rendus, votes, diffusion et chrono
+repartent de zero, et la duree de la manche suivante se regle au moment de la
+lancer. Le bouton attend que tout le classement soit devoile : c'est a ce
+moment que la manche est figee.
+
+Le **classement general** est la moyenne des manches, et une manche sans rendu
+compte zero. Moyenner sur les seules manches jouees paraissait plus doux ;
+c'etait surtout une faille : il suffisait de ne jouer que sa meilleure manche.
+Le classement de chaque manche est fige quand on passe a la suivante — le
+calcul compte les votants absents, et un spectateur arrive en manche 2 aurait
+sinon modifie les scores de la manche 1. Podium ne recoit que le general, a la
+fin de la derniere manche : une soiree en quatre manches est un match, pas
+quatre.
+
+**Rebuild The Track** est un mode : la regie depose des extraits audio, et au
+lancement de chaque manche, chaque createur en recoit un — different pour
+chacun tant qu'il y en a assez, jamais celui qu'il a deja reconstruit si c'est
+evitable, les neufs avant ceux deja joues. Un retardataire recoit le moins
+distribue sans que les autres changent. Le fichier n'est accessible, par lien
+signe, qu'a la regie et a qui l'a recu ; la diffusion montre l'extrait d'origine
+de chaque rendu, sans son auteur.
+
+Le **tempo et la tonalite** sont estimes a l'arrivee du fichier :
+
+- le tempo par autocorrelation du flux spectral, affine sur les multiples de la
+  periode — lu sur le seul premier pic, 125 sortait 124,3 ;
+- la tonalite par chromagramme et profils de Krumhansl, apres separation
+  harmonique/percussive — sans elle, un do diese mineur sous une batterie
+  sortait mi majeur, sa relative.
+
+Ces estimations se trompent, et il faut le savoir : le tempo surtout d'une
+octave (87 lu 174), la tonalite surtout d'une relative. La regie corrige d'un
+×2, d'un /2 ou d'une saisie (« C#m », « Db min », « F major »), et une valeur
+saisie a la main n'est jamais ecrasee par une nouvelle analyse. Chaque valeur
+porte sa source, AUTO ou MANUEL, jusque sur le telephone du createur.
+
+Les manches sont filtrees dans le SQL lui-meme : sans manche precisee, une
+requete de rendus ou de votes voit la manche courante. La diffusion, le vote et
+le classement n'ont donc pas change d'une ligne.
+
 ## La roulette
 
 Arena impose des contraintes : c'est sa premisse. La roulette ne fait que la
@@ -460,8 +504,17 @@ npm run test:voting        # diffusion, notation, ecoute synchronisee, revelatio
 npm run test:transcode     # vrai ffmpeg : metadonnees, coupure, fondu, duree, cretes, image (11)
 npm run test:discord       # faux webhook : trois annonces, et rien avant la revelation (6)
 npm run test:podium        # faux hub : cookie signe, classement transmis, Elo relaye (8)
+npm run test:rebuild-pur   # tempo, tonalite, attribution, moyenne — sans serveur (19)
+npm run test:manches-migration # la migration des manches, sur une base au schema 10 (7)
+npm run test:rebuild-e2e   # trois manches de Rebuild jouees de bout en bout (16)
 npm test                   # parcours complet, vraies sockets        (15)
 ```
+
+`test/manches-migration.mjs` remplit une base a l'ancien schema — fige dans
+`test/fixtures/schema-v10.sql` — et la migre : c'est la seule migration qui
+reconstruit une table referencee, et sans la coupure des cles etrangeres elle
+effacerait tous les votes en silence. Le test le verifie, et echoue bien si
+l'on retire la coupure.
 
 Cent trente-six verifications au total. La suite de transcodage s'ignore
 d'elle-meme quand ffmpeg manque sur la machine.

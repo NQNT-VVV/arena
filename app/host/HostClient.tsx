@@ -7,6 +7,8 @@ import { Icon } from '@/components/Icon';
 import { AssetPack } from '@/components/AssetPack';
 import { AssetUploader } from '@/components/AssetUploader';
 import { Brand } from '@/components/Brand';
+import { ClassementGeneral } from '@/components/ClassementGeneral';
+import { ExtraitsRegie } from '@/components/ExtraitsRegie';
 import { DiffusionStage } from '@/components/DiffusionStage';
 import { Podium } from '@/components/Podium';
 import { RouletteHost } from '@/components/RouletteHost';
@@ -20,7 +22,7 @@ import { sfx } from '@/lib/sfx';
 import { call } from '@/lib/socket';
 import { copyToClipboard } from '@/lib/storage';
 import { toast } from '@/lib/toast';
-import { MEDIA_LABELS, type Asset, type LatePolicy, type MediaType } from '@/lib/types';
+import { MEDIA_LABELS, type Asset, type LatePolicy, type MediaType, type SessionMode } from '@/lib/types';
 import { useBattleSocket } from '@/lib/useBattleSocket';
 import { usePhaseClock } from '@/lib/usePhaseClock';
 import styles from './host.module.css';
@@ -59,6 +61,8 @@ interface Draft {
   latePolicy: LatePolicy;
   latePenalty: number;
   autoAdvance: boolean;
+  mode: SessionMode;
+  rounds: number;
 }
 
 const EMPTY_DRAFT: Draft = {
@@ -77,7 +81,18 @@ const EMPTY_DRAFT: Draft = {
   latePolicy: 'reject',
   latePenalty: 1,
   autoAdvance: false,
+  mode: 'battle',
+  rounds: 1,
 };
+
+const MODES: { id: SessionMode; label: string; hint: string }[] = [
+  { id: 'battle', label: 'Beat Battle', hint: 'Tout le monde cree sur la meme consigne et les memes elements.' },
+  {
+    id: 'rebuild',
+    label: 'Rebuild The Track',
+    hint: 'Chacun recoit un extrait different — tempo et tonalite affiches — et le reconstruit.',
+  },
+];
 
 export function HostClient() {
   const [code, setCode] = useState<string | null>(null);
@@ -154,6 +169,8 @@ export function HostClient() {
       latePolicy: state.config.latePolicy,
       latePenalty: state.config.latePenalty,
       autoAdvance: state.config.autoAdvance,
+      mode: state.config.mode ?? 'battle',
+      rounds: state.config.rounds ?? 1,
     }));
   }, [state?.code, state?.phase]);
 
@@ -195,6 +212,8 @@ export function HostClient() {
     latePolicy: d.latePolicy,
     latePenalty: d.latePenalty,
     autoAdvance: d.autoAdvance,
+    mode: d.mode,
+    rounds: d.rounds,
   });
 
   const create = async () => {
@@ -313,7 +332,10 @@ export function HostClient() {
         <Brand compact />
         <span className="grow">
           <span className="session-name">{state.name}</span>
-          <span className="meta">{PHASE_LABELS[phase]}</span>
+          <span className="meta">
+            {PHASE_LABELS[phase]}
+            {state.manche.rounds > 1 ? ` • MANCHE ${state.manche.round}/${state.manche.rounds}` : ''}
+          </span>
         </span>
         <span className={`pill ${connected ? 'ok' : ''}`}>
           <span className="dot" /> {connected ? 'En ligne' : 'Reconnexion…'}
@@ -412,9 +434,31 @@ export function HostClient() {
 
         {phase === 'results' && state.podium && (
           <section className="card pad col">
-            <h2 className="section-title">CLASSEMENT</h2>
+            <h2 className="section-title">
+              CLASSEMENT{state.manche.rounds > 1 ? ` — MANCHE ${state.manche.round}` : ''}
+            </h2>
             <Podium replay podium={state.podium} ratings={ratings} />
           </section>
+        )}
+
+        {state.general && (
+          <section className="card pad col">
+            <h2 className="section-title">CLASSEMENT GENERAL</h2>
+            <ClassementGeneral general={state.general} rounds={state.manche.rounds} />
+          </section>
+        )}
+
+        {state.config.mode === 'rebuild' && (
+          <ExtraitsRegie
+            code={state.code}
+            token={hostKeys.get(state.code)}
+            extraits={state.extraits ?? []}
+            attributions={state.attributions ?? []}
+            roster={state.roster}
+            phase={phase}
+            manche={state.manche}
+            act={act}
+          />
         )}
 
         <section className="card pad col">
@@ -640,7 +684,11 @@ export function HostClient() {
               <button className="btn sm ghost" onClick={() => download('json')}><Icon name="telecharge" />JSON</button>
               {btn('Archiver la session', 'host:archive', {}, 'btn sm ghost')}
             </div>
-            {renderNextEdition()}
+            {renderNextRound()}
+            {/* Pas de « nouvelle edition » tant qu'il reste des manches : en
+                pleine partie, ce bouton a cote de « manche suivante » ne
+                servirait qu'a relancer une session par erreur. */}
+            {state!.manche.derniere && renderNextEdition()}
           </div>
         );
       }
@@ -656,6 +704,57 @@ export function HostClient() {
           </div>
         );
     }
+  }
+
+  /**
+   * La manche suivante, et sa duree.
+   *
+   * La duree se regle ICI, au moment de lancer : c'est la consigne — « reglage
+   * de la duree avant chaque manche » — et les reglages generaux sont figes
+   * depuis le premier lancement. Le bouton attend que tout le classement soit
+   * devoile : la manche se fige a ce moment-la.
+   */
+  function renderNextRound() {
+    const m = state!.manche;
+    if (m.rounds <= 1) return null;
+    if (m.derniere) {
+      return (
+        <p className="meta" style={{ textTransform: 'none', letterSpacing: 'var(--ls-prose)' }}>
+          Derniere manche : le classement general ci-dessous est le classement final.
+        </p>
+      );
+    }
+    const pret = !!state!.podium?.complete;
+    return (
+      <div className={styles.nextEdition}>
+        <span className="section-title">MANCHE {m.round + 1}/{m.rounds}</span>
+        <div className="row wrap">
+          <label className="field" style={{ minWidth: 160 }}>
+            <span className="meta">DUREE DE CREATION (MINUTES)</span>
+            <input
+              className="input" type="number" min={1} max={720} value={draft.durationMin}
+              onChange={(e) => setDraft((d) => ({ ...d, durationMin: Number(e.target.value) }))}
+            />
+          </label>
+          <button
+            className="btn primary"
+            disabled={busy || !pret}
+            aria-busy={busy}
+            title={pret ? undefined : 'Devoilez tout le classement d’abord'}
+            onClick={() => act('host:next-round', { durationMs: draft.durationMin * 60_000 })}
+          >
+            Lancer la manche {m.round + 1}
+          </button>
+        </div>
+        <span className="meta">
+          {pret
+            ? (state!.config.mode === 'rebuild'
+              ? 'Rendus, votes et chrono repartent de zero ; chacun recoit un nouvel extrait.'
+              : 'Rendus, votes et chrono repartent de zero ; participants et spectateurs restent.')
+            : 'Devoilez tout le classement : la manche est figee a ce moment-la.'}
+        </span>
+      </div>
+    );
   }
 
   /** Relancer : memes reglages, meme consigne, pack repris ou non. */
@@ -730,6 +829,31 @@ export function HostClient() {
             ))}
           </div>
           <span className="meta">{MEDIA_LABELS[draft.mediaType].hint}</span>
+        </div>
+
+        <div className="field">
+          <label>MODE</label>
+          <div className="seg">
+            {MODES.map((m) => (
+              <button key={m.id} type="button" aria-pressed={draft.mode === m.id} onClick={() => set('mode', m.id)}>
+                {m.label}
+              </button>
+            ))}
+          </div>
+          <span className="meta">{MODES.find((m) => m.id === draft.mode)?.hint}</span>
+        </div>
+
+        <div className="field">
+          <label htmlFor="rounds">NOMBRE DE MANCHES</label>
+          <input
+            id="rounds" className="input" type="number" min={1} max={10} value={draft.rounds}
+            onChange={(e) => set('rounds', Math.max(1, Math.min(10, Number(e.target.value) || 1)))}
+          />
+          <span className="meta">
+            {draft.rounds > 1
+              ? 'Meme code et meme ecran pour toutes les manches. Classement general : la moyenne, une manche sans rendu compte zero.'
+              : 'Une seule manche : le classement de la manche est le classement final.'}
+          </span>
         </div>
 
         <div className="field">

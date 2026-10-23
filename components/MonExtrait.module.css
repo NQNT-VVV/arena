@@ -1,0 +1,13 @@
+/* « Ton extrait » : deux chiffres en donnee vivante, le lecteur, le fichier. */
+.carte { display: grid; gap: var(--sp-3); }
+.tete { display: flex; align-items: center; gap: var(--sp-3); justify-content: space-between; flex-wrap: wrap; }
+.nom { margin: 0; font: var(--t-ui); letter-spacing: var(--ls-mono); overflow-wrap: anywhere; color: var(--ink-90); }
+
+.valeurs { display: grid; grid-template-columns: 1fr 1fr; border: var(--border); }
+.valeur { display: grid; gap: var(--sp-1); padding: var(--sp-3) var(--sp-4); }
+.valeur + .valeur { border-left: var(--border); }
+/* `none` : « C#m » est mineur, « C#M » se lirait majeur. */
+.chiffre { text-transform: none; font: var(--t-data); font-size: clamp(40px, 12vw, 64px); letter-spacing: var(--ls-mono); font-variant-numeric: tabular-nums; line-height: 1; }
+.unite { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); }
+
+.lecteur { width: 100%; color-scheme: dark; }

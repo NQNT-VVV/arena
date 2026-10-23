@@ -53,3 +53,8 @@
 .large .bar { height: 12px; }
 .large .text { font-size: clamp(17px, 2vw, 26px); max-height: 58vh; }
 .large .meta { font-size: clamp(13px, 1.4vw, 18px); }
+
+/* Rebuild The Track : l'extrait d'origine du rendu, en bande sous le compteur. */
+.origine { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; border-top: var(--border); border-bottom: var(--border); padding: var(--sp-2) 0; }
+.origineNom { font: var(--t-ui); letter-spacing: var(--ls-mono); overflow-wrap: anywhere; flex: 1 1 160px; min-width: 0; }
+.large .origineNom { font: var(--t-ui-l); letter-spacing: var(--ls-mono); }

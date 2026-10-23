@@ -38,7 +38,13 @@ export interface SessionConfig {
   playerAudio: boolean;
   allowedExt: string[];
   maxFileBytes: number;
+  /** `battle` : une consigne pour tous. `rebuild` : chacun reconstruit son extrait. */
+  mode: SessionMode;
+  /** Nombre de manches ; le classement general est leur moyenne. */
+  rounds: number;
 }
+
+export type SessionMode = 'battle' | 'rebuild';
 
 /**
  * Horloge de session.
@@ -155,6 +161,71 @@ export interface DiffusionState {
   playMaxS: number;
   voteWindowS: number;
   playerAudio: boolean;
+  /** Rebuild : l'extrait que ce rendu reconstruit (sans fichier, sans auteur). */
+  extrait: Extrait | null;
+}
+
+/* ------------------------------------------------------------------ */
+/* Manches et Rebuild The Track                                        */
+/* ------------------------------------------------------------------ */
+
+export interface MancheState {
+  round: number;
+  rounds: number;
+  derniere: boolean;
+  mode: SessionMode;
+}
+
+export type AnalyseEtat = 'attente' | 'en_cours' | 'faite' | 'echec';
+export type SourceValeur = 'auto' | 'manuel' | null;
+
+/** Un extrait a reconstruire. `url` n'est present que pour la regie et pour qui l'a recu. */
+export interface Extrait {
+  id: string;
+  nom: string;
+  position: number;
+  bpm: number | null;
+  bpmSource: SourceValeur;
+  /** Notation courte : « C#m », « F ». */
+  tonalite: string | null;
+  /** Lecture longue : « C# minor ». */
+  tonaliteNom: string | null;
+  tonaliteSource: SourceValeur;
+  analyse: AnalyseEtat;
+  mime?: string;
+  bytes?: number;
+  url?: string;
+}
+
+/** Regie seulement : l'extrait, plus son usage dans la partie. */
+export interface ExtraitRegie extends Extrait {
+  /** Nombre de manches passees ou il a servi. */
+  joues: number;
+  /** Pseudos de ceux qui le reconstruisent dans la manche en cours. */
+  cetteManche: string[];
+  /** Faux des qu'il a servi une fois : il porte l'histoire d'une manche. */
+  retirable: boolean;
+}
+
+export interface AttributionRegie {
+  participantId: string;
+  pseudo: string | null;
+  extraitId: string;
+}
+
+export interface GeneralRow {
+  rank: number;
+  moyenne: number;
+  /** Un score par manche comptee ; null = pas de rendu (compte zero). */
+  scores: (number | null)[];
+  joues: number;
+  author: { id: string; pseudo: string; avatar: string } | null;
+}
+
+export interface GeneralState {
+  /** Manches comptees : les passees, plus la courante une fois tout devoile. */
+  manches: number;
+  rows: GeneralRow[];
 }
 
 export interface PodiumRow {
@@ -374,6 +445,9 @@ export interface BattleState {
   podium: PodiumState | null;
   chain: ChainState;
   roulette: RouletteState;
+  manche: MancheState;
+  /** Null en une seule manche, ou tant qu'aucune manche n'est comptee. */
+  general: GeneralState | null;
   serverNow: number;
   isHost?: boolean;
   isScreen?: boolean;
@@ -391,6 +465,10 @@ export interface BattleState {
    * une ligne d'affichage.
    */
   lastSeed?: string | null;
+  /** Regie seulement : les extraits de Rebuild The Track. */
+  extraits?: ExtraitRegie[];
+  /** Regie seulement : qui reconstruit quoi dans la manche en cours. */
+  attributions?: AttributionRegie[];
 }
 
 export type SubmissionStatus = 'pending' | 'transcoding' | 'ready' | 'failed';
@@ -465,6 +543,8 @@ export interface You {
   chain: YouChain | null;
   /** Son propre sort, pour que le telephone l'affiche en grand. Null s'il n'en a pas. */
   fate: YouFate | null;
+  /** Rebuild : l'extrait a reconstruire cette manche, avec son fichier. */
+  extrait: Extrait | null;
 }
 
 /** Carte de visite renvoyee par `GET /api/session/:code`. */

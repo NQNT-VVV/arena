@@ -8,6 +8,8 @@ import { hexOf } from '@/lib/hex';
 import { Icon } from '@/components/Icon';
 import { AssetPack } from '@/components/AssetPack';
 import { Brand } from '@/components/Brand';
+import { ClassementGeneral } from '@/components/ClassementGeneral';
+import { MonExtrait } from '@/components/MonExtrait';
 import { DiffusionStage } from '@/components/DiffusionStage';
 import { Podium } from '@/components/Podium';
 import { OwnFate } from '@/components/Roulette';
@@ -280,7 +282,10 @@ export function PlayClient() {
         <Brand compact />
         <span className="grow">
           <span className="session-name ellipsis">{state.name}</span>
-          <span className="meta">{PHASE_LABELS[phase]}</span>
+          <span className="meta">
+            {PHASE_LABELS[phase]}
+            {state.manche.rounds > 1 ? ` • MANCHE ${state.manche.round}/${state.manche.rounds}` : ''}
+          </span>
         </span>
         {you?.spectator && <span className="pill"><Icon name="oeil" />SPECTATEUR</span>}
         {you && (
@@ -305,8 +310,17 @@ export function PlayClient() {
             pendant qu'on cree, pas passer comme un message. */}
         <OwnFate fate={you?.fate ?? null} />
 
+        {/* Rebuild The Track : l'extrait passe avant tout le reste pendant la
+            creation — c'est la consigne, et elle est differente pour chacun. */}
+        {you?.extrait && (phase === 'creation' || phase === 'upload') && (
+          <MonExtrait extrait={you.extrait} round={state.manche.round} rounds={state.manche.rounds} />
+        )}
+
         <section className={`card pad ${styles.stage}`}>{renderStage()}</section>
 
+        {/* En Rebuild, l'extrait EST la consigne : une carte « aucune consigne »
+            ou « aucun element » vide ne ferait que repousser l'essentiel. */}
+        {!(state.config.mode === 'rebuild' && !state.brief.trim()) && (
         <section className="card pad col">
           <h2 className="section-title">CONSIGNE</h2>
           <p className="brief">{state.brief}</p>
@@ -318,7 +332,9 @@ export function PlayClient() {
             <span>NOTE SUR {state.config.scale}</span>
           </div>
         </section>
+        )}
 
+        {!(state.config.mode === 'rebuild' && state.assets.length === 0) && (
         <section className="card pad col">
           <h2 className="section-title">ELEMENTS IMPOSES</h2>
           <AssetPack
@@ -327,6 +343,7 @@ export function PlayClient() {
             emptyLabel="Aucun element impose · la consigne seule fait foi"
           />
         </section>
+        )}
 
         <section className="card pad col">
           <h2 className="section-title">Dans l&apos;arene ({state.counts.participants})</h2>
@@ -429,7 +446,9 @@ export function PlayClient() {
             ) : (
               <>
                 <p className="muted">
-                  Lis la consigne, prepare ton materiel. L&apos;animateur lance le chrono quand tout le monde est la.
+                  {state!.config.mode === 'rebuild'
+                    ? 'Tu recevras ton extrait au lancement : son tempo, sa tonalite, et le fichier a reconstruire.'
+                    : 'Lis la consigne, prepare ton materiel. L’animateur lance le chrono quand tout le monde est la.'}
                 </p>
                 <p className="meta">
                   Tu auras {humanDuration(state!.config.durationMs)} pour creer.
@@ -499,6 +518,12 @@ export function PlayClient() {
               ? null
               : <p className="meta">L&apos;animateur devoile les places une par une.</p>}
             <Podium replay podium={state!.podium} meId={you?.id} ratings={ratings} />
+            {state!.general && (
+              <>
+                <h2>CLASSEMENT GENERAL</h2>
+                <ClassementGeneral general={state!.general} rounds={state!.manche.rounds} mineId={you?.id ?? null} />
+              </>
+            )}
             <ChaineLue chain={state!.chain} />
           </div>
         ) : null;
@@ -508,6 +533,9 @@ export function PlayClient() {
             <Icon name="depot" size="xl" className={styles.bigIcon} />
             <h2>SESSION TERMINEE</h2>
             <p className="muted">Session archivee. Merci d&apos;avoir joue.</p>
+            {state!.general && (
+              <ClassementGeneral general={state!.general} rounds={state!.manche.rounds} mineId={you?.id ?? null} />
+            )}
           </div>
         );
     }

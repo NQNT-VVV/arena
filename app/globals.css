@@ -66,9 +66,16 @@ body.reveal-on .grain { display: none; }
 /* --------------------------------------------------------------------------
    Grand ecran : lisible a cinq metres, 40 % de vide
    -------------------------------------------------------------------------- */
+/*
+ * L'en-tete de partie est fixe (`.head`, une ligne de meta et ses filets, pres
+ * de 42 px) : la scene doit lui reserver sa hauteur. Avec seulement
+ * `--sp-8` en haut, le titre de la session passait dessous, rogne de quelques
+ * pixels — et davantage des que l'en-tete passe sur deux lignes, sur une
+ * source OBS plus etroite.
+ */
 .screen-stage {
   min-height: 100dvh; display: grid; align-content: space-between;
-  gap: var(--sp-12); padding: var(--sp-8) var(--margin) var(--sp-12); text-align: left;
+  gap: var(--sp-12); padding: calc(var(--sp-8) + var(--sp-12)) var(--margin) var(--sp-12); text-align: left;
 }
 .screen-stage .title { font: var(--t-h1); letter-spacing: var(--ls-display); }
 .screen-stage .join-code {
