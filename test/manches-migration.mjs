@@ -11,7 +11,7 @@
 
 import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
-import { mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 
 const require = createRequire(import.meta.url);
@@ -99,6 +99,15 @@ test('les cascades marchent toujours : supprimer une session emporte rendus et v
   assert.equal(compte('submission'), 0);
   assert.equal(compte('vote'), 0);
   assert.equal(compte('media_job'), 0);
+});
+
+test('la base a ete sauvegardee avant d\'etre migree, et la copie est intacte', () => {
+  const copies = readdirSync(DATA_DIR).filter((f) => f.startsWith('arena.db.avant-v11-'));
+  assert.equal(copies.length, 1, `copies trouvees : ${copies.join(', ') || 'aucune'}`);
+  const copie = new Database(join(DATA_DIR, copies[0]), { readonly: true });
+  assert.equal(copie.pragma('user_version', { simple: true }), 10, 'la copie n\'est pas celle d\'avant la migration');
+  assert.equal(copie.prepare('SELECT COUNT(*) AS n FROM vote').get().n, 4, 'la copie a perdu des votes');
+  copie.close();
 });
 
 test('les tables de Rebuild The Track existent', () => {

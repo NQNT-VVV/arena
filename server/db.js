@@ -459,6 +459,30 @@ const MIGRATIONS = [
 ];
 
 /**
+ * Une copie complete de la base avant toute migration d'une base existante.
+ *
+ * Certaines migrations reconstruisent une table entiere. Elles sont eprouvees,
+ * mais une base de production porte des soirees qu'on ne rejoue pas : si une
+ * migration tourne mal, il faut pouvoir revenir en arriere sans dependre de
+ * quelqu'un qui aurait pense a sauvegarder avant de deployer. Le serveur le
+ * fait donc lui-meme, a cote de la base, sur le meme volume.
+ *
+ * `VACUUM INTO` ecrit une copie coherente en une instruction, journal WAL
+ * compris, et doit tourner hors transaction — c'est-a-dire ici. Une base neuve
+ * (version 0) n'a rien a perdre et n'est pas copiee.
+ *
+ * Si la copie echoue — disque plein, droits —, on n'avance pas : migrer sans
+ * filet une base qui en demandait un est exactement ce qu'on veut eviter.
+ */
+function sauvegarderAvantMigration(version) {
+  if (version === 0) return;
+  const horodatage = new Date().toISOString().replace(/[:.]/g, '-');
+  const cible = `${config.dbPath}.avant-v${version + 1}-${horodatage}`;
+  db.exec(`VACUUM INTO '${cible.replace(/'/g, "''")}'`);
+  console.log(`[arena] base sauvegardee avant migration : ${cible}`);
+}
+
+/**
  * Les migrations tournent cles etrangeres coupees.
  *
  * Reconstruire une table referencee — `submission`, par `vote` et `media_job` —
@@ -471,6 +495,7 @@ const MIGRATIONS = [
 function migrer() {
   const appliquee = db.pragma('user_version', { simple: true });
   if (appliquee >= MIGRATIONS.length) return;
+  sauvegarderAvantMigration(appliquee);
   db.pragma('foreign_keys = OFF');
   try {
     for (let v = appliquee; v < MIGRATIONS.length; v++) {
