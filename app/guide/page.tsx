@@ -2,36 +2,88 @@
  * Le guide de l'animateur.
  *
  * Une page statique, sans socket ni compte : on la lit avant la soiree, on la
- * garde ouverte dans un onglet pendant. Elle suit l'ordre d'une soiree plutot
- * que l'ordre des boutons — personne ne cherche « la carte Inviter », on
- * cherche « comment je fais venir les gens ».
+ * garde ouverte dans un onglet pendant. Elle montre ou cliquer plutot qu'elle
+ * n'explique : une etape par geste, deux ou trois lignes, une capture ou le
+ * bouton a cliquer est entoure. Les cas particuliers sont replies.
  *
- * Les captures viennent d'une vraie partie de banc ; quand l'interface change,
- * elles se refont avec `~/.chrome-deps/capture-stockage.mjs`.
+ * Le choix du mode, en haut, masque ce qui ne concerne pas l'autre mode. Il
+ * tient sans JavaScript : deux boutons radio et `:has()` dans la feuille de
+ * style. Les etapes se numerotent par compteur CSS, pour que la numerotation
+ * suive ce qui est affiche.
+ *
+ * Les captures viennent d'une vraie partie de banc, a l'echelle 2 ; quand
+ * l'interface change, elles se refont avec `~/.chrome-deps/capture-guide.mjs`.
  */
 
 import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
 
 import { Brand } from '@/components/Brand';
 import styles from './guide.module.css';
 
 export const metadata: Metadata = {
   title: 'Guide de l’animateur — Arena',
-  description: 'Faire tourner une soiree Arena du debut a la fin : Beat Battle, Rebuild The Track, plusieurs manches.',
+  description: 'Animer une soiree Arena, bouton par bouton : Beat Battle, Rebuild The Track, plusieurs manches.',
 };
 
-function Image({ src, alt, legende, etroite = false }: { src: string; alt: string; legende: string; etroite?: boolean }) {
+/** Un libelle de bouton de la regie, tel qu'il apparait a l'ecran. */
+function B({ children, plein = false }: { children: ReactNode; plein?: boolean }) {
+  return <span className={`${styles.bouton} ${plein ? styles.plein : ''}`}>{children}</span>;
+}
+
+/** Le numero rouge qui renvoie a la capture. */
+function N({ children }: { children: ReactNode }) {
+  return <span className={styles.num}>{children}</span>;
+}
+
+function Capture({ nom, alt, l, h, legende, telephone = false, className = '' }: {
+  nom: string; alt: string; l: number; h: number; legende?: string; telephone?: boolean; className?: string;
+}) {
+  const src = `/guide/${nom}.webp`;
   return (
-    <figure className={`${styles.figure} ${etroite ? styles.etroite : ''}`}>
-      {/* La colonne est etroite : un clic ouvre la capture en taille reelle. */}
+    <figure className={`${styles.figure} ${telephone ? styles.telephone : ''} ${className}`}>
+      {/* Un clic ouvre la capture en taille reelle. */}
       <a href={src} target="_blank" rel="noreferrer">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt={alt} loading="lazy" />
+        <img src={src} alt={alt} width={l} height={h} loading="lazy" />
       </a>
-      <figcaption>{legende}</figcaption>
+      {legende && <figcaption>{legende}</figcaption>}
     </figure>
   );
 }
+
+function Etape({ titre, captures, large = false, className = '', children }: {
+  titre: string; captures?: ReactNode; large?: boolean; className?: string; children: ReactNode;
+}) {
+  return (
+    <article className={`${styles.etape} ${large ? styles.large : ''} ${className}`}>
+      <div className={styles.texte}>
+        <h3 className={styles.titreEtape}><span className={styles.numero} />{titre}</h3>
+        {children}
+      </div>
+      {captures && <div className={styles.captures}>{captures}</div>}
+    </article>
+  );
+}
+
+function Plus({ question, children, className = '' }: { question: string; children: ReactNode; className?: string }) {
+  return (
+    <details className={`${styles.plus} ${className}`}>
+      <summary>{question}</summary>
+      <div className={styles.reponse}>{children}</div>
+    </details>
+  );
+}
+
+const FLUX: Array<{ bouton: string; quand: string; plusieurs?: boolean }> = [
+  { bouton: 'Ouvrir le lobby', quand: 'les joueurs entrent' },
+  { bouton: '▶ Lancer la manche 1', quand: 'le chrono part' },
+  { bouton: 'Clore la creation', quand: 'le chrono est fini' },
+  { bouton: 'Lancer la diffusion', quand: 'on ecoute, on note' },
+  { bouton: 'Afficher les resultats', quand: 'apres le dernier rendu' },
+  { bouton: 'Devoiler la place suivante', quand: 'du dernier au premier' },
+  { bouton: 'Lancer la manche 2', quand: 's’il reste des manches', plusieurs: true },
+];
 
 export default function GuidePage() {
   return (
@@ -44,269 +96,298 @@ export default function GuidePage() {
         <a className="btn sm" href="/host">Ouvrir la regie</a>
       </header>
 
-      <main className={`shell narrow ${styles.guide}`}>
+      <main className={`shell ${styles.guide}`}>
         <header className={styles.intro}>
-          <h1>GUIDE DE L&apos;ANIMATEUR</h1>
+          <h1>ANIMER UNE SOIREE ARENA</h1>
           <p className={styles.chapeau}>
-            Arena fait tourner une battle de creation : chacun cree pendant un temps donne, puis tout le monde
-            ecoute, note, et le classement se devoile place par place. Ce guide te prend du debut a la fin d&apos;une
-            soiree. Cinq minutes de lecture.
+            Tu pilotes tout depuis la regie, sur ton ordinateur. Les joueurs n&apos;ont besoin que de leur telephone.
+            Voici ou cliquer, dans l&apos;ordre.
           </p>
+          <fieldset className={styles.choix}>
+            <legend>TA SOIREE</legend>
+            <label>
+              <input type="radio" name="mode" className={styles.choixRebuild} defaultChecked />
+              <span>REBUILD THE TRACK</span>
+            </label>
+            <label>
+              <input type="radio" name="mode" className={styles.choixBattle} />
+              <span>BEAT BATTLE</span>
+            </label>
+          </fieldset>
+          <p className={`${styles.modeAide} ${styles.rebuild}`}>Chacun recoit un extrait different et le reconstruit.</p>
+          <p className={`${styles.modeAide} ${styles.battle}`}>Tout le monde cree sur la meme consigne.</p>
         </header>
 
-        <section className={styles.bref} aria-label="En bref">
-          <h2 className="section-title">EN BREF</h2>
-          <ol>
-            <li>Ouvre la <b>regie</b> et cree la session : nom, mode, nombre de manches, duree.</li>
-            <li>En Rebuild The Track, <b>depose tes extraits</b> et verifie leur tempo et leur tonalite.</li>
-            <li><b>Ouvre le lobby</b> et envoie le lien. Les gens rejoignent depuis leur telephone.</li>
-            <li><b>Lance la manche</b> : le chrono part, chacun cree.</li>
-            <li><b>Lance la diffusion</b> : tout le monde ecoute et note.</li>
-            <li><b>Devoile le classement</b>, puis lance la manche suivante — ou termine.</li>
-          </ol>
-          <p className={styles.note}>
-            Tant que rien n&apos;a commence, tout se modifie. En haut de la regie, la carte « Avant le depart » te dit
-            a chaque instant ce qu&apos;il reste a faire.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="section-title"><span className="idx">0x01</span>LES DEUX MODES</h2>
-          <div className={styles.deux}>
-            <div className={styles.mode}>
-              <h3>BEAT BATTLE</h3>
-              <p>
-                Tout le monde cree sur la <b>meme consigne</b>, avec le meme pack d&apos;elements si tu en deposes
-                (samples, images…). C&apos;est le mode classique.
-              </p>
-            </div>
-            <div className={styles.mode}>
-              <h3>REBUILD THE TRACK</h3>
-              <p>
-                Tu deposes des extraits de morceaux. A chaque manche, <b>chacun en recoit un different</b>, avec son
-                tempo (BPM) et sa tonalite, et doit le reconstruire. A l&apos;ecoute, l&apos;ecran rappelle quel
-                extrait chaque remake reconstruit.
-              </p>
-            </div>
-          </div>
+        <section className={styles.antiseche} aria-labelledby="antiseche">
+          <h2 id="antiseche" className="section-title">LA SOIREE EN UN COUP D&apos;OEIL</h2>
           <p>
-            Les deux modes se jouent en <b>une ou plusieurs manches</b> (jusqu&apos;a dix). Plusieurs manches, c&apos;est
-            le meme code, la meme page pour les joueurs et le meme ecran dans OBS du debut a la fin : personne n&apos;a a
-            rejoindre de nouveau.
+            Tout se passe dans le <b>cadre du chrono</b>, en haut a gauche de la regie. Le bouton plein, c&apos;est
+            presque toujours l&apos;etape suivante.
           </p>
-        </section>
-
-        <section>
-          <h2 className="section-title"><span className="idx">0x02</span>AVANT LA SOIREE</h2>
-          <ol className={styles.etapes}>
-            <li>
-              <b>Ouvre la regie</b> (<code>/host</code>) et remplis le formulaire. Seuls six reglages sont visibles ;
-              le reste est range dans « Reglages avances » et ses valeurs par defaut conviennent a la plupart des
-              soirees.
-            </li>
-            <li>
-              <b>Rebuild The Track : depose les extraits</b> dans la carte « Extraits a reconstruire ». Wav, mp3 ou flac,
-              plusieurs d&apos;un coup. Arena calcule le tempo et la tonalite de chacun en quelques secondes.
-            </li>
-            <li>
-              <b>Verifie le tempo et la tonalite.</b> Le calcul est bon la plupart du temps, mais il se trompe de deux
-              facons connues :
-              <ul>
-                <li>
-                  le tempo affiche est <b>le double ou la moitie</b> du vrai (174 au lieu de 87) : un clic sur
-                  <b> ×2</b> ou <b>/2</b> corrige ;
-                </li>
-                <li>
-                  la tonalite est sa <b>« relative »</b> (do majeur au lieu de la mineur — ce sont les memes notes) :
-                  tape la bonne, par exemple <code>C#m</code>, <code>F#</code>, <code>Bb</code> ou <code>A minor</code>.
-                </li>
-              </ul>
-              Ce que tu tapes est marque <b>MANUEL</b> et ne sera plus jamais modifie par le calcul.
-            </li>
-            <li>
-              <b>Prevois assez d&apos;extraits</b> : idealement un par createur et par manche. Avec 8 createurs et 3
-              manches, 24 extraits garantissent que personne ne partage ni ne refait un extrait. Avec moins, ca marche
-              quand meme : certains auront le meme.
-            </li>
-            <li>
-              <b>Prepare l&apos;ecran.</b> Le bouton « Ouvrir l&apos;ecran de projection » donne l&apos;adresse a coller dans
-              OBS (source navigateur, 1920 × 1080). Cet ecran ne montre jamais qui a fait quoi avant le classement.
-            </li>
+          <ol className={styles.flux}>
+            {FLUX.map((f) => (
+              <li key={f.bouton} className={f.plusieurs ? styles.plusieurs : undefined}>
+                <B plein>{f.bouton}</B>
+                <span className={styles.quand}>{f.quand}</span>
+              </li>
+            ))}
           </ol>
-          <Image
-            src="/guide/regie-depart.webp"
-            alt="La carte Avant le depart : les etapes, celle a faire en surbrillance"
-            legende="En haut de la regie : ce qui est fait, ce qu'il reste a faire, et l'etape en cours en surbrillance."
-          />
-          <Image
-            src="/guide/regie-extraits.webp"
-            alt="Les extraits deposes : tempo, tonalite, boutons ×2 et /2, attributions"
-            legende="Les extraits deposes. AUTO : calcule par Arena ; MANUEL : corrige par toi, plus jamais recalcule."
-          />
+          <nav className={styles.sommaire} aria-label="Dans ce guide">
+            <a href="#avant">Avant la soiree</a>
+            <a href="#pendant">Pendant chaque manche</a>
+            <a href="#fin">A la fin</a>
+            <a href="#problemes">Ca coince ?</a>
+          </nav>
         </section>
 
-        <section>
-          <h2 className="section-title"><span className="idx">0x03</span>FAIRE VENIR LES GENS</h2>
-          <ol className={styles.etapes}>
-            <li><b>Ouvre le lobby</b> (bouton dans le cadre du chrono). La session devient rejoignable.</li>
-            <li>
-              Envoie le lien <b>« pour creer »</b>, ou montre le QR code a l&apos;ecran. Chacun choisit un pseudo sur son
+        <section className={styles.groupe} aria-labelledby="avant">
+          <header className={styles.groupeTete}>
+            <h2 id="avant" className="section-title">AVANT LA SOIREE</h2>
+            <p>Dix minutes, la veille ou juste avant.</p>
+          </header>
+
+          <Etape
+            titre="Cree la session"
+            captures={(
+              <>
+                <Capture nom="creer" l={629} h={400} className={styles.rebuild} alt="Le formulaire de creation en Rebuild The Track : le mode et le nombre de manches entoures" />
+                <Capture nom="creer-battle" l={629} h={400} className={styles.battle} alt="Le formulaire de creation en Beat Battle : le mode et le nombre de manches entoures" />
+              </>
+            )}
+          >
+            <p>
+              Ouvre la <a href="/host">regie</a>. Donne un nom, choisis le mode <N>1</N>, le nombre de manches et
+              leur duree <N>2</N>. Termine par <B plein>Creer la session</B>, tout en bas.
+            </p>
+            <p className={styles.battle}>Ecris aussi la consigne : elle s&apos;affiche sur tous les telephones.</p>
+            <p className={styles.discret}>Le reste est range dans « Reglages avances » : pas besoin d&apos;y toucher.</p>
+          </Etape>
+
+          <Etape
+            titre="Depose les extraits"
+            className={styles.rebuild}
+            large
+            captures={<Capture nom="extraits" l={1089} h={560} alt="La carte des extraits : le bouton pour deposer et les champs tempo et tonalite entoures" />}
+          >
+            <p>
+              Glisse tes morceaux dans la carte « Extraits a reconstruire » <N>1</N> : wav, mp3 ou flac, plusieurs
+              d&apos;un coup. Arena trouve tout seul le tempo et la tonalite <N>2</N>.
+            </p>
+            <p>
+              Compte un extrait par createur et par manche : 8 createurs et 3 manches, 24 extraits. Avec moins, certains
+              auront le meme.
+            </p>
+            <Plus question="Le tempo ou la tonalite est faux ?">
+              <p>
+                Tempo double ou moitie du vrai (174 au lieu de 87) : clique <B>×2</B> ou <B>/2</B>. Tonalite fausse :
+                tape la bonne, par exemple <code>Am</code>, <code>C#m</code>, <code>F#</code> ou <code>Bb</code>.
+                Ce que tu corriges n&apos;est plus jamais recalcule.
+              </p>
+            </Plus>
+          </Etape>
+
+          <Etape
+            titre="Ouvre le lobby"
+            captures={<Capture nom="ouvrir-lobby" l={662} h={386} alt="Le cadre du chrono avec le bouton Ouvrir le lobby entoure" />}
+          >
+            <p>Clique <B plein>Ouvrir le lobby</B> dans le cadre du chrono. Les joueurs peuvent maintenant entrer.</p>
+          </Etape>
+
+          <Etape
+            titre="Fais venir les joueurs"
+            captures={<Capture nom="inviter" l={436} h={736} alt="La carte Inviter : le lien pour creer et le bouton de l'ecran de projection entoures" />}
+          >
+            <p>
+              Envoie le lien « pour creer » <N>1</N> sur Discord, ou montre le QR code. Chacun choisit un pseudo sur son
               telephone.
-            </li>
-            <li>
-              Le lien <b>« pour juger sans creer »</b> est pour les <b>spectateurs</b> : ils notent comme les autres, mais
-              ne deposent rien et ne peuvent pas gagner. A envoyer avant le debut de l&apos;ecoute — apres, on ne rejoint
-              plus.
-            </li>
-          </ol>
-          <p className={styles.note}>
-            Quelqu&apos;un arrive en retard, pendant la creation ? Il peut encore entrer. En Rebuild, il recoit
-            automatiquement un extrait, sans que celui des autres change.
-          </p>
+            </p>
+            <p>
+              Pour le stream, <B>Ouvrir l&apos;ecran de projection</B> <N>2</N> donne l&apos;adresse a coller dans OBS :
+              une source navigateur en 1920 × 1080.
+            </p>
+            <Plus question="Et ceux qui veulent juste noter ?">
+              <p>
+                Envoie-leur le lien « pour juger sans creer ». Ils notent comme tout le monde, mais ne deposent rien et
+                ne peuvent pas gagner. A envoyer avant l&apos;ecoute : apres, on n&apos;entre plus.
+              </p>
+            </Plus>
+          </Etape>
         </section>
 
-        <section>
-          <h2 className="section-title"><span className="idx">0x04</span>PENDANT UNE MANCHE</h2>
-          <ol className={styles.etapes}>
-            <li>
-              <b>Lance la manche.</b> Le chrono part pour tout le monde. En Rebuild, chacun voit aussitot son extrait sur
-              son telephone : le tempo, la tonalite, l&apos;ecoute et le fichier a telecharger.
-            </li>
-            <li>
-              <b>Le chrono t&apos;appartient</b> : +1, +5, +15 minutes, −5, pause. Tout le monde le voit bouger en
-              meme temps.
-            </li>
-            <li>
-              <b>Changer l&apos;extrait de quelqu&apos;un</b> (il le connait par coeur, le fichier est abime) : dans
-              « Qui reconstruit quoi », choisis-en un autre dans la liste. Son telephone se met a jour.
-            </li>
-            <li>
-              Les createurs <b>deposent quand ils veulent</b> et peuvent remplacer leur depot. Le compteur « rendus » te
-              dit qui a fini.
-            </li>
-            <li>
-              <b>Clore la creation</b> ouvre la fenetre de grace (deux minutes par defaut) pour les depots de derniere
-              minute. Ensuite : <b>Lancer la diffusion</b>.
-            </li>
-          </ol>
-          <Image
-            src="/guide/telephone-extrait.webp"
-            alt="Le telephone d'un createur : son extrait, son tempo et sa tonalite"
-            legende="Ce que voit un createur : son extrait en premier, le tempo et la tonalite en grand."
-            etroite
-          />
+        <section className={styles.groupe} aria-labelledby="pendant">
+          <header className={styles.groupeTete}>
+            <h2 id="pendant" className="section-title">PENDANT CHAQUE MANCHE</h2>
+            <p>Les memes gestes, a chaque manche.</p>
+          </header>
+
+          <Etape
+            titre="Lance la manche"
+            captures={(
+              <>
+                <Capture nom="lancer" l={662} h={404} alt="Le cadre du chrono avec le bouton Lancer la manche 1 entoure" />
+                <Capture
+                  nom="telephone-extrait" l={358} h={386} telephone className={styles.rebuild}
+                  alt="Le telephone d'un createur : son extrait, son tempo et sa tonalite"
+                  legende="Sur le telephone d'un createur."
+                />
+              </>
+            )}
+          >
+            <p>
+              Clique <B plein>▶ Lancer la manche 1</B>. Le chrono part pour tout le monde. S&apos;il n&apos;y a
+              qu&apos;une manche, le bouton s&apos;appelle <B plein>▶ Lancer la creation</B>.
+            </p>
+            <p className={styles.rebuild}>
+              Chaque createur recoit aussitot son extrait sur son telephone : le tempo, la tonalite, et le fichier a
+              telecharger.
+            </p>
+          </Etape>
+
+          <Etape
+            titre="Pendant que ca cree"
+            captures={<Capture nom="creation" l={662} h={363} alt="Le chrono en cours : le bouton plus cinq minutes et le bouton Clore la creation entoures" />}
+          >
+            <p>Le chrono est a toi : ajoute du temps <N>1</N> ou mets en pause. Tout le monde le voit bouger.</p>
+            <p>
+              A la fin, clique <B plein>Clore la creation</B> <N>2</N>. Les retardataires ont encore deux minutes pour
+              deposer.
+            </p>
+            <Plus question="Changer l'extrait de quelqu'un ?" className={styles.rebuild}>
+              <p>
+                Il le connait par coeur, ou le fichier est abime : dans « Qui reconstruit quoi », sous les extraits,
+                choisis-en un autre. Son telephone se met a jour tout seul.
+              </p>
+              <Capture nom="qui-quoi" l={1047} h={217} alt="La liste Qui reconstruit quoi, avec le choix de l'extrait d'un joueur entoure" />
+            </Plus>
+          </Etape>
+
+          <Etape
+            titre="Lance l'ecoute"
+            captures={<Capture nom="diffuser" l={662} h={368} alt="Le cadre du chrono avec le bouton Lancer la diffusion entoure" />}
+          >
+            <p>
+              Clique <B plein>Lancer la diffusion</B>. Si tout le monde a deja depose, inutile d&apos;attendre la fin des
+              deux minutes : la phrase au-dessus du bouton compte les rendus recus.
+            </p>
+          </Etape>
+
+          <Etape
+            titre="Laisse tourner l'ecoute"
+            captures={(
+              <>
+                <Capture nom="ecoute" l={662} h={449} alt="Les commandes de l'ecoute : l'enchainement automatique et le bouton Afficher les resultats entoures" />
+                <Capture
+                  nom="telephone-vote" l={390} h={640} telephone
+                  alt="Le telephone pendant l'ecoute : le rendu en cours, l'extrait d'origine et les notes de 1 a 5"
+                  legende="Sur les telephones : le rendu en cours et les notes."
+                />
+              </>
+            )}
+          >
+            <p>
+              Les rendus passent un par un, sans le nom de leur auteur. Chacun note sur son telephone.
+              <span className={styles.rebuild}> L&apos;ecran rappelle quel extrait chaque rendu reconstruit.</span>
+            </p>
+            <p>
+              Arena passe seul au rendu suivant <N>1</N>. Pour commenter entre deux rendus, coupe l&apos;enchainement :
+              tu avances alors avec <B>Suivant</B>.
+            </p>
+            <p>Apres le dernier rendu : <B plein>Afficher les resultats</B> <N>2</N>.</p>
+          </Etape>
+
+          <Etape
+            titre="Devoile le classement"
+            captures={<Capture nom="devoiler" l={662} h={557} alt="Les resultats : le bouton Devoiler la place suivante entoure" />}
+          >
+            <p>
+              Clique <B plein>Devoiler la place suivante</B> une fois par joueur : du dernier au premier, c&apos;est la que
+              se fait le suspense. Pour aller vite : <B>Tout devoiler</B>.
+            </p>
+            <p>Avec plusieurs manches, le classement general s&apos;affiche a cote, une fois tout devoile.</p>
+          </Etape>
+
+          <Etape
+            titre="Passe a la manche suivante"
+            captures={<Capture nom="manche-suivante" l={662} h={574} alt="Apres le classement : la duree de la manche suivante et le bouton Lancer la manche 2 entoures" />}
+          >
+            <p>
+              Regle la duree de la prochaine manche <N>1</N>, puis <B plein>Lancer la manche 2</B> <N>2</N>. Les joueurs,
+              le code et l&apos;ecran restent ; rendus, votes et chrono repartent de zero.
+            </p>
+            <p className={styles.rebuild}>Chacun recoit un nouvel extrait, jamais un qu&apos;il a deja reconstruit.</p>
+            <p className={styles.discret}>Le bouton attend que tout le classement soit devoile.</p>
+          </Etape>
         </section>
 
-        <section>
-          <h2 className="section-title"><span className="idx">0x05</span>L&apos;ECOUTE ET LE VOTE</h2>
-          <ol className={styles.etapes}>
-            <li>
-              Chaque rendu passe a l&apos;ecran, <b>sans le nom de son auteur</b>. En Rebuild, l&apos;ecran indique quel
-              extrait il reconstruit — nom, tempo, tonalite — pour qu&apos;on juge le remake contre l&apos;original.
-            </li>
-            <li>Tout le monde note sur son telephone, sauf son propre rendu.</li>
-            <li>
-              Par defaut, Arena <b>enchaine seul</b> au rendu suivant apres l&apos;ecoute. Coupe l&apos;enchainement si tu
-              veux commenter : tu avances alors avec « Suivant ».
-            </li>
-          </ol>
+        <section className={styles.groupe} aria-labelledby="fin">
+          <header className={styles.groupeTete}>
+            <h2 id="fin" className="section-title">A LA FIN</h2>
+          </header>
+
+          <Etape
+            titre="Le classement final"
+            large
+            captures={(
+              <Capture
+                nom="ecran-final" l={1280} h={720}
+                alt="L'ecran de projection a la fin : la derniere manche a gauche, le classement general a droite"
+                legende="L'ecran a la fin : la derniere manche a gauche, le classement general a droite."
+              />
+            )}
+          >
+            <p>
+              Apres la derniere manche, l&apos;ecran affiche le <b>classement general</b> : la moyenne de toutes les
+              manches. Une manche sans rendu compte zero, sinon il suffirait de ne jouer que celle ou l&apos;on se sent
+              fort.
+            </p>
+            <p className={styles.exemple}>Ines : 3 a la manche 1, rien a la 2, 5 a la 3 → (3 + 0 + 5) / 3 = <b>2,67</b></p>
+            <p>
+              Dans la regie : les resultats en <B>CSV</B> ou <B>JSON</B>, et <B>Relancer</B>, sous « Nouvelle edition »,
+              pour rejouer avec les memes reglages et de nouveaux joueurs.
+            </p>
+          </Etape>
         </section>
 
-        <section>
-          <h2 className="section-title"><span className="idx">0x06</span>LE CLASSEMENT, ET LA MANCHE SUIVANTE</h2>
-          <ol className={styles.etapes}>
-            <li>
-              <b>Afficher les resultats</b>, puis <b>Devoiler la place suivante</b> : du dernier au premier, le suspense
-              est la. « Tout devoiler » va plus vite.
-            </li>
-            <li>
-              Avec plusieurs manches, le <b>classement general</b> apparait une fois tout devoile, a cote du classement
-              de la manche.
-            </li>
-            <li>
-              <b>Regle la duree de la manche suivante</b>, puis « Lancer la manche 2 ». Rendus, votes et chrono
-              repartent de zero ; les participants, le code et l&apos;ecran restent. En Rebuild, chacun recoit un nouvel
-              extrait — jamais celui qu&apos;il a deja reconstruit, s&apos;il en reste assez.
-            </li>
-          </ol>
-          <Image
-            src="/guide/regie-manche-suivante.webp"
-            alt="La regie apres le classement : la duree et le bouton de la manche suivante"
-            legende="Apres le classement : la duree de la manche suivante, et le bouton pour la lancer."
-          />
-        </section>
-
-        <section>
-          <h2 className="section-title"><span className="idx">0x07</span>LA FIN</h2>
-          <p>
-            Apres la derniere manche, l&apos;ecran affiche le <b>classement general final</b>. Depuis la regie, tu peux
-            exporter les resultats (CSV ou JSON), archiver la session, ou lancer une <b>nouvelle edition</b> : memes
-            reglages, memes extraits si tu veux, nouveaux participants.
-          </p>
-          <Image
-            src="/guide/ecran-final.webp"
-            alt="L'ecran de projection a la fin : classement de la derniere manche et classement general"
-            legende="L'ecran a la fin : la derniere manche a gauche, le classement general a droite."
-          />
-        </section>
-
-        <section>
-          <h2 className="section-title"><span className="idx">0x08</span>LE CLASSEMENT GENERAL, EXPLIQUE</h2>
-          <p>
-            C&apos;est la <b>moyenne des manches</b>. Une manche sans rendu compte <b>zero</b>.
-          </p>
-          <p className={styles.exemple}>
-            Ines : 3 a la manche 1, rien a la manche 2, 5 a la manche 3 → (3 + 0 + 5) / 3 = <b>2,67</b>.
-          </p>
-          <p>
-            Pourquoi zero ? Sinon il suffirait de ne jouer que la manche ou l&apos;on se sent fort pour finir devant
-            quelqu&apos;un qui a tout joue. Sur l&apos;ecran, une manche sans rendu est barree d&apos;une trame : personne
-            ne decouvre la regle au moment du verdict.
-          </p>
-          <p>
-            Un rendu depose en retard suit le reglage « depots hors delai » (refuse, hors classement — il compte alors
-            zero —, ou penalise). Un participant que tu ecartes disparait du classement.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="section-title"><span className="idx">0x09</span>QUESTIONS FREQUENTES</h2>
-          <dl className={styles.faq}>
-            <dt>Le tempo affiche est faux.</dt>
-            <dd>S&apos;il est le double ou la moitie du vrai, clique ×2 ou /2. Sinon, tape-le.</dd>
-
-            <dt>La tonalite est fausse.</dt>
-            <dd>
-              Le plus souvent, c&apos;est sa relative : do majeur au lieu de la mineur, et inversement. Tape la bonne :
-              <code>Am</code>, <code>C#m</code>, <code>F#</code>, <code>Bb</code>, <code>D minor</code>… Attention a la
-              casse : <code>Gm</code> est sol mineur.
-            </dd>
-
-            <dt>Il n&apos;y a pas assez d&apos;extraits pour tout le monde.</dt>
-            <dd>Ce n&apos;est pas bloquant : certains recevront le meme. La regie te previent. Tu peux en ajouter a tout moment, meme pendant une manche, pour la suivante.</dd>
-
-            <dt>Je veux retirer un extrait.</dt>
-            <dd>C&apos;est possible tant qu&apos;il n&apos;a jamais ete attribue. Apres, il reste : il fait partie de l&apos;histoire d&apos;une manche jouee.</dd>
-
-            <dt>Quelqu&apos;un n&apos;a rien rendu.</dt>
-            <dd>Il a zero pour cette manche et peut jouer les suivantes normalement.</dd>
-
-            <dt>Un spectateur veut entrer pendant l&apos;ecoute.</dt>
-            <dd>Ce n&apos;est plus possible : il n&apos;aurait juge que la moitie des rendus, et sa note par defaut fausserait les autres. Il entre avant le debut de la diffusion.</dd>
-
-            <dt>Le son passe deux fois.</dt>
-            <dd>La regie est muette par defaut. Si une enceinte ou le partage d&apos;ecran diffuse deja, coupe le son des telephones dans « Reglages avances ».</dd>
-
-            <dt>J&apos;ai ferme l&apos;onglet de la regie.</dt>
-            <dd>Rouvre <code>/host</code> dans le meme navigateur : la regie reprend la ou elle en etait. Elle est liee a ce navigateur — evite de changer d&apos;ordinateur en pleine soiree.</dd>
-
-            <dt>Le serveur a redemarre.</dt>
-            <dd>La session reprend toute seule, chrono compris. Le son peut se couper quelques secondes.</dd>
-          </dl>
+        <section className={styles.groupe} aria-labelledby="problemes">
+          <header className={styles.groupeTete}>
+            <h2 id="problemes" className="section-title">CA COINCE ?</h2>
+          </header>
+          <div className={styles.faq}>
+            <Plus question="Quelqu'un arrive en retard">
+              <p>
+                Pendant la creation, il peut encore entrer avec le lien.
+                <span className={styles.rebuild}> Il recoit un extrait, sans changer celui des autres.</span>
+              </p>
+            </Plus>
+            <Plus question="Il n'y a pas assez d'extraits" className={styles.rebuild}>
+              <p>Ce n&apos;est pas bloquant : certains auront le meme. Tu peux en ajouter a tout moment, meme pendant une manche, pour la suivante.</p>
+            </Plus>
+            <Plus question="Je veux retirer un extrait" className={styles.rebuild}>
+              <p>C&apos;est possible tant qu&apos;il n&apos;a jamais ete attribue. Apres, il fait partie d&apos;une manche jouee et reste.</p>
+            </Plus>
+            <Plus question="Quelqu'un n'a rien rendu">
+              <p>Il a zero pour cette manche et joue les suivantes normalement.</p>
+            </Plus>
+            <Plus question="Je veux sortir un joueur du classement">
+              <p>Dans la liste des participants de la regie, <B>Ecarter</B>. <B>Reintegrer</B> annule.</p>
+            </Plus>
+            <Plus question="Un spectateur veut entrer pendant l'ecoute">
+              <p>Ce n&apos;est plus possible : il n&apos;aurait note que la moitie des rendus. Il entre avant le debut de la diffusion.</p>
+            </Plus>
+            <Plus question="Le son passe deux fois">
+              <p>La regie est muette par defaut. Si l&apos;ecran partage deja le son, coupe celui des telephones dans « Reglages avances ».</p>
+            </Plus>
+            <Plus question="J'ai ferme l'onglet de la regie">
+              <p>Rouvre <a href="/host">la regie</a> dans le meme navigateur : tout reprend ou c&apos;en etait. Evite de changer d&apos;ordinateur en pleine soiree.</p>
+            </Plus>
+            <Plus question="Le serveur a redemarre">
+              <p>La session reprend toute seule, chrono compris. Le son peut se couper quelques secondes.</p>
+            </Plus>
+          </div>
         </section>
 
         <footer className={styles.pied}>
-          <a className="btn primary" href="/host">Ouvrir la regie</a>
+          <a className="btn primary lg" href="/host">Ouvrir la regie</a>
         </footer>
       </main>
     </>

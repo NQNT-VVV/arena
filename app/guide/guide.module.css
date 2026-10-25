@@ -1,49 +1,135 @@
 /*
- * Le guide de l'animateur : une page qu'on lit. Texte suivi en --t-read, des
- * etapes numerotees, des captures encadrees d'un filet. Rien ne bouge.
+ * Le guide de l'animateur : une page qu'on parcourt, pas un document qu'on lit.
+ * Une etape = un titre-verbe, deux ou trois lignes, une capture ou le bouton est
+ * entoure. Les libelles de boutons sont dessines comme dans la regie, pour qu'on
+ * les reconnaisse d'un coup d'oeil. Rien ne bouge.
  */
-.guide { gap: var(--sp-12); }
-/* La colonne est etroite : a 40 px, un titre comme « LE CLASSEMENT, ET LA
-   MANCHE SUIVANTE » prenait trois lignes. La taille du mobile tient partout. */
-.guide :global(.section-title) { font-size: clamp(var(--fs-2), 5.5vw, var(--fs-3)); }
-.guide section { display: grid; gap: var(--sp-4); }
-.guide p, .guide li, .guide dd { font: var(--t-read); letter-spacing: var(--ls-prose); color: var(--ink-90); text-transform: none; }
+.guide { gap: var(--sp-16); counter-reset: etape; }
 .guide b { color: var(--ink); font-weight: 400; background-image: var(--rule); background-size: 4px 4px; background-position: bottom; background-repeat: repeat-x; }
-.guide code { font: var(--t-ui); letter-spacing: 0; text-transform: none; border: var(--border); padding: 0 var(--sp-1); }
+.guide code { font: var(--t-ui); font-size: .9em; letter-spacing: 0; text-transform: none; border: var(--border); padding: 0 var(--sp-1); }
+.guide [id] { scroll-margin-top: 96px; }
 
-.intro { display: grid; gap: var(--sp-3); }
-.chapeau { font: var(--t-read); letter-spacing: var(--ls-prose); color: var(--ink-60); max-width: 62ch; }
+/* Le choix du mode masque ce qui concerne l'autre. Sans :has(), tout reste
+   affiche : la page est plus longue, jamais fausse. */
+.guide:has(.choixBattle:checked) .rebuild { display: none !important; }
+.guide:has(.choixRebuild:checked) .battle { display: none !important; }
 
-/* En bref : la seule partie qu'on relit pendant la soiree. */
-.bref { border: var(--border-strong); padding: var(--sp-4) var(--sp-6); }
-.bref ol { margin: 0; padding-left: var(--sp-6); display: grid; gap: var(--sp-2); }
+/* --- En-tete --- */
+.intro { display: grid; gap: var(--sp-4); }
+.chapeau { font: var(--t-read); letter-spacing: var(--ls-prose); color: var(--ink-90); max-width: 58ch; margin: 0; }
 
-.etapes { margin: 0; padding-left: var(--sp-6); display: grid; gap: var(--sp-3); }
-.etapes ul { margin: var(--sp-2) 0; padding-left: var(--sp-6); display: grid; gap: var(--sp-2); }
-.etapes li::marker { font: var(--t-meta); color: var(--ink-60); }
+.choix { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; }
+.choix legend { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); padding: 0; margin-bottom: var(--sp-2); }
+.choix label { position: relative; cursor: pointer; }
+.choix input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+.choix span {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--sp-4);
+  border: var(--border-ui); font: var(--t-ui); font-size: 15px; letter-spacing: var(--ls-mono); color: var(--ink-60);
+  transition: background var(--tap), color var(--tap);
+}
+.choix label + label span { border-left: 0; }
+.choix label:hover span { color: var(--ink); background: var(--ink-12); }
+.choix input:checked + span { background: var(--ink); color: var(--bg); }
+.choix input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.modeAide { font: var(--t-prose); letter-spacing: var(--ls-prose); color: var(--ink-60); margin: 0; }
 
-.note { border-left: 2px solid var(--ink-35); padding-left: var(--sp-4); color: var(--ink-60) !important; }
-.exemple { border: var(--border); padding: var(--sp-3) var(--sp-4); font-variant-numeric: tabular-nums; }
+/* --- Antiseche : les boutons de la soiree, dans l'ordre --- */
+.antiseche { border: var(--border-strong); padding: var(--sp-6); display: grid; gap: var(--sp-4); }
+.antiseche > p { font: var(--t-read); letter-spacing: var(--ls-prose); color: var(--ink-90); margin: 0; max-width: 70ch; }
+/* Une liste a cocher en deux colonnes, lue de haut en bas : numero, bouton,
+   moment. En tuiles de 150 px, les libelles cassaient sur trois lignes et le
+   septieme restait seul sur la sienne. */
+.flux {
+  list-style: none; margin: 0; padding: 0; counter-reset: flux;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(4, auto); grid-auto-flow: column;
+  gap: var(--sp-3) var(--sp-8);
+}
+.flux li { counter-increment: flux; display: grid; grid-template-columns: 2.5em minmax(0, 18em) minmax(0, 1fr); align-items: center; gap: var(--sp-3); }
+.flux li::before { content: counter(flux, decimal-leading-zero); font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); }
+.flux .bouton { display: block; font: var(--t-ui); font-size: 14px; letter-spacing: var(--ls-mono); padding: var(--sp-2) var(--sp-3); }
+.quand { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); }
+/* La manche suivante n'existe que s'il en reste : bouton en pointilles. */
+.plusieurs .bouton { background: transparent; color: var(--ink); border-style: dashed; }
 
-.deux { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--sp-4); }
-.mode { border: var(--border); padding: var(--sp-4); display: grid; gap: var(--sp-2); align-content: start; }
-.mode h3 { font: var(--t-ui); letter-spacing: var(--ls-mono); margin: 0; }
+.sommaire { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-6); border-top: var(--border); padding-top: var(--sp-4); }
+.sommaire a { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); text-transform: uppercase; text-decoration: none; }
+.sommaire a:hover, .sommaire a:focus-visible { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
 
-.figure { margin: 0; display: grid; gap: var(--sp-2); }
+/* --- Groupes et etapes --- */
+.groupe { display: grid; gap: var(--sp-8); }
+.groupeTete { display: grid; gap: var(--sp-2); }
+.groupeTete p { font: var(--t-prose); letter-spacing: var(--ls-prose); color: var(--ink-60); margin: 0; }
+
+.etape {
+  counter-increment: etape;
+  display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: var(--sp-8); align-items: start;
+  padding-top: var(--sp-8); border-top: var(--border);
+}
+/* Capture large : sous le texte, sur toute la largeur. */
+.large { grid-template-columns: minmax(0, 1fr); gap: var(--sp-4); }
+.large .texte { max-width: 72ch; }
+
+.texte { display: grid; gap: var(--sp-3); align-content: start; }
+.texte > p, .reponse > p { font: var(--t-read); letter-spacing: var(--ls-prose); color: var(--ink-90); margin: 0; text-transform: none; }
+.texte .discret { font: var(--t-prose); letter-spacing: var(--ls-prose); color: var(--ink-60); }
+.titreEtape { font: var(--t-h2); letter-spacing: var(--ls-display); text-transform: uppercase; margin: 0; display: flex; align-items: center; gap: var(--sp-3); }
+.numero { flex: none; font: var(--t-meta); letter-spacing: var(--ls-mono); background: var(--ink); color: var(--bg); padding: 0 var(--sp-1); }
+.numero::before { content: counter(etape, decimal-leading-zero); }
+
+.captures { display: flex; flex-wrap: wrap; gap: var(--sp-4); align-items: flex-start; }
+.figure { margin: 0; display: grid; gap: var(--sp-2); max-width: 100%; }
 .figure a { display: block; cursor: zoom-in; }
-.figure img { width: 100%; height: auto; display: block; border: var(--border); }
+.figure img { display: block; max-width: 100%; height: auto; border: var(--border); }
 .figure a:hover img, .figure a:focus-visible img { border: var(--border-strong); }
-.figure figcaption { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); }
-.etroite { max-width: 360px; }
+.figure figcaption { font: var(--t-prose); letter-spacing: var(--ls-prose); color: var(--ink-60); }
+.telephone { max-width: 260px; }
 
-.faq { margin: 0; display: grid; gap: 0; border: var(--border); }
-.faq dt { font: var(--t-ui); letter-spacing: var(--ls-mono); padding: var(--sp-3) var(--sp-4) var(--sp-1); border-top: var(--border); }
-.faq dt:first-child { border-top: 0; }
-.faq dd { margin: 0; padding: 0 var(--sp-4) var(--sp-3); color: var(--ink-60) !important; }
+/* Un bouton de la regie, dans le texte : meme casse, meme filet. */
+.bouton {
+  display: inline; font-family: var(--font-mono); font-size: .8em; line-height: 1.9; letter-spacing: var(--ls-mono);
+  text-transform: uppercase; color: var(--ink); border: var(--border-strong); padding: .1em .5em;
+  white-space: nowrap; -webkit-box-decoration-break: clone; box-decoration-break: clone;
+}
+.plein { background: var(--ink); color: var(--bg); }
+
+/* Le numero rouge des captures. */
+.num {
+  display: inline-block; min-width: 1.5em; padding: 0 .3em; text-align: center;
+  font-family: var(--font-mono); font-size: .75em; font-weight: 700; line-height: 1.5;
+  background: var(--accent); color: var(--bg); vertical-align: .12em;
+}
+
+/* --- Replis : questions, cas particuliers --- */
+.plus { border: var(--border); }
+.plus summary {
+  cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: var(--sp-3);
+  min-height: 44px; padding: var(--sp-2) var(--sp-4); font: var(--t-ui); font-size: 15px; letter-spacing: var(--ls-prose); color: var(--ink);
+}
+.plus summary::-webkit-details-marker { display: none; }
+.plus summary::after { content: '+'; font: var(--t-ui); color: var(--ink-60); flex: none; }
+.plus[open] summary::after { content: '−'; }
+.plus summary:hover { background: var(--ink-06); }
+.plus summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.reponse { padding: 0 var(--sp-4) var(--sp-4); display: grid; gap: var(--sp-3); }
+.reponse > p { font: var(--t-prose); font-size: 15px; color: var(--ink-90); }
+
+.faq { display: grid; max-width: 820px; }
+.faq .plus + .plus { border-top: 0; }
+
+.exemple { border: var(--border); padding: var(--sp-3) var(--sp-4); font-variant-numeric: tabular-nums; }
 
 .pied { display: flex; justify-content: center; padding-bottom: var(--sp-12); }
 
-@media (max-width: 640px) {
-  .deux { grid-template-columns: minmax(0, 1fr); }
-  .bref { padding: var(--sp-3) var(--sp-4); }
+@media (max-width: 800px) {
+  .guide { gap: var(--sp-12); }
+  .etape { grid-template-columns: minmax(0, 1fr); gap: var(--sp-4); padding-top: var(--sp-6); }
+  .antiseche { padding: var(--sp-4); }
+  .flux { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-auto-flow: row; gap: var(--sp-3); }
+  .flux li { grid-template-columns: 2em minmax(0, 1fr); row-gap: var(--sp-1); }
+  .flux .quand { grid-column: 2; }
+  .telephone { max-width: 220px; }
+}
+/* Sur un telephone, un long libelle peut depasser la colonne : il passe a la ligne. */
+@media (max-width: 480px) {
+  .bouton { white-space: normal; }
 }
