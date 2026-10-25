@@ -28,3 +28,15 @@
 
 /* Les deux invitations : creer, ou seulement juger. */
 .linkBlock { display: grid; gap: var(--sp-2); }
+
+/*
+ * Reglages avances : fermes par defaut. Le signe dit l'etat — « + » ferme,
+ * « − » ouvert — sans fleche dessinee ni animation.
+ */
+.avance { border: var(--border); padding: var(--sp-3) var(--sp-4); }
+.avance summary { cursor: pointer; list-style: none; font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); min-height: 44px; display: flex; align-items: center; }
+.avance summary::-webkit-details-marker { display: none; }
+.avance summary::before { content: '+'; display: inline-block; width: 2ch; color: var(--ink); }
+.avance[open] summary::before { content: '\2212'; }
+.avance summary:hover { color: var(--ink); }
+.avanceCorps { display: grid; gap: var(--sp-4); padding-top: var(--sp-3); }

@@ -1,0 +1,49 @@
+/*
+ * Le guide de l'animateur : une page qu'on lit. Texte suivi en --t-read, des
+ * etapes numerotees, des captures encadrees d'un filet. Rien ne bouge.
+ */
+.guide { gap: var(--sp-12); }
+/* La colonne est etroite : a 40 px, un titre comme « LE CLASSEMENT, ET LA
+   MANCHE SUIVANTE » prenait trois lignes. La taille du mobile tient partout. */
+.guide :global(.section-title) { font-size: clamp(var(--fs-2), 5.5vw, var(--fs-3)); }
+.guide section { display: grid; gap: var(--sp-4); }
+.guide p, .guide li, .guide dd { font: var(--t-read); letter-spacing: var(--ls-prose); color: var(--ink-90); text-transform: none; }
+.guide b { color: var(--ink); font-weight: 400; background-image: var(--rule); background-size: 4px 4px; background-position: bottom; background-repeat: repeat-x; }
+.guide code { font: var(--t-ui); letter-spacing: 0; text-transform: none; border: var(--border); padding: 0 var(--sp-1); }
+
+.intro { display: grid; gap: var(--sp-3); }
+.chapeau { font: var(--t-read); letter-spacing: var(--ls-prose); color: var(--ink-60); max-width: 62ch; }
+
+/* En bref : la seule partie qu'on relit pendant la soiree. */
+.bref { border: var(--border-strong); padding: var(--sp-4) var(--sp-6); }
+.bref ol { margin: 0; padding-left: var(--sp-6); display: grid; gap: var(--sp-2); }
+
+.etapes { margin: 0; padding-left: var(--sp-6); display: grid; gap: var(--sp-3); }
+.etapes ul { margin: var(--sp-2) 0; padding-left: var(--sp-6); display: grid; gap: var(--sp-2); }
+.etapes li::marker { font: var(--t-meta); color: var(--ink-60); }
+
+.note { border-left: 2px solid var(--ink-35); padding-left: var(--sp-4); color: var(--ink-60) !important; }
+.exemple { border: var(--border); padding: var(--sp-3) var(--sp-4); font-variant-numeric: tabular-nums; }
+
+.deux { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--sp-4); }
+.mode { border: var(--border); padding: var(--sp-4); display: grid; gap: var(--sp-2); align-content: start; }
+.mode h3 { font: var(--t-ui); letter-spacing: var(--ls-mono); margin: 0; }
+
+.figure { margin: 0; display: grid; gap: var(--sp-2); }
+.figure a { display: block; cursor: zoom-in; }
+.figure img { width: 100%; height: auto; display: block; border: var(--border); }
+.figure a:hover img, .figure a:focus-visible img { border: var(--border-strong); }
+.figure figcaption { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); }
+.etroite { max-width: 360px; }
+
+.faq { margin: 0; display: grid; gap: 0; border: var(--border); }
+.faq dt { font: var(--t-ui); letter-spacing: var(--ls-mono); padding: var(--sp-3) var(--sp-4) var(--sp-1); border-top: var(--border); }
+.faq dt:first-child { border-top: 0; }
+.faq dd { margin: 0; padding: 0 var(--sp-4) var(--sp-3); color: var(--ink-60) !important; }
+
+.pied { display: flex; justify-content: center; padding-bottom: var(--sp-12); }
+
+@media (max-width: 640px) {
+  .deux { grid-template-columns: minmax(0, 1fr); }
+  .bref { padding: var(--sp-3) var(--sp-4); }
+}

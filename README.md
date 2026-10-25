@@ -80,6 +80,10 @@ SESSION_SECRET=$(openssl rand -hex 32) docker compose up --build
 | `/screen` | le videoprojecteur | Code et QR, chrono geant, rendu en cours. Aucun controle |
 
 `/j/ABC123` est le lien court d'invitation ; il redirige vers `/play`.
+`/guide` est le guide de l'animateur : une soiree du debut a la fin, dans
+l'ordre ou on la vit, avec des captures. La regie y renvoie depuis sa barre du
+haut et depuis le formulaire de creation. Les captures (`public/guide/`) se
+refont sur une partie de banc quand l'interface change.
 
 Le grand ecran n'herite d'aucun privilege : il finit souvent en partage d'ecran
 Discord, parfois devant des gens qui ne participent pas.
@@ -558,6 +562,12 @@ kubectl apply -f deploy/arena.yaml
 Une seule instance, `strategy: Recreate`, volume persistant. Deux pods ecrivant
 la meme base SQLite se marcheraient dessus — c'est l'ecart assume avec Refrain,
 qui peut se permettre d'etre sans etat.
+
+Avant d'appliquer une migration, le serveur copie la base a cote d'elle
+(`VACUUM INTO`, fichier `arena.db.avant-vN-<horodatage>`) et l'annonce dans ses
+journaux. Revenir en arriere, c'est arreter le pod, remettre cette copie a la
+place de la base et redeployer l'image precedente. Les copies ne sont jamais
+effacees automatiquement : une par migration, sur le volume.
 
 Pour brancher Arena sur Podium, un second Secret, facultatif — le Deployment le
 lit en `optional: true` et demarre sans lui :
