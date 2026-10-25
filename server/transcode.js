@@ -444,4 +444,4 @@ function stop() {
   stopped = true;
 }
 
-module.exports = { enqueue, start, stop, removeRenditions, ffmpegAvailable, probe, peaks };
+module.exports = { enqueue, start, stop, removeRenditions, ffmpegAvailable, probe, peaks, run, pipeToFile };

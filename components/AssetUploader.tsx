@@ -11,6 +11,8 @@ import styles from './AssetUploader.module.css';
 interface Response {
   added?: number;
   assets?: Asset[];
+  /** Fichiers refuses un par un (un extrait qui n'est pas du son, par exemple). */
+  refused?: { filename: string; reason: string }[];
   error?: string;
 }
 
@@ -27,12 +29,21 @@ export function AssetUploader({
   disabled,
   hint,
   onDone,
+  endpoint,
+  accept,
+  noun = 'element',
 }: {
   code: string;
   token: string | null;
   disabled?: boolean;
   hint?: string;
   onDone?: (assets: Asset[]) => void;
+  /** Autre point de depot que le pack — les extraits de Rebuild The Track. */
+  endpoint?: string;
+  /** Filtre du selecteur de fichiers, par exemple `audio/*`. */
+  accept?: string;
+  /** Le mot des messages : « element », « extrait ». */
+  noun?: string;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const cancelRef = useRef<(() => void) | null>(null);
@@ -46,7 +57,7 @@ export function AssetUploader({
     if (!files.length || busy || disabled) return;
 
     setProgress(0);
-    const { promise, cancel } = uploadFiles<Response>(`/api/session/${code}/assets`, files, {
+    const { promise, cancel } = uploadFiles<Response>(endpoint ?? `/api/session/${code}/assets`, files, {
       headers: { 'X-Arena-Token': token ?? '' },
       onProgress: setProgress,
     });
@@ -62,7 +73,11 @@ export function AssetUploader({
       toast(body?.error || 'Le depot a echoue.', 'err');
       return;
     }
-    toast(`${body.added} element${(body.added ?? 0) > 1 ? 's' : ''} depose${(body.added ?? 0) > 1 ? 's' : ''}`, 'ok');
+    const n = body.added ?? 0;
+    if (n > 0) toast(`${n} ${noun}${n > 1 ? 's' : ''} depose${n > 1 ? 's' : ''}`, 'ok');
+    // Un refus fichier par fichier se dit, et nomme le fichier : sinon l'envoi
+    // parait reussi et l'extrait manque au moment de distribuer.
+    for (const r of body.refused ?? []) toast(`« ${r.filename} » refuse : ${r.reason}`, 'err');
     onDone?.(body.assets ?? []);
   };
 
@@ -78,6 +93,7 @@ export function AssetUploader({
         type="file"
         multiple
         className="sr-only"
+        accept={accept}
         disabled={disabled || busy}
         onChange={(e) => void send(e.target.files)}
       />

@@ -93,6 +93,12 @@ const config = {
     maxFileBytes: int('MAX_FILE_BYTES', 200 * 1024 * 1024),
     /** Poids cumule du pack d'assets impose. 500 Mo par defaut. */
     maxAssetsBytes: int('MAX_ASSETS_BYTES', 500 * 1024 * 1024),
+    /**
+     * Rebuild The Track : les extraits a reconstruire. Soixante couvrent six
+     * manches a dix participants sans jamais resservir un extrait.
+     */
+    maxExtraits: int('MAX_EXTRAITS', 60),
+    maxExtraitsBytes: int('MAX_EXTRAITS_BYTES', 500 * 1024 * 1024),
     maxBriefChars: int('MAX_BRIEF_CHARS', 4000),
     maxTextBodyChars: int('MAX_TEXT_BODY_CHARS', 20000),
   },

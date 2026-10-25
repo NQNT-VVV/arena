@@ -35,6 +35,8 @@ const { rank } = require('./scoring');
 /** Doit rester egal a `BattleServer.CHAIN_TURN_MS`. Les vues ne dependent pas de la classe. */
 const CHAIN_TURN_MS = 90000;
 const { signMedia } = require('./util');
+const { classementGeneral } = require('./manches');
+const { nomTonalite } = require('./analyse');
 
 function authorsVisible(session) {
   return AUTHORS_VISIBLE.has(session.phase);
@@ -85,6 +87,8 @@ function configView(config) {
     playerAudio: config.playerAudio,
     allowedExt: config.allowedExt,
     maxFileBytes: config.maxFileBytes,
+    mode: config.mode ?? 'battle',
+    rounds: config.rounds ?? 1,
   };
 }
 
@@ -263,6 +267,170 @@ function diffusionView(session) {
     playMaxS: session.config.playMaxS,
     voteWindowS: session.config.voteWindowS,
     playerAudio: session.config.playerAudio,
+    /**
+     * L'extrait que ce rendu reconstruit, en Rebuild The Track : son nom, son
+     * tempo, sa tonalite — ce qu'il faut pour juger un remake. Sans le
+     * fichier, et sans dire qui l'avait recu.
+     */
+    extrait: submission ? extraitDuRendu(session, submission) : null,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* Manches et Rebuild The Track                                        */
+/* ------------------------------------------------------------------ */
+
+const rebuild = (session) => (session.config.mode ?? 'battle') === 'rebuild';
+
+/** Ou en est la partie : manche k sur N, et le mode. */
+function mancheView(session) {
+  const round = session.round ?? 1;
+  const rounds = session.config.rounds ?? 1;
+  return { round, rounds, derniere: round >= rounds, mode: session.config.mode ?? 'battle' };
+}
+
+/**
+ * Un extrait tel qu'on l'affiche.
+ *
+ * `avecFichier` ajoute le lien de telechargement, signe : il ne part que vers
+ * l'animateur et vers ceux a qui l'extrait a ete attribue. Le lien est signe
+ * plutot que protege par un jeton parce qu'une balise `<audio src>` ne sait
+ * pas envoyer d'en-tete.
+ */
+function extraitCarte(e, { avecFichier = false } = {}) {
+  return {
+    id: e.id,
+    nom: e.filename,
+    position: e.position,
+    bpm: e.bpm,
+    bpmSource: e.bpmSource,
+    tonalite: e.tonalite,
+    tonaliteNom: e.tonalite ? nomTonalite(e.tonalite) : null,
+    tonaliteSource: e.tonaliteSource,
+    analyse: e.analyse,
+    ...(avecFichier ? {
+      mime: e.mime,
+      bytes: e.bytes,
+      url: `/api/extrait/${e.id}?k=${signMedia(config.secret, `extrait:${e.id}`)}`,
+    } : {}),
+  };
+}
+
+/** L'extrait d'origine d'un rendu : celui que son auteur avait recu pour cette manche. */
+function extraitDuRendu(session, submission) {
+  if (!rebuild(session)) return null;
+  const a = repo.attributionDe(session.id, submission.participantId, submission.round ?? null);
+  const e = a ? repo.extrait(a.extraitId) : null;
+  return e ? extraitCarte(e) : null;
+}
+
+/**
+ * Les extraits, pour l'animateur.
+ *
+ * Avec, pour chacun, combien de fois il a deja ete joue et qui l'a dans la
+ * manche en cours. `retirable` est faux des qu'il a servi une fois : il porte
+ * l'histoire d'une manche jouee, et le classement de cette manche y renvoie.
+ */
+function extraitsView(session) {
+  const toutes = repo.toutesAttributions(session.id);
+  const round = session.round ?? 1;
+  return repo.extraits(session.id).map((e) => {
+    const siennes = toutes.filter((a) => a.extraitId === e.id);
+    return {
+      ...extraitCarte(e, { avecFichier: true }),
+      joues: new Set(siennes.filter((a) => a.round < round).map((a) => a.round)).size,
+      cetteManche: siennes.filter((a) => a.round === round)
+        .map((a) => session.participants.get(a.participantId)?.pseudo)
+        .filter(Boolean),
+      retirable: siennes.length === 0,
+    };
+  });
+}
+
+/** Qui reconstruit quoi dans la manche en cours, pour l'animateur. */
+function attributionsView(session) {
+  return repo.attributions(session.id).map((a) => ({
+    participantId: a.participantId,
+    pseudo: session.participants.get(a.participantId)?.pseudo ?? null,
+    extraitId: a.extraitId,
+  }));
+}
+
+/** L'extrait du participant pour la manche en cours, avec son fichier. */
+function monExtraitView(session, participant) {
+  if (!rebuild(session) || participant.spectator || participant.isHost) return null;
+  const a = repo.attributionDe(session.id, participant.id);
+  const e = a ? repo.extrait(a.extraitId) : null;
+  return e ? extraitCarte(e, { avecFichier: true }) : null;
+}
+
+/**
+ * Le classement complet de la manche courante, pour l'usage interne : figer
+ * une manche, calculer la moyenne. Il ne part jamais tel quel vers un client —
+ * le devoilement par crans passe par `podiumView`.
+ */
+function rangsManche(session) {
+  const submissions = repo.submissions(session.id).filter((sub) => {
+    const author = session.participants.get(sub.participantId);
+    return sub.status === 'ready' && author && !author.disqualified;
+  });
+  const voters = [...session.participants.values()].filter((p) => !p.isHost && !p.disqualified);
+  return rank({
+    submissions,
+    tally: repo.tally(session.id),
+    voterIds: voters.map((p) => p.id),
+    config: session.config,
+    spun: repo.appliedPoints(session.id),
+  }).map((row) => ({ participantId: row.participantId, score: row.score, rank: row.rank }));
+}
+
+/** Le classement de la manche courante est-il entierement devoile ? */
+function mancheDevoilee(session) {
+  if (session.phase !== 'results' && session.phase !== 'archived') return false;
+  const total = (session.order ?? []).length;
+  return (session.revealedRank ?? 0) >= total;
+}
+
+/**
+ * Le classement general : les manches figees, plus la courante une fois son
+ * classement entierement devoile — jamais avant, sans quoi la moyenne
+ * trahirait des places encore cachees.
+ */
+function classementGeneralDe(session) {
+  const round = session.round ?? 1;
+  const manches = repo.manchesFigees(session.id).filter((m) => m.round < round);
+  if (mancheDevoilee(session)) manches.push({ round, rows: rangsManche(session) });
+  const classables = [...session.participants.values()].filter((p) => !p.isHost && !p.disqualified && !p.spectator);
+  return { manches: manches.length, lignes: classementGeneral({ manches, participants: classables }) };
+}
+
+/**
+ * L'identite d'un classe au general.
+ *
+ * Sans la garde de `authorOf`, et c'est voulu : le general ne contient que
+ * des manches DEJA devoilees — la courante n'y entre qu'une fois tout son
+ * classement affiche. Pendant la manche 2, montrer qui menait apres la
+ * manche 1 ne trahit rien de ce qui se joue maintenant.
+ */
+function classeDe(session, participantId) {
+  const p = session.participants.get(participantId);
+  return p ? { id: p.id, pseudo: p.pseudo, avatar: p.avatar } : null;
+}
+
+/** La vue du classement general, pour les trois surfaces. Nulle en une manche. */
+function generalView(session) {
+  if ((session.config.rounds ?? 1) <= 1) return null;
+  const { manches, lignes } = classementGeneralDe(session);
+  if (!manches) return null;
+  return {
+    manches,
+    rows: lignes.map((l) => ({
+      rank: l.rank,
+      moyenne: l.moyenne,
+      scores: l.scores.map((v) => (v === null ? null : Math.round(v * 100) / 100)),
+      joues: l.joues,
+      author: classeDe(session, l.participantId),
+    })),
   };
 }
 
@@ -435,6 +603,8 @@ function commonView(session) {
     podium: podiumView(session),
     chain: chainView(session),
     roulette: rouletteView(session),
+    manche: mancheView(session),
+    general: generalView(session),
     /** Reference d'horloge : le client s'en sert pour mesurer sa derive. */
     serverNow: Date.now(),
   };
@@ -524,6 +694,9 @@ function hostView(session) {
      */
     wheels: repo.wheels(),
     lastSeed: repo.lastSpin(session.id)?.seed ?? null,
+    /** Rebuild The Track : les extraits et qui reconstruit quoi. */
+    extraits: extraitsView(session),
+    attributions: attributionsView(session),
     /**
      * Les regles du tirage, envoyees plutot que recopiees.
      *
@@ -594,6 +767,8 @@ function youView(session, participant) {
     chain: youChainView(session, participant),
     /** Son propre sort, pour que le telephone l'affiche en grand. */
     fate: youFateView(session, participant),
+    /** Rebuild The Track : l'extrait a reconstruire, sur son seul canal. */
+    extrait: monExtraitView(session, participant),
   };
 }
 
@@ -615,4 +790,6 @@ module.exports = {
   commonView, participantView, hostView, screenView, youView,
   chainView, youChainView,
   rouletteView, youFateView,
+  mancheView, extraitCarte, extraitsView, attributionsView, monExtraitView, extraitDuRendu,
+  rangsManche, mancheDevoilee, classementGeneralDe, generalView,
 };

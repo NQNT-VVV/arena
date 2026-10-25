@@ -6,6 +6,7 @@ import type { Socket } from 'socket.io-client';
 
 import { audioPref } from '@/lib/audioPref';
 import { Brand } from '@/components/Brand';
+import { ClassementGeneral } from '@/components/ClassementGeneral';
 import { DiffusionStage } from '@/components/DiffusionStage';
 import { ChaineLue } from '@/components/Chaine';
 import { Podium } from '@/components/Podium';
@@ -121,6 +122,8 @@ export function ScreenClient() {
         <span>SALLE {state.code}</span>
         <span>RENDU {media.icon} · {media.label}</span>
         <span>{PHASE_LABELS[state.phase]}</span>
+        {state.manche.rounds > 1 && <span>MANCHE {state.manche.round}/{state.manche.rounds}</span>}
+        {state.config.mode === 'rebuild' && <span>REBUILD THE TRACK</span>}
         {/* Le compte des tirages est sur l'ecran de la salle, pas seulement en
             regie : une roue qu'on relance en secret n'a aucune autorite. */}
         {state.roulette.spins > 0 && <span>TIRAGES {hex(state.roulette.spins)}</span>}
@@ -153,7 +156,11 @@ export function ScreenClient() {
       {(state.phase === 'creation' || state.phase === 'upload') && (
         <>
           <Chrono clock={chrono} />
-          <p className={styles.brief}>{state.brief}</p>
+          <p className={styles.brief}>
+            {state.config.mode === 'rebuild' && !state.brief
+              ? 'Chacun a recu un extrait different. Reconstruisez-le.'
+              : state.brief}
+          </p>
           <p className={styles.count}>
             RENDUS <b>{hex(state.counts.submitted)}</b> / {hex(state.counts.participants)}
           </p>
@@ -176,9 +183,30 @@ export function ScreenClient() {
       )}
 
       {(state.phase === 'results' || state.phase === 'archived') && state.podium && (
-        <div className={styles.wide}>
-          <span className={styles.bigIcon}>CLASSEMENT FINAL · {hex(state.podium.total ?? 0)} RENDUS</span>
-          <Podium podium={state.podium} large ratings={ratings} />
+        /*
+         * Le podium de la manche et le general, cote a cote sur un ecran large.
+         * Empiles, ils debordaient des 1080 pixels du stream des trois joueurs,
+         * pendant que la moitie droite de l'image restait vide.
+         *
+         * Le general n'apparait qu'une fois la manche entierement devoilee : le
+         * serveur ne l'envoie pas avant, sans quoi la moyenne trahirait des
+         * places encore cachees.
+         */
+        <div className={state.general && state.podium.complete ? styles.duo : styles.wide}>
+          <div>
+            <span className={styles.bigIcon}>
+              {state.manche.rounds > 1 ? `CLASSEMENT · MANCHE ${state.manche.round}` : 'CLASSEMENT FINAL'} · {hex(state.podium.total ?? 0)} RENDUS
+            </span>
+            <Podium podium={state.podium} large ratings={ratings} />
+          </div>
+          {state.general && state.podium.complete && (
+            <div>
+              <span className={styles.bigIcon}>
+                {state.manche.derniere ? 'CLASSEMENT GENERAL FINAL' : 'CLASSEMENT GENERAL'}
+              </span>
+              <ClassementGeneral general={state.general} rounds={state.manche.rounds} large />
+            </div>
+          )}
         </div>
       )}
 

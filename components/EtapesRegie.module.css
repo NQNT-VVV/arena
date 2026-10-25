@@ -1,0 +1,23 @@
+/* Etapes avant le depart : une ligne par etape, l'etape courante en os plein. */
+.carte { display: grid; gap: var(--sp-3); }
+.tete { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; }
+
+.liste { list-style: none; margin: 0; padding: 0; display: grid; border: var(--border); }
+.etape { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: var(--sp-3); align-items: start; padding: var(--sp-3) var(--sp-4); border-bottom: var(--border); }
+.etape:last-child { border-bottom: 0; }
+
+.numero { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); padding-top: 2px; }
+.texte { display: grid; gap: var(--sp-1); min-width: 0; }
+.titre { font: var(--t-ui); letter-spacing: var(--ls-mono); }
+.detail { font: var(--t-prose); letter-spacing: var(--ls-prose); color: var(--ink-60); }
+.etat { font: var(--t-meta); letter-spacing: var(--ls-mono); white-space: nowrap; padding-top: 2px; }
+
+/* Fait : en retrait, coche par le mot. */
+.fait .titre, .fait .numero { color: var(--ink-55); }
+.fait .etat { color: var(--ink-55); }
+/* Maintenant : l'etape a faire, inversee sur son numero. */
+.maintenant { background: var(--ink-06); }
+.maintenant .numero { background: var(--ink); color: var(--bg); padding: 0 var(--sp-1); justify-self: start; }
+.maintenant .etat { color: var(--ink); }
+/* Ensuite : visible, sans insister. */
+.ensuite .titre { color: var(--ink-60); }

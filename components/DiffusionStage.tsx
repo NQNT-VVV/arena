@@ -93,6 +93,20 @@ export function DiffusionStage({
         )}
       </div>
 
+      {/*
+        Rebuild The Track : ce que ce rendu reconstruit. On juge un remake
+        contre son original — son tempo et sa tonalite sont la consigne. Le nom
+        de l'extrait ne dit rien de l'auteur : chacun ne connait que le sien.
+      */}
+      {diffusion.extrait && (
+        <div className={styles.origine}>
+          <span className="meta">REBUILD DE</span>
+          <span className={styles.origineNom}>{diffusion.extrait.nom}</span>
+          {diffusion.extrait.bpm !== null && <span className="pill">{Math.round(diffusion.extrait.bpm)} BPM</span>}
+          {diffusion.extrait.tonaliteNom && <span className="pill">{diffusion.extrait.tonaliteNom.toUpperCase()}</span>}
+        </div>
+      )}
+
       {/* Ou en est-on : ecoute, vote, ou passage au suivant. */}
       {tick.stage && diffusion.startedAt && diffusion.endsAt && (
         <div className={`${styles.timeline} ${styles[tick.stage]}`}>

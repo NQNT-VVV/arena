@@ -1,0 +1,28 @@
+/* Classement general : le scoreboard 0x07 du podium, plus le detail des manches. */
+.wrap { display: grid; gap: var(--sp-3); }
+.legende { margin: 0; font: var(--t-prose); letter-spacing: var(--ls-prose); color: var(--ink-60); }
+
+.list { list-style: none; margin: 0; padding: 0; display: grid; border: var(--border); }
+.row {
+  display: grid; grid-template-columns: 56px minmax(0, 1fr) auto;
+  gap: var(--sp-3); align-items: center;
+  padding: var(--sp-3) var(--sp-4); border-bottom: var(--border);
+}
+.row:last-child { border-bottom: 0; }
+
+.place { font: var(--t-ui); letter-spacing: var(--ls-mono); font-variant-numeric: tabular-nums; color: var(--ink-60); justify-self: start; }
+.who { min-width: 0; display: grid; gap: var(--sp-1); }
+.pseudo { display: flex; align-items: center; gap: var(--sp-2); font: var(--t-ui); letter-spacing: var(--ls-mono); overflow-wrap: anywhere; }
+.manches { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-3); font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); font-variant-numeric: tabular-nums; }
+/* Une manche sans rendu : barree d'une trame, pas d'une couleur. */
+.absent { color: var(--ink-55); background-image: var(--hatch); background-repeat: repeat-x; background-position: bottom; background-size: 8px 2px; }
+.score { font: var(--t-ui-l); letter-spacing: var(--ls-mono); font-variant-numeric: tabular-nums; text-align: right; }
+
+/* Le premier : le seul or de l'ecran, en aplat sur le rang. */
+.top .place { background: var(--gold); color: var(--bg); padding: 0 var(--sp-1); }
+.mine { background: var(--ink-06); }
+
+.large .row { grid-template-columns: 88px minmax(0, 1fr) auto; padding: var(--sp-4) var(--sp-6); gap: var(--sp-6); }
+.large .pseudo { font: var(--t-ui-l); letter-spacing: var(--ls-mono); }
+.large .score { font: var(--t-data); letter-spacing: var(--ls-mono); font-size: clamp(27px, 3.4vw, 46px); }
+.large .legende { font: var(--t-meta); letter-spacing: var(--ls-mono); text-transform: uppercase; }

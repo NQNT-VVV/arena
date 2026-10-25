@@ -7,6 +7,9 @@ import { Icon } from '@/components/Icon';
 import { AssetPack } from '@/components/AssetPack';
 import { AssetUploader } from '@/components/AssetUploader';
 import { Brand } from '@/components/Brand';
+import { ClassementGeneral } from '@/components/ClassementGeneral';
+import { EtapesRegie } from '@/components/EtapesRegie';
+import { ExtraitsRegie } from '@/components/ExtraitsRegie';
 import { DiffusionStage } from '@/components/DiffusionStage';
 import { Podium } from '@/components/Podium';
 import { RouletteHost } from '@/components/RouletteHost';
@@ -20,7 +23,7 @@ import { sfx } from '@/lib/sfx';
 import { call } from '@/lib/socket';
 import { copyToClipboard } from '@/lib/storage';
 import { toast } from '@/lib/toast';
-import { MEDIA_LABELS, type Asset, type LatePolicy, type MediaType } from '@/lib/types';
+import { MEDIA_LABELS, type Asset, type LatePolicy, type MediaType, type SessionMode } from '@/lib/types';
 import { useBattleSocket } from '@/lib/useBattleSocket';
 import { usePhaseClock } from '@/lib/usePhaseClock';
 import styles from './host.module.css';
@@ -59,6 +62,8 @@ interface Draft {
   latePolicy: LatePolicy;
   latePenalty: number;
   autoAdvance: boolean;
+  mode: SessionMode;
+  rounds: number;
 }
 
 const EMPTY_DRAFT: Draft = {
@@ -77,7 +82,18 @@ const EMPTY_DRAFT: Draft = {
   latePolicy: 'reject',
   latePenalty: 1,
   autoAdvance: false,
+  mode: 'battle',
+  rounds: 1,
 };
+
+const MODES: { id: SessionMode; label: string; hint: string }[] = [
+  { id: 'battle', label: 'Beat Battle', hint: 'Tout le monde cree sur la meme consigne et les memes elements.' },
+  {
+    id: 'rebuild',
+    label: 'Rebuild The Track',
+    hint: 'Chacun recoit un extrait different — tempo et tonalite affiches — et le reconstruit.',
+  },
+];
 
 export function HostClient() {
   const [code, setCode] = useState<string | null>(null);
@@ -154,6 +170,8 @@ export function HostClient() {
       latePolicy: state.config.latePolicy,
       latePenalty: state.config.latePenalty,
       autoAdvance: state.config.autoAdvance,
+      mode: state.config.mode ?? 'battle',
+      rounds: state.config.rounds ?? 1,
     }));
   }, [state?.code, state?.phase]);
 
@@ -195,6 +213,8 @@ export function HostClient() {
     latePolicy: d.latePolicy,
     latePenalty: d.latePenalty,
     autoAdvance: d.autoAdvance,
+    mode: d.mode,
+    rounds: d.rounds,
   });
 
   const create = async () => {
@@ -313,7 +333,10 @@ export function HostClient() {
         <Brand compact />
         <span className="grow">
           <span className="session-name">{state.name}</span>
-          <span className="meta">{PHASE_LABELS[phase]}</span>
+          <span className="meta">
+            {PHASE_LABELS[phase]}
+            {state.manche.rounds > 1 ? ` • MANCHE ${state.manche.round}/${state.manche.rounds}` : ''}
+          </span>
         </span>
         <span className={`pill ${connected ? 'ok' : ''}`}>
           <span className="dot" /> {connected ? 'En ligne' : 'Reconnexion…'}
@@ -321,11 +344,14 @@ export function HostClient() {
         <span className="pill">
           <span className="code-chip">{state.code}</span>
         </span>
+        <a className="btn sm ghost" href="/guide" target="_blank" rel="noreferrer">GUIDE</a>
         <button className="btn sm ghost" onClick={quit}>QUITTER</button>
       </header>
 
       <div className="shell">
         <PhaseRail phase={phase} />
+
+        <EtapesRegie state={state} />
 
         <section className={styles.grid}>
           <div className={`card pad ${styles.stage}`}>
@@ -381,6 +407,22 @@ export function HostClient() {
           </div>
         </section>
 
+        {/* Rebuild The Track : les extraits avant tout le reste. Avant la
+            soiree, c'est ce que la regie vient preparer ; pendant une manche,
+            c'est la qu'on change l'extrait de quelqu'un. */}
+        {state.config.mode === 'rebuild' && (
+          <ExtraitsRegie
+            code={state.code}
+            token={hostKeys.get(state.code)}
+            extraits={state.extraits ?? []}
+            attributions={state.attributions ?? []}
+            roster={state.roster}
+            phase={phase}
+            manche={state.manche}
+            act={act}
+          />
+        )}
+
         {/* LA ROULETTE. Au-dessus du reste : les roues se preparent avant la
             session, et pendant la creation c'est ce que la regie vient
             chercher. */}
@@ -412,10 +454,20 @@ export function HostClient() {
 
         {phase === 'results' && state.podium && (
           <section className="card pad col">
-            <h2 className="section-title">CLASSEMENT</h2>
+            <h2 className="section-title">
+              CLASSEMENT{state.manche.rounds > 1 ? ` — MANCHE ${state.manche.round}` : ''}
+            </h2>
             <Podium replay podium={state.podium} ratings={ratings} />
           </section>
         )}
+
+        {state.general && (
+          <section className="card pad col">
+            <h2 className="section-title">CLASSEMENT GENERAL</h2>
+            <ClassementGeneral general={state.general} rounds={state.manche.rounds} />
+          </section>
+        )}
+
 
         <section className="card pad col">
           <h2 className="section-title">CONSIGNE</h2>
@@ -528,7 +580,7 @@ export function HostClient() {
             </p>
             <div className="row wrap">
               {btn('Revenir aux reglages', 'host:unpublish')}
-              {btn('▶ Lancer la creation', 'host:start', {}, 'btn primary lg')}
+              {btn(state!.manche.rounds > 1 ? '▶ Lancer la manche 1' : '▶ Lancer la creation', 'host:start', {}, 'btn primary lg')}
             </div>
           </div>
         );
@@ -640,7 +692,11 @@ export function HostClient() {
               <button className="btn sm ghost" onClick={() => download('json')}><Icon name="telecharge" />JSON</button>
               {btn('Archiver la session', 'host:archive', {}, 'btn sm ghost')}
             </div>
-            {renderNextEdition()}
+            {renderNextRound()}
+            {/* Pas de « nouvelle edition » tant qu'il reste des manches : en
+                pleine partie, ce bouton a cote de « manche suivante » ne
+                servirait qu'a relancer une session par erreur. */}
+            {state!.manche.derniere && renderNextEdition()}
           </div>
         );
       }
@@ -656,6 +712,57 @@ export function HostClient() {
           </div>
         );
     }
+  }
+
+  /**
+   * La manche suivante, et sa duree.
+   *
+   * La duree se regle ICI, au moment de lancer : c'est la consigne — « reglage
+   * de la duree avant chaque manche » — et les reglages generaux sont figes
+   * depuis le premier lancement. Le bouton attend que tout le classement soit
+   * devoile : la manche se fige a ce moment-la.
+   */
+  function renderNextRound() {
+    const m = state!.manche;
+    if (m.rounds <= 1) return null;
+    if (m.derniere) {
+      return (
+        <p className="meta" style={{ textTransform: 'none', letterSpacing: 'var(--ls-prose)' }}>
+          Derniere manche : le classement general ci-dessous est le classement final.
+        </p>
+      );
+    }
+    const pret = !!state!.podium?.complete;
+    return (
+      <div className={styles.nextEdition}>
+        <span className="section-title">MANCHE {m.round + 1}/{m.rounds}</span>
+        <div className="row wrap">
+          <label className="field" style={{ minWidth: 160 }}>
+            <span className="meta">DUREE DE CREATION (MINUTES)</span>
+            <input
+              className="input" type="number" min={1} max={720} value={draft.durationMin}
+              onChange={(e) => setDraft((d) => ({ ...d, durationMin: Number(e.target.value) }))}
+            />
+          </label>
+          <button
+            className="btn primary"
+            disabled={busy || !pret}
+            aria-busy={busy}
+            title={pret ? undefined : 'Devoilez tout le classement d’abord'}
+            onClick={() => act('host:next-round', { durationMs: draft.durationMin * 60_000 })}
+          >
+            Lancer la manche {m.round + 1}
+          </button>
+        </div>
+        <span className="meta">
+          {pret
+            ? (state!.config.mode === 'rebuild'
+              ? 'Rendus, votes et chrono repartent de zero ; chacun recoit un nouvel extrait.'
+              : 'Rendus, votes et chrono repartent de zero ; participants et spectateurs restent.')
+            : 'Devoilez tout le classement : la manche est figee a ce moment-la.'}
+        </span>
+      </div>
+    );
   }
 
   /** Relancer : memes reglages, meme consigne, pack repris ou non. */
@@ -692,6 +799,10 @@ export function HostClient() {
           <header>
             <h1 >NOUVELLE SESSION</h1>
             <p className="muted">Tout reste modifiable tant que la creation n&apos;a pas demarre.</p>
+            <p className="muted">
+              Premiere fois ? <a href="/guide" target="_blank" rel="noreferrer">Le guide de l&apos;animateur</a> explique
+              une soiree du debut a la fin, en cinq minutes de lecture.
+            </p>
           </header>
           <section className="card pad col">{renderForm(false)}</section>
         </div>
@@ -699,8 +810,21 @@ export function HostClient() {
     );
   }
 
+  /**
+   * Le formulaire de session.
+   *
+   * Six reglages visibles, ceux qu'un animateur choisit vraiment : le nom, le
+   * mode, le nombre de manches, la duree, le type de rendu, la consigne. Les
+   * dix autres ont des valeurs par defaut qui conviennent a la plupart des
+   * soirees ; ils sont ranges sous « Reglages avances », fermes. Les montrer
+   * tous d'emblee faisait de la creation d'une session un questionnaire.
+   */
   function renderForm(existing: boolean) {
     const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((d) => ({ ...d, [key]: value }));
+    // Un remake se rend en son : choisir Rebuild regle le type de rendu, qui
+    // reste modifiable juste en dessous.
+    const choisirMode = (mode: SessionMode) => setDraft((d) => ({ ...d, mode, ...(mode === 'rebuild' ? { mediaType: 'audio' as MediaType } : {}) }));
+    const rebuild = draft.mode === 'rebuild';
 
     return (
       <>
@@ -710,9 +834,46 @@ export function HostClient() {
           <label htmlFor="name">NOM DE LA SESSION</label>
           <input
             id="name" className="input" value={draft.name} maxLength={60}
-            placeholder="BEAT BATTLE #12"
+            placeholder={rebuild ? 'REBUILD THE TRACK #1' : 'BEAT BATTLE #12'}
             onChange={(e) => set('name', e.target.value)}
           />
+        </div>
+
+        <div className="field">
+          <label>MODE</label>
+          <div className="seg">
+            {MODES.map((m) => (
+              <button key={m.id} type="button" aria-pressed={draft.mode === m.id} onClick={() => choisirMode(m.id)}>
+                {m.label}
+              </button>
+            ))}
+          </div>
+          <span className="meta">{MODES.find((m) => m.id === draft.mode)?.hint}</span>
+        </div>
+
+        <div className={styles.two}>
+          <div className="field">
+            <label htmlFor="rounds">NOMBRE DE MANCHES</label>
+            <input
+              id="rounds" className="input" type="number" min={1} max={10} value={draft.rounds}
+              onChange={(e) => set('rounds', Math.max(1, Math.min(10, Number(e.target.value) || 1)))}
+            />
+            <span className="meta">
+              {draft.rounds > 1
+                ? 'Meme code et meme ecran pour toutes. Le classement general fait la moyenne.'
+                : 'Une seule manche : son classement est le classement final.'}
+            </span>
+          </div>
+          <div className="field">
+            <label htmlFor="duration">DUREE DE CREATION (MINUTES)</label>
+            <input
+              id="duration" className="input" type="number" min={1} max={720} value={draft.durationMin}
+              onChange={(e) => set('durationMin', Number(e.target.value))}
+            />
+            <span className="meta">
+              {draft.rounds > 1 ? 'Pour la manche 1. Tu la regles de nouveau avant chaque manche.' : 'Le chrono part au lancement.'}
+            </span>
+          </div>
         </div>
 
         <div className="field">
@@ -733,132 +894,131 @@ export function HostClient() {
         </div>
 
         <div className="field">
-          <label htmlFor="brief">CONSIGNE</label>
+          <label htmlFor="brief">{rebuild ? 'CONSIGNE (FACULTATIVE)' : 'CONSIGNE'}</label>
           <textarea
-            id="brief" className="input" rows={5} value={draft.brief} maxLength={4000}
-            placeholder={'Les 5 samples du pack sont obligatoires.\nAucun autre son externe.\nDuree libre.'}
+            id="brief" className="input" rows={rebuild ? 3 : 5} value={draft.brief} maxLength={4000}
+            placeholder={rebuild
+              ? 'Rien n’est obligatoire ici : l’extrait de chacun fait office de consigne.\nPar exemple : garder le tempo de l’original.'
+              : 'Les 5 samples du pack sont obligatoires.\nAucun autre son externe.\nDuree libre.'}
             onChange={(e) => set('brief', e.target.value)}
           />
           <span className="meta">Affichee en permanence aux participants.</span>
         </div>
 
-        <div className={styles.two}>
-          <div className="field">
-            <label htmlFor="duration">DUREE DE CREATION (MINUTES)</label>
-            <input
-              id="duration" className="input" type="number" min={1} max={720} value={draft.durationMin}
-              onChange={(e) => set('durationMin', Number(e.target.value))}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="grace">FENETRE DE GRACE (MINUTES)</label>
-            <input
-              id="grace" className="input" type="number" min={0} max={30} value={draft.graceMin}
-              onChange={(e) => set('graceMin', Number(e.target.value))}
-            />
-          </div>
-        </div>
+        <details className={styles.avance}>
+          <summary>Reglages avances — les valeurs par defaut conviennent a la plupart des soirees</summary>
+          <div className={styles.avanceCorps}>
+            <div className={styles.two}>
+              <div className="field">
+                <label htmlFor="grace">FENETRE DE GRACE (MINUTES)</label>
+                <input
+                  id="grace" className="input" type="number" min={0} max={30} value={draft.graceMin}
+                  onChange={(e) => set('graceMin', Number(e.target.value))}
+                />
+                <span className="meta">Le temps laisse apres le chrono pour finir de deposer.</span>
+              </div>
+              <div className="field">
+                <label htmlFor="playMax">Duree d&apos;ecoute par rendu (secondes)</label>
+                <input
+                  id="playMax" className="input" type="number" min={5} max={600} value={draft.playMaxS}
+                  onChange={(e) => set('playMaxS', Number(e.target.value))}
+                />
+                <span className="meta">Au-dela, l&apos;extrait est coupe en fondu.</span>
+              </div>
+            </div>
 
-        <div className={styles.two}>
-          <div className="field">
-            <label htmlFor="playMax">Duree d&apos;ecoute par rendu (secondes)</label>
-            <input
-              id="playMax" className="input" type="number" min={5} max={600} value={draft.playMaxS}
-              onChange={(e) => set('playMaxS', Number(e.target.value))}
-            />
-            <span className="meta">Au-dela, l&apos;extrait est coupe en fondu.</span>
-          </div>
-          <div className="field">
-            <label htmlFor="voteWindow">Fenetre de vote apres l&apos;ecoute (secondes)</label>
-            <input
-              id="voteWindow" className="input" type="number" min={0} max={300} value={draft.voteWindowS}
-              onChange={(e) => set('voteWindowS', Number(e.target.value))}
-            />
-            <span className="meta">Sautee des que tout le monde a note.</span>
-          </div>
-        </div>
+            <div className={styles.two}>
+              <div className="field">
+                <label htmlFor="voteWindow">Fenetre de vote apres l&apos;ecoute (secondes)</label>
+                <input
+                  id="voteWindow" className="input" type="number" min={0} max={300} value={draft.voteWindowS}
+                  onChange={(e) => set('voteWindowS', Number(e.target.value))}
+                />
+                <span className="meta">Sautee des que tout le monde a note.</span>
+              </div>
+              <div className="field">
+                <label htmlFor="scale">BAREME (NOTE MAXIMALE)</label>
+                <input
+                  id="scale" className="input" type="number" min={2} max={100} value={draft.scale}
+                  onChange={(e) => set('scale', Number(e.target.value))}
+                />
+              </div>
+            </div>
 
-        <label className="switch">
-          <input type="checkbox" checked={draft.autoNext} onChange={(e) => set('autoNext', e.target.checked)} />
-          <span className="track" />
-          <span>Passer seul au rendu suivant apres l&apos;ecoute et la fenetre de vote</span>
-        </label>
+            <div className="field">
+              <label htmlFor="defaultVote">NOTE PAR DEFAUT</label>
+              <input
+                id="defaultVote" className="input" type="number" min={0} max={draft.scale} step={0.5} value={draft.defaultVote}
+                onChange={(e) => set('defaultVote', Number(e.target.value))}
+              />
+              <span className="meta">Appliquee quand un votant saute un rendu.</span>
+            </div>
 
-        <label className="switch">
-          <input type="checkbox" checked={draft.playerAudio} onChange={(e) => set('playerAudio', e.target.checked)} />
-          <span className="track" />
-          <span>Jouer le son sur les telephones des participants</span>
-        </label>
-        <span className="faint" style={{ marginTop: 'calc(-1 * var(--sp-2))' }}>
-          A couper si une enceinte ou le partage d&apos;ecran diffuse deja pour tout le monde.
-        </span>
+            <label className="switch">
+              <input type="checkbox" checked={draft.autoNext} onChange={(e) => set('autoNext', e.target.checked)} />
+              <span className="track" />
+              <span>Passer seul au rendu suivant apres l&apos;ecoute et la fenetre de vote</span>
+            </label>
 
-        <div className="field">
-          <label>ALERTES SONORES</label>
-          <div className="row wrap">
-            {ALERT_CHOICES.map((s) => {
-              const on = draft.alerts.includes(s);
-              return (
-                <button
-                  key={s} type="button"
-                  className={`btn xs ${on ? 'good' : 'ghost'}`}
-                  aria-pressed={on}
-                  onClick={() => set('alerts', on ? draft.alerts.filter((a) => a !== s) : [...draft.alerts, s].sort((a, b) => b - a))}
-                >
-                  {humanThreshold(s)}
-                </button>
-              );
-            })}
+            <label className="switch">
+              <input type="checkbox" checked={draft.playerAudio} onChange={(e) => set('playerAudio', e.target.checked)} />
+              <span className="track" />
+              <span>Jouer le son sur les telephones des participants</span>
+            </label>
+            <span className="faint" style={{ marginTop: 'calc(-1 * var(--sp-2))' }}>
+              A couper si une enceinte ou le partage d&apos;ecran diffuse deja pour tout le monde.
+            </span>
+
+            <div className="field">
+              <label>ALERTES SONORES</label>
+              <div className="row wrap">
+                {ALERT_CHOICES.map((sec) => {
+                  const on = draft.alerts.includes(sec);
+                  return (
+                    <button
+                      key={sec} type="button"
+                      className={`btn xs ${on ? 'good' : 'ghost'}`}
+                      aria-pressed={on}
+                      onClick={() => set('alerts', on ? draft.alerts.filter((a) => a !== sec) : [...draft.alerts, sec].sort((a, b) => b - a))}
+                    >
+                      {humanThreshold(sec)}
+                    </button>
+                  );
+                })}
+              </div>
+              <span className="meta">
+                Un signal sonore et un changement de couleur du chrono a chaque seuil coche.
+              </span>
+            </div>
+
+            <div className="field">
+              <label>DEPOTS HORS DELAI</label>
+              <div className="seg">
+                {LATE_POLICIES.map((lp) => (
+                  <button
+                    key={lp.id} type="button"
+                    aria-pressed={draft.latePolicy === lp.id}
+                    onClick={() => set('latePolicy', lp.id)}
+                  >
+                    {lp.label}
+                  </button>
+                ))}
+              </div>
+              <span className="meta">
+                {LATE_POLICIES.find((lp) => lp.id === draft.latePolicy)?.hint}
+              </span>
+            </div>
+
+            <label className="switch">
+              <input
+                type="checkbox" checked={draft.autoAdvance}
+                onChange={(e) => set('autoAdvance', e.target.checked)}
+              />
+              <span className="track" />
+              <span>Enchainer sur la diffusion des la fin de la fenetre de grace</span>
+            </label>
           </div>
-          <span className="meta">
-            Un signal sonore et un changement de couleur du chrono a chaque seuil coche.
-          </span>
-        </div>
-
-        <div className={styles.two}>
-          <div className="field">
-            <label htmlFor="scale">BAREME (NOTE MAXIMALE)</label>
-            <input
-              id="scale" className="input" type="number" min={2} max={100} value={draft.scale}
-              onChange={(e) => set('scale', Number(e.target.value))}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="defaultVote">NOTE PAR DEFAUT</label>
-            <input
-              id="defaultVote" className="input" type="number" min={0} max={draft.scale} step={0.5} value={draft.defaultVote}
-              onChange={(e) => set('defaultVote', Number(e.target.value))}
-            />
-            <span className="meta">Appliquee quand un votant saute un rendu.</span>
-          </div>
-        </div>
-
-        <div className="field">
-          <label>DEPOTS HORS DELAI</label>
-          <div className="seg">
-            {LATE_POLICIES.map((p) => (
-              <button
-                key={p.id} type="button"
-                aria-pressed={draft.latePolicy === p.id}
-                onClick={() => set('latePolicy', p.id)}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-          <span className="meta">
-            {LATE_POLICIES.find((p) => p.id === draft.latePolicy)?.hint}
-          </span>
-        </div>
-
-        <label className="switch">
-          <input
-            type="checkbox" checked={draft.autoAdvance}
-            onChange={(e) => set('autoAdvance', e.target.checked)}
-          />
-          <span className="track" />
-          <span>Enchainer sur la diffusion des la fin de la fenetre de grace</span>
-        </label>
+        </details>
 
         {existing
           ? <button className="btn primary" disabled={busy} aria-busy={busy} onClick={saveConfig}>ENREGISTRER LES REGLAGES</button>

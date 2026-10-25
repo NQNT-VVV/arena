@@ -170,6 +170,41 @@ async function activeChallenges(slug = SLUG) {
  * dernier classe : ils ont joue, ils apparaissent, mais derriere tout le monde.
  */
 function resultsPayload(session) {
+  /*
+   * Une partie en plusieurs manches est UN match pour le hub, pas plusieurs :
+   * c'est le classement general — la moyenne des manches — qui part, une
+   * seule fois, a la fin de la derniere. Envoyer chaque manche compterait
+   * quatre matchs classes pour une seule soiree, et l'Elo de chacun bougerait
+   * quatre fois pour ce qui n'est qu'un resultat.
+   */
+  if ((session.config?.rounds ?? 1) > 1) {
+    const { lignes } = views.classementGeneralDe(session);
+    return {
+      matchId: session.id,
+      mode: session.config?.mode === 'rebuild' ? 'rebuild' : session.mediaType,
+      challengeId: null,
+      playedAt: session.endedAt ?? Date.now(),
+      durationS: Math.round((session.config?.durationMs ?? 0) / 1000) * (session.config?.rounds ?? 1),
+      meta: {
+        name: session.name,
+        code: session.code,
+        scale: session.config?.scale,
+        rounds: session.config?.rounds,
+        participants: [...session.participants.values()].filter((p) => !p.isHost).length,
+      },
+      players: lignes.map((l) => {
+        const author = views.authorOf(session, l.participantId);
+        return {
+          pid: session.participants.get(l.participantId)?.podiumPid ?? null,
+          nickname: author?.pseudo ?? null,
+          avatar: author?.avatar ?? null,
+          score: l.moyenne,
+          rank: l.rank,
+        };
+      }),
+    };
+  }
+
   const podium = views.podiumView({ ...session, revealedRank: Number.MAX_SAFE_INTEGER });
   const rows = (podium?.rows ?? []).filter((r) => !r.hidden && r.author);
   const lastRank = rows.reduce((max, r) => (r.rank ? Math.max(max, r.rank) : max), 0);
@@ -247,6 +282,8 @@ function attach(battle) {
   if (!config.podium.gameKey) console.warn('[arena] podium : PODIUM_GAME_KEY absent, les classements ne seront pas transmis');
   if (!config.podium.ssoSecret) console.warn('[arena] podium : PODIUM_SSO_SECRET absent, les joueurs ne seront pas reconnus');
   battle.events.on('results:complete', ({ session }) => {
+    // Une manche intermediaire n'est pas un resultat : le hub attend la derniere.
+    if ((session.round ?? 1) < (session.config?.rounds ?? 1)) return;
     sendResults(battle, session).catch((err) => console.warn(`[arena] podium : ${err.message}`));
   });
   return true;
