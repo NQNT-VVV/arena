@@ -287,11 +287,15 @@ export function PlayClient() {
             {state.manche.rounds > 1 ? ` • MANCHE ${state.manche.round}/${state.manche.rounds}` : ''}
           </span>
         </span>
-        {you?.spectator && <span className="pill"><Icon name="oeil" />SPECTATEUR</span>}
+        {/* Le spectateur se signale dans sa propre pastille, par l'oeil : une
+            seconde pastille « SPECTATEUR » ecrasait, a 390 px, le nom de la
+            session en « R. » et son etat en une lettre par ligne. */}
         {you && (
-          <span className="pill">
+          <span className="pill" title={you.spectator ? 'Spectateur : tu notes, tu ne deposes rien' : undefined}>
+            {you.spectator && <Icon name="oeil" />}
             <span aria-hidden="true">{you.avatar}</span>
             <span className="ellipsis" style={{ maxWidth: 90 }}>{you.pseudo}</span>
+            {you.spectator && <span className="sr-only">, spectateur</span>}
           </span>
         )}
         {!connected && <span className="pill live"><span className="dot" /> HORS LIGNE</span>}
