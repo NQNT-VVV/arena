@@ -43,6 +43,71 @@ function throws(fn, needle) {
 
 /* ------------------------------------------------------------------ */
 
+/** Une session au classement, avec `n` rendus diffuses, plus un createur ecarte avant la diffusion. */
+function auClassement(n = 3) {
+  const srv = new BattleServer(fakeIo());
+  const { session, hostToken } = srv.createSession({ name: 'Devoilement', mediaType: 'text', config: { rounds: 2 } });
+  srv.publishSession(session.code, hostToken);
+  const gens = [];
+  for (let i = 0; i <= n; i++) gens.push(srv.join(session.code, { pseudo: `CREA${i + 1}` }));
+  srv.start(session.code, hostToken);
+  for (const g of gens) {
+    const prep = srv.openSubmissionSlot(session.code, g.participant.id, g.token);
+    srv.saveSubmission(session, g.participant, { textBody: g.participant.pseudo, kind: 'text', inline: 1, late: 0 }, prep.existing);
+  }
+  const ecarte = gens[n];
+  srv.setDisqualified(session.code, hostToken, ecarte.participant.id, true);
+  srv.forceCloseCreation(session.code, hostToken);
+  srv.startDiffusion(session.code, hostToken);
+  return { srv, session, hostToken, gens: gens.slice(0, n), ecarte };
+}
+
+test('devoilement : ecarter apres la diffusion ne laisse pas « manche suivante » offerte puis refusee', () => {
+  const { srv, session, hostToken, gens } = auClassement(3);
+  srv.showResults(session.code, hostToken);
+  srv.setDisqualified(session.code, hostToken, gens[0].participant.id, true);
+  // Cran par cran : c'est la que les deux comptes divergeaient.
+  srv.reveal(session.code, hostToken);
+  srv.reveal(session.code, hostToken);
+  const vue = views.hostView(session);
+  assert.equal(vue.podium.total, 2, 'deux classes restent');
+  assert.equal(vue.podium.complete, true);
+  assert.equal(views.mancheDevoilee(session), true, 'meme reponse que le podium');
+  srv.nextRound(session.code, hostToken);
+  assert.equal(session.phase, 'creation');
+});
+
+test('devoilement : un reintegre dont le rendu n’est jamais passe ne bloque pas la premiere place', () => {
+  const { srv, session, hostToken, ecarte } = auClassement(3);
+  srv.setDisqualified(session.code, hostToken, ecarte.participant.id, false);
+  srv.showResults(session.code, hostToken);
+  srv.reveal(session.code, hostToken, { all: true });
+  const podium = views.hostView(session).podium;
+  assert.equal(podium.total, 3, 'son rendu n’a pas ete diffuse : il n’est pas classe');
+  assert.equal(podium.complete, true);
+  assert.ok(podium.rows.every((r) => !r.hidden), 'aucune place indevoilable');
+});
+
+test('devoilement : ecarter ou reintegrer en cours de route ne devoile ni ne recache personne', () => {
+  const { srv, session, hostToken } = auClassement(4);
+  srv.showResults(session.code, hostToken);
+  srv.reveal(session.code, hostToken);
+  srv.reveal(session.code, hostToken);
+  const lignes = () => views.hostView(session).podium.rows;
+  const montres = () => lignes().filter((r) => !r.hidden).map((r) => r.author.id);
+  const avant = montres();
+  assert.equal(avant.length, 2);
+  // Le dernier, deja montre, est ecarte : il disparait, rien d'autre n'apparait.
+  const dernier = avant[avant.length - 1];
+  srv.setDisqualified(session.code, hostToken, dernier, true);
+  assert.deepEqual(montres(), avant.filter((id) => id !== dernier));
+  assert.equal(lignes().filter((r) => r.hidden).length, 2, 'les deux premieres places restent cachees');
+  // Reintegre : il revient ou il etait, sans recacher son voisin.
+  srv.setDisqualified(session.code, hostToken, dernier, false);
+  assert.deepEqual(montres(), avant);
+  assert.equal(lignes().filter((r) => r.hidden).length, 2);
+});
+
 test('creation : code lisible, jeton rendu une seule fois', () => {
   const srv = new BattleServer(fakeIo());
   const { session, hostToken } = srv.createSession({ name: 'Beat Battle #12', mediaType: 'audio', brief: '5 samples imposes' });

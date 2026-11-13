@@ -191,7 +191,7 @@ test('la chaine ne rapporte rien : le classement l’ignore', () => {
     srv.saveSubmission(session, g.participant, { textBody: `TEXTE DE ${g.participant.pseudo}`, kind: 'text', inline: 1, late: 0 }, prep.existing);
   }
   srv.setPhase(session, 'upload');
-  srv.setPhase(session, 'diffusion');
+  srv.startDiffusionInternal(session);
   srv.setPhase(session, 'results');
   const podium = views.podiumView({ ...srv.get(session.code), revealedRank: Number.MAX_SAFE_INTEGER });
   const pseudos = podium.rows.map((r) => r.author?.pseudo).filter(Boolean);

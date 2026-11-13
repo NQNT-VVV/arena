@@ -365,30 +365,63 @@ function monExtraitView(session, participant) {
 }
 
 /**
+ * LES RENDUS CLASSES DE LA MANCHE — une seule definition.
+ *
+ * Un rendu est classe s'il a ete DIFFUSE (il figure dans l'ordre de passage)
+ * et si son auteur n'est pas ecarte a l'instant ou l'on regarde. Le podium, le
+ * nombre de crans a devoiler, « tout est devoile » et le classement fige d'une
+ * manche partent tous d'ici.
+ *
+ * Il y avait deux comptes : l'ordre de passage d'un cote, les rendus des
+ * non-ecartes de l'autre. Ils divergeaient des qu'on ecartait ou reintegrait
+ * quelqu'un apres le debut de la diffusion — premiere place indevoilable, ou
+ * manche suivante offerte puis refusee.
+ *
+ * Un reintegre dont le rendu n'est jamais passe n'entre pas au classement :
+ * personne ne l'a ecoute, il n'aurait que des notes par defaut.
+ */
+function rendusClasses(session) {
+  const diffuses = new Set(session.order ?? []);
+  return repo.submissions(session.id).filter((sub) => {
+    const author = session.participants.get(sub.participantId);
+    return diffuses.has(sub.id) && sub.status === 'ready' && author && !author.disqualified;
+  });
+}
+
+/** Combien de places le classement de la manche compte, donc combien de crans a devoiler. */
+function totalClasses(session) {
+  return rendusClasses(session).length;
+}
+
+/** Le classement calcule de la manche, et les rendus dont il part. */
+function classer(session) {
+  const submissions = rendusClasses(session);
+  const voters = [...session.participants.values()].filter((p) => !p.isHost && !p.disqualified);
+  const rows = rank({
+    submissions,
+    tally: repo.tally(session.id),
+    voterIds: voters.map((p) => p.id),
+    config: session.config,
+    // Seuls les sorts REELLEMENT appliques comptent : un tirage fait apres le
+    // devoilement reste une consigne, et le classement ne bouge pas pour lui.
+    spun: repo.appliedPoints(session.id),
+  });
+  return { submissions, rows };
+}
+
+/**
  * Le classement complet de la manche courante, pour l'usage interne : figer
  * une manche, calculer la moyenne. Il ne part jamais tel quel vers un client —
  * le devoilement par crans passe par `podiumView`.
  */
 function rangsManche(session) {
-  const submissions = repo.submissions(session.id).filter((sub) => {
-    const author = session.participants.get(sub.participantId);
-    return sub.status === 'ready' && author && !author.disqualified;
-  });
-  const voters = [...session.participants.values()].filter((p) => !p.isHost && !p.disqualified);
-  return rank({
-    submissions,
-    tally: repo.tally(session.id),
-    voterIds: voters.map((p) => p.id),
-    config: session.config,
-    spun: repo.appliedPoints(session.id),
-  }).map((row) => ({ participantId: row.participantId, score: row.score, rank: row.rank }));
+  return classer(session).rows.map((row) => ({ participantId: row.participantId, score: row.score, rank: row.rank }));
 }
 
 /** Le classement de la manche courante est-il entierement devoile ? */
 function mancheDevoilee(session) {
   if (session.phase !== 'results' && session.phase !== 'archived') return false;
-  const total = (session.order ?? []).length;
-  return (session.revealedRank ?? 0) >= total;
+  return (session.revealedRank ?? 0) >= totalClasses(session);
 }
 
 /**
@@ -445,21 +478,7 @@ function generalView(session) {
 function podiumView(session) {
   if (!AUTHORS_VISIBLE.has(session.phase)) return null;
 
-  const submissions = repo.submissions(session.id).filter((sub) => {
-    const author = session.participants.get(sub.participantId);
-    return sub.status === 'ready' && author && !author.disqualified;
-  });
-
-  const voters = [...session.participants.values()].filter((p) => !p.isHost && !p.disqualified);
-  const rows = rank({
-    submissions,
-    tally: repo.tally(session.id),
-    voterIds: voters.map((p) => p.id),
-    config: session.config,
-    // Seuls les sorts REELLEMENT appliques comptent : un tirage fait apres le
-    // devoilement reste une consigne, et le classement ne bouge pas pour lui.
-    spun: repo.appliedPoints(session.id),
-  });
+  const { submissions, rows } = classer(session);
 
   const revealed = session.revealedRank ?? 0;
   const byId = new Map(submissions.map((sub) => [sub.id, sub]));
@@ -791,5 +810,5 @@ module.exports = {
   chainView, youChainView,
   rouletteView, youFateView,
   mancheView, extraitCarte, extraitsView, attributionsView, monExtraitView, extraitDuRendu,
-  rangsManche, mancheDevoilee, classementGeneralDe, generalView,
+  rendusClasses, totalClasses, classer, rangsManche, mancheDevoilee, classementGeneralDe, generalView,
 };

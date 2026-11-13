@@ -446,10 +446,41 @@ class BattleServer {
     const s = this.requireHost(code, token);
     const p = s.participants.get(participantId);
     if (!p) throw new BattleError('Participant introuvable.', 404);
+    if (p.disqualified === !!on) return s;
+    /*
+     * En plein devoilement, ecarter ou reintegrer ne devoile ni ne recache
+     * personne d'autre.
+     *
+     * Le podium se devoile par le bas : `revealedRank` compte des lignes, pas
+     * des personnes. Retirer une ligne deja montree sans toucher au compte
+     * ferait apparaitre d'office la place du dessus ; en ajouter une dans la
+     * zone montree en recacherait une. On garde donc le nombre de lignes
+     * CACHEES, sauf si la ligne qui bouge en faisait partie.
+     */
+    const devoilement = s.phase === 'results';
+    const place = () => views.classer(s).rows.findIndex((r) => r.participantId === p.id);
+    const totalAvant = devoilement ? views.totalClasses(s) : 0;
+    const placeAvant = devoilement ? place() : -1;
+    const completAvant = devoilement && views.mancheDevoilee(s);
     p.disqualified = !!on;
     repo.setDisqualified(participantId, on);
     repo.logEvent(s.id, on ? 'participant:disqualified' : 'participant:requalified', { pseudo: p.pseudo });
+    if (devoilement) {
+      const devoilees = Math.min(s.revealedRank ?? 0, totalAvant);
+      const cachees = totalAvant - devoilees;
+      const placeApres = place();
+      if (placeAvant >= 0 && placeApres < 0 && placeAvant >= cachees) s.patch({ revealedRank: devoilees - 1 });
+      else if (placeAvant < 0 && placeApres >= 0 && placeApres >= cachees) s.patch({ revealedRank: devoilees + 1 });
+      else if (devoilees !== (s.revealedRank ?? 0)) s.patch({ revealedRank: devoilees });
+      // Ecarter le dernier cache acheve le devoilement : les modules qui
+      // attendent le classement complet doivent l'apprendre aussi.
+      if (!completAvant && views.mancheDevoilee(s) && views.totalClasses(s) > 0) {
+        this.events.emit('results:complete', { session: s });
+      }
+    }
     this.publish(s);
+    // L'interesse l'apprend sur son canal : son telephone n'a pas a le deviner.
+    this.publishYou(s, p);
     return s;
   }
 
@@ -915,8 +946,11 @@ class BattleServer {
   reveal(code, token, { all = false } = {}) {
     const s = this.requireHost(code, token);
     if (s.phase !== 'results') throw new BattleError('Le classement n’est pas encore affiché.');
-    const total = (s.order ?? []).length;
-    const current = s.revealedRank ?? 0;
+    // Le nombre de crans est celui du podium — `views.rendusClasses`, la seule
+    // definition — et non la longueur de l'ordre de passage, qui ne suit pas
+    // les ecartes.
+    const total = views.totalClasses(s);
+    const current = Math.min(total, s.revealedRank ?? 0);
     s.patch({ revealedRank: all ? total : Math.min(total, current + 1) });
     repo.logEvent(s.id, 'results:reveal', { revealed: s.revealedRank });
     this.publish(s);
@@ -1051,7 +1085,7 @@ class BattleServer {
     this.setPhase(s, 'results', { endedAt: Date.now(), revealedRank: 0 });
     // Sans aucun rendu, il n'y a rien a devoiler : le classement est complet
     // des l'affichage, et les modules qui l'attendent doivent le savoir.
-    if (!(s.order ?? []).length) this.events.emit('results:complete', { session: s });
+    if (!views.totalClasses(s)) this.events.emit('results:complete', { session: s });
     return s;
   }
 
@@ -1064,7 +1098,7 @@ class BattleServer {
      * trois places devoilees sur huit gardait les cinq autres cachees pour
      * toujours, sur l'ecran comme sur les telephones.
      */
-    const total = (s.order ?? []).length;
+    const total = views.totalClasses(s);
     const avant = s.revealedRank ?? 0;
     if (s.phase === 'results' && avant < total) {
       s.patch({ revealedRank: total });

@@ -125,7 +125,7 @@ test('un spectateur n’apparait pas au classement', () => {
     srv.saveSubmission(session, g.participant, { textBody: 'X', kind: 'text', inline: 1, late: 0 }, prep.existing);
   }
   srv.setPhase(session, 'upload');
-  srv.setPhase(session, 'diffusion');
+  srv.startDiffusionInternal(session);
   srv.setPhase(session, 'results');
   const podium = views.podiumView({ ...srv.get(session.code), revealedRank: Number.MAX_SAFE_INTEGER });
   const auteurs = podium.rows.filter((r) => r.author).map((r) => r.author.pseudo);
@@ -177,7 +177,7 @@ test('le classement porte de quoi reecouter sans telecharger', () => {
     srv.saveSubmission(session, g.participant, { textBody: `TEXTE DE ${g.participant.pseudo}`, kind: 'text', inline: 1, late: 0 }, prep.existing);
   }
   srv.setPhase(session, 'upload');
-  srv.setPhase(session, 'diffusion');
+  srv.startDiffusionInternal(session);
   srv.setPhase(session, 'results');
   const podium = views.podiumView({ ...srv.get(session.code), revealedRank: Number.MAX_SAFE_INTEGER });
   for (const row of podium.rows.filter((r) => !r.hidden)) {
