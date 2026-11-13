@@ -14,6 +14,7 @@ const { ZipArchive } = require('archiver');
 const config = require('./config');
 const files = require('./files');
 const mime = require('./mime');
+const regles = require('./regles');
 const repo = require('./repo');
 const storage = require('./storage');
 const transcode = require('./transcode');
@@ -510,8 +511,8 @@ function mount(app, battle) {
    * Hors de ces cas : 404, et non 403. Confirmer l'existence d'un rendu a
    * quelqu'un qui n'y a pas droit est deja une information de trop.
    */
-  const REVEALED_PHASES = new Set(['diffusion', 'results', 'archived']);
-  const AUTHORS_PHASES = new Set(['results', 'archived']);
+  // La regle vit dans `regles.js` : elle tient compte de la manche du rendu,
+  // pas seulement de la phase de la session.
 
   const loadMedia = (req) => {
     const sub = repo.submissionByRendition(req.params.renditionId);
@@ -524,7 +525,7 @@ function mount(app, battle) {
 
   /** Nom montre : le vrai seulement a l'auteur ou apres la revelation. */
   const shownName = (sub, session, signed, ext) => {
-    const revealed = signed || AUTHORS_PHASES.has(session.phase);
+    const revealed = signed || regles.rendusReveles(session, sub);
     if (revealed && sub.filename) return sub.filename.replace(/\.[^.]+$/, '') + ext;
     return `rendu${ext}`;
   };
@@ -533,7 +534,7 @@ function mount(app, battle) {
     const found = loadMedia(req);
     if (!found) return res.status(404).json({ error: 'Rendu introuvable.' });
     const { sub, session, signed } = found;
-    if (!signed && !AUTHORS_PHASES.has(session.phase)) {
+    if (!signed && !regles.rendusReveles(session, sub)) {
       return res.status(404).json({ error: 'Rendu introuvable.' });
     }
 
@@ -562,7 +563,7 @@ function mount(app, battle) {
     const found = loadMedia(req);
     if (!found) return res.status(404).json({ error: 'Rendu introuvable.' });
     const { sub, session, signed } = found;
-    if (!signed && !REVEALED_PHASES.has(session.phase)) {
+    if (!signed && !regles.extraitVisible(session, sub)) {
       return res.status(404).json({ error: 'Rendu introuvable.' });
     }
 

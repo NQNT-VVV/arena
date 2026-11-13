@@ -79,8 +79,8 @@ export function Podium({
                 )}
               </span>
               <span className={styles.detail}>
-                {hex(row.voters ?? 0)} / {hex(row.expected ?? 0)} votes
-                {row.late && ' · hors délai'}
+                {row.voters !== undefined && `${hex(row.voters)} / ${hex(row.expected ?? 0)} votes`}
+                {row.late && (row.voters !== undefined ? ' · hors délai' : 'hors délai')}
                 {row.penalty ? ` · −${row.penalty}` : ''}
                 {/*
                   * Le sort ne se melange pas a la penalite.
@@ -103,7 +103,7 @@ export function Podium({
               )}
             </span>
             <span className={styles.score}>
-              {row.unranked ? <span className={styles.raw}>{row.raw}</span> : row.score}
+              {row.unranked ? <span className={styles.raw}>{row.raw ?? 'HC'}</span> : row.score}
             </span>
             {replay && canReplay(row) && (
               <button

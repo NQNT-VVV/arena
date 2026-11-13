@@ -530,6 +530,50 @@ function podiumView(session) {
   };
 }
 
+/**
+ * Les manches deja jouees, avec leurs rendus : pour les reecouter et les
+ * telecharger une fois passe a la suite.
+ *
+ * Meme forme qu'un podium entierement devoile, pour que les pages le montrent
+ * avec le meme composant. Le rang et la note viennent du classement FIGE ; le
+ * detail des votes n'a pas ete garde et n'est pas invente. Envoye seulement au
+ * classement et en fin de session : c'est la qu'on vient chercher un rendu, et
+ * le joindre a chaque diffusion d'etat pendant la creation ferait voyager
+ * toutes les cartes de toutes les manches a chaque depot.
+ */
+function manchesPasseesView(session) {
+  if (!AUTHORS_VISIBLE.has(session.phase)) return null;
+  const round = session.round ?? 1;
+  if (round <= 1) return null;
+  return repo.manchesFigees(session.id).filter((m) => m.round < round).map((m) => {
+    const rendus = new Map(repo.submissions(session.id, m.round).map((sub) => [sub.participantId, sub]));
+    // Les hors classement (rang nul) vont en bas, comme sur le podium.
+    const rows = [...m.rows].sort((a, b) => (a.rank ?? Infinity) - (b.rank ?? Infinity));
+    return {
+      round: m.round,
+      podium: {
+        total: rows.length,
+        revealed: rows.length,
+        complete: true,
+        rows: rows.map((r, index) => {
+          const sub = rendus.get(r.participantId);
+          return {
+            position: index + 1,
+            hidden: false,
+            rank: r.rank,
+            score: r.score === null ? null : Math.round(r.score * 100) / 100,
+            unranked: r.rank === null,
+            late: !!sub?.late,
+            author: classeDe(session, r.participantId),
+            rendition: sub ? anonymousCard(sub) : null,
+            filename: sub?.filename ?? null,
+          };
+        }),
+      },
+    };
+  });
+}
+
 /* ------------------------------------------------------------------ */
 /* Export de l'animateur                                               */
 /* ------------------------------------------------------------------ */
@@ -751,6 +795,8 @@ function commonView(session) {
     roulette: rouletteView(session),
     manche: mancheView(session),
     general: generalView(session),
+    /** Les manches deja jouees et leurs rendus ; nul hors du classement. */
+    passees: manchesPasseesView(session),
     /** Reference d'horloge : le client s'en sert pour mesurer sa derive. */
     serverNow: Date.now(),
   };
@@ -981,6 +1027,6 @@ module.exports = {
   chainView, youChainView, aRattraperView,
   rouletteView, youFateView,
   mancheView, extraitCarte, extraitsView, attributionsView, monExtraitView, extraitDuRendu,
-  exportView, exportCsv,
+  exportView, exportCsv, manchesPasseesView,
   rendusClasses, totalClasses, classer, rangsManche, mancheDevoilee, classementGeneralDe, generalView,
 };

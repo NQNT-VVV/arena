@@ -257,6 +257,12 @@ export interface PodiumRow {
   filename?: string | null;
 }
 
+/** Une manche deja jouee : son classement fige, sous la forme d'un podium entierement devoile. */
+export interface PastRound {
+  round: number;
+  podium: PodiumState;
+}
+
 export interface PodiumState {
   total: number;
   /** Nombre de places devoilees, en partant du bas. */
@@ -451,6 +457,8 @@ export interface BattleState {
   manche: MancheState;
   /** Null en une seule manche, ou tant qu'aucune manche n'est comptee. */
   general: GeneralState | null;
+  /** Les manches deja jouees, avec leurs rendus. Nul hors du classement, ou en premiere manche. */
+  passees?: PastRound[] | null;
   serverNow: number;
   isHost?: boolean;
   isScreen?: boolean;

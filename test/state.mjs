@@ -335,6 +335,50 @@ test('diffusion : un rendu passe sans note reste a rattraper, sur le canal de ch
   assert.deepEqual(vu(), [], 'classement affiche : plus rien a rattraper');
 });
 
+test('manches passees : leurs rendus restent joignables une fois la suite lancee', () => {
+  const regles = require('../server/regles.js');
+  const srv = new BattleServer(fakeIo());
+  const { session, hostToken } = srv.createSession({ name: 'Archives', mediaType: 'text', config: { rounds: 2 } });
+  srv.publishSession(session.code, hostToken);
+  const a = srv.join(session.code, { pseudo: 'ALPHA' });
+  srv.start(session.code, hostToken);
+  const deposer = () => {
+    const prep = srv.openSubmissionSlot(session.code, a.participant.id, a.token);
+    return srv.saveSubmission(session, a.participant, { textBody: `Manche ${session.round}`, filename: `m${session.round}.txt`, kind: 'text', inline: 1, late: 0 }, prep.existing);
+  };
+  const premier = deposer();
+  srv.forceCloseCreation(session.code, hostToken);
+  srv.startDiffusion(session.code, hostToken);
+  srv.showResults(session.code, hostToken);
+  assert.equal(views.participantView(session).passees, null, 'en premiere manche, rien de passe');
+  srv.reveal(session.code, hostToken, { all: true });
+  srv.nextRound(session.code, hostToken);
+
+  // Manche 2 en cours : le rendu de la manche 1 se sert encore, le courant non.
+  const second = deposer();
+  const m1 = repo.submission(premier.id);
+  const m2 = repo.submission(second.id);
+  assert.equal(m1.round, 1);
+  assert.equal(regles.rendusReveles(session, m1), true, 'la manche 1 a ete devoilee : son rendu se telecharge');
+  assert.equal(regles.extraitVisible(session, m1), true);
+  assert.equal(regles.rendusReveles(session, m2), false, 'le rendu en cours reste anonyme');
+  assert.equal(regles.extraitVisible(session, m2), false);
+  assert.equal(views.participantView(session).passees, null, 'pas envoye pendant la creation');
+
+  srv.forceCloseCreation(session.code, hostToken);
+  srv.startDiffusion(session.code, hostToken);
+  assert.equal(regles.rendusReveles(session, m2), false, 'toujours anonyme en diffusion');
+  srv.showResults(session.code, hostToken);
+  const passees = views.participantView(session).passees;
+  assert.deepEqual(passees.map((m) => m.round), [1]);
+  const ligne = passees[0].podium.rows[0];
+  assert.equal(ligne.author.pseudo, 'ALPHA');
+  assert.equal(ligne.rendition.renditionId, m1.renditionId, 'de quoi reecouter et telecharger');
+  assert.equal(ligne.rendition.textBody, 'Manche 1');
+  assert.equal(ligne.filename, 'm1.txt');
+  assert.equal(passees[0].podium.complete, true);
+});
+
 test('creation : code lisible, jeton rendu une seule fois', () => {
   const srv = new BattleServer(fakeIo());
   const { session, hostToken } = srv.createSession({ name: 'Beat Battle #12', mediaType: 'audio', brief: '5 samples imposes' });

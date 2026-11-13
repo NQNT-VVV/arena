@@ -9,6 +9,7 @@ import { Icon } from '@/components/Icon';
 import { AssetPack } from '@/components/AssetPack';
 import { Brand } from '@/components/Brand';
 import { ClassementGeneral } from '@/components/ClassementGeneral';
+import { ManchesPassees } from '@/components/ManchesPassees';
 import { MonExtrait } from '@/components/MonExtrait';
 import { Pads } from '@/components/Pads';
 import { DiffusionStage } from '@/components/DiffusionStage';
@@ -639,6 +640,7 @@ export function PlayClient() {
                 <ClassementGeneral general={state!.general} rounds={state!.manche.rounds} mineId={you?.id ?? null} />
               </>
             )}
+            <ManchesPassees passees={state!.passees} meId={you?.id} />
             <ChaineLue chain={state!.chain} />
           </div>
         ) : null;

@@ -22,6 +22,7 @@ import { hostKeys } from '@/lib/identity';
 import { sfx } from '@/lib/sfx';
 import { call } from '@/lib/socket';
 import { copyToClipboard } from '@/lib/storage';
+import { ManchesPassees } from '@/components/ManchesPassees';
 import { toast } from '@/lib/toast';
 import { MEDIA_LABELS, type Asset, type LatePolicy, type MediaType, type SessionMode } from '@/lib/types';
 import { useBattleSocket } from '@/lib/useBattleSocket';
@@ -484,6 +485,12 @@ export function HostClient() {
           <section className="card pad col">
             <h2 className="section-title">Classement général</h2>
             <ClassementGeneral general={state.general} rounds={state.manche.rounds} />
+          </section>
+        )}
+
+        {state.passees && state.passees.length > 0 && (
+          <section className="card pad col">
+            <ManchesPassees passees={state.passees} />
           </section>
         )}
 

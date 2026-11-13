@@ -47,7 +47,30 @@ function entreDeuxManches(session) {
 const peutAjouterElement = (session) => ASSET_ADD_PHASES.has(session.phase) || entreDeuxManches(session);
 const peutRetirerElement = (session) => ASSET_REMOVE_PHASES.has(session.phase) || entreDeuxManches(session);
 
+/* ------------------------------------------------------------------ */
+/* Acces aux rendus                                                    */
+/* ------------------------------------------------------------------ */
+
+const AUTHORS_PHASES = new Set(['results', 'archived']);
+const REVEALED_PHASES = new Set(['diffusion', 'results', 'archived']);
+
+/** Le rendu vient-il d'une manche deja jouee ? Elle a ete devoilee en entier avant de passer a la suivante. */
+const mancheJouee = (session, sub) => (sub.round ?? 1) < (session.round ?? 1);
+
+/**
+ * Peut-on servir le rendu complet, sous son vrai nom ?
+ *
+ * Une fois les auteurs reveles : au classement, ou pour toute manche deja
+ * jouee. La regle ne regardait que la phase de la session — des la manche 2
+ * lancee, les rendus de la manche 1 repondaient 404 a tout le monde.
+ */
+const rendusReveles = (session, sub) => AUTHORS_PHASES.has(session.phase) || mancheJouee(session, sub);
+
+/** Peut-on servir l'extrait de diffusion, anonyme ? Des la diffusion, et pour toute manche jouee. */
+const extraitVisible = (session, sub) => REVEALED_PHASES.has(session.phase) || mancheJouee(session, sub);
+
 module.exports = {
+  rendusReveles, extraitVisible,
   ASSET_ADD_PHASES, ASSET_REMOVE_PHASES,
   entreDeuxManches, peutAjouterElement, peutRetirerElement,
 };
