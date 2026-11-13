@@ -1819,6 +1819,9 @@ class BattleServer {
    */
   spin(code, token, payload = {}) {
     const s = this.requireHost(code, token);
+    if (!regles.rouletteOuverte(s)) {
+      throw new BattleError('La session est terminée : la roue ne tourne plus.');
+    }
     const tirage = roulette.tirer(s, payload);
 
     if (tirage.chronoApplicable && tirage.chronoMs) {

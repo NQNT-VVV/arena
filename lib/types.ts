@@ -419,6 +419,8 @@ export interface YouFate {
  * tranches, ils n'ont aucune regle a appliquer.
  */
 export interface RouletteRules {
+  /** Faux sur une session terminee : la roue ne tourne plus. */
+  open: boolean;
   /** Phases ou les points corrigent encore un score. */
   pointsPhases: Phase[];
   /** Phases ou le chrono court encore. */

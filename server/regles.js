@@ -59,6 +59,17 @@ const CHAIN_TURN_MS = 90000;
 const CHAIN_LINE_MAX = 140;
 
 /* ------------------------------------------------------------------ */
+/* La roulette                                                         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * La roue tourne-t-elle encore ? Plus sur une session terminee : il n'y a
+ * plus personne a qui le sort s'adresse, et le tirage s'ajouterait au compte
+ * public d'une soiree close. Les roues, elles, restent modifiables.
+ */
+const rouletteOuverte = (session) => session.phase !== 'archived';
+
+/* ------------------------------------------------------------------ */
 /* Acces aux rendus                                                    */
 /* ------------------------------------------------------------------ */
 
@@ -82,6 +93,7 @@ const extraitVisible = (session, sub) => REVEALED_PHASES.has(session.phase) || m
 
 module.exports = {
   CHAIN_PHASES, CHAIN_TURN_MS, CHAIN_LINE_MAX,
+  rouletteOuverte,
   rendusReveles, extraitVisible,
   ASSET_ADD_PHASES, ASSET_REMOVE_PHASES,
   entreDeuxManches, peutAjouterElement, peutRetirerElement,

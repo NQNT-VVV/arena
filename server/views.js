@@ -883,9 +883,10 @@ function hostView(session) {
      * Les roues, et la graine du dernier tirage.
      *
      * Les roues ne dependent d'aucune session : elles se preparent entre deux
-     * soirees. La graine est ici et pas dans la vue commune — elle sert a
-     * rejouer un tirage conteste, ce qui est une conversation entre
-     * l'animateur et la salle, pas une ligne d'affichage.
+     * soirees. La graine est ici et pas dans la vue commune — c'est la trace
+     * d'un tirage, a produire s'il est conteste : une conversation entre
+     * l'animateur et la salle, pas une ligne d'affichage. Rien ne la rejoue
+     * depuis la regie, et la page ne le promet pas.
      */
     wheels: repo.wheels(),
     lastSeed: repo.lastSpin(session.id)?.seed ?? null,
@@ -902,6 +903,8 @@ function hostView(session) {
      * miroir finit par mentir — on les lui donne.
      */
     rouletteRules: {
+      /** Faux sur une session terminee : la regie ne propose plus de tirer. */
+      open: regles.rouletteOuverte(session),
       pointsPhases: [...roulette.PHASES_POINTS],
       chronoPhases: [...roulette.PHASES_CHRONO],
       blindPhases: [...roulette.PHASES_AVEUGLES],

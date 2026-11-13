@@ -511,7 +511,13 @@ export function RouletteHost({
 
       {/* ------------------------------ le tirage ----------------------- */}
 
-      {openId && (
+      {rules?.open === false && (
+        <p className="meta">
+          La session est terminée : la roue ne tourne plus. Les roues restent modifiables, pour la prochaine.
+        </p>
+      )}
+
+      {openId && rules?.open !== false && (
         <div className={styles.spin}>
           <span className="section-title sub">Faire tourner</span>
 
@@ -632,8 +638,8 @@ export function RouletteHost({
                 <Icon name="copier" />Copier
               </button>
               <span className="meta">
-                Même graine, même roue, même liste : le tirage se refait à l’identique. C’est
-                de quoi vérifier un tirage contesté devant la salle.
+                La trace de ce tirage, gardée avec lui dans le journal de la session : à
+                produire si quelqu’un le conteste. Rien ici ne rejoue un tirage à partir de sa graine.
               </span>
             </div>
           )}

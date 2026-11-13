@@ -301,6 +301,21 @@ test('en creation, les points s’appliquent', () => {
   assert.equal(totaux[t.fates[0].participantId], -2);
 });
 
+test('sur une session terminee, la roue ne tourne plus', () => {
+  const srv = new BattleServer(fakeIo());
+  const { session, hostToken } = srv.createSession({ name: 'Finie', mediaType: 'text' });
+  srv.publishSession(session.code, hostToken);
+  srv.join(session.code, { pseudo: 'CREATEUR' });
+  const w = roue('Apres coup', [{ label: 'Trop tard' }]);
+  assert.equal(views.hostView(session).rouletteRules.open, true);
+  srv.spin(session.code, hostToken, { wheelId: w.id, target: 'one' });
+  const avant = repo.countSpins(session.id);
+  srv.archive(session.code, hostToken);
+  assert.equal(views.hostView(session).rouletteRules.open, false, 'la regie ne le propose plus');
+  assert.throws(() => srv.spin(session.code, hostToken, { wheelId: w.id, target: 'one' }), /ne tourne plus/);
+  assert.equal(repo.countSpins(session.id), avant, 'aucun tirage ne s’ajoute au compte public');
+});
+
 test('au classement, les points ne corrigent plus rien : le sort reste une consigne', () => {
   const { session } = ouvrir({ createurs: 3, phase: 'results' });
   const w = roue('Trop tard', [{ label: 'Moins deux', points: -2 }]);
