@@ -252,6 +252,43 @@ export function PlayClient() {
     );
   }
 
+  /*
+   * Arrive trop tard : on le dit, et on donne quelque chose a faire.
+   *
+   * Passe le debut de la diffusion, le serveur n'inscrit plus personne — les
+   * votants absents comptent pour la note par defaut, et un arrivant fausserait
+   * les rendus deja passes. La page montrait pourtant un champ pseudo et deux
+   * boutons actifs qui refusaient l'un apres l'autre. Elle explique maintenant
+   * pourquoi, et envoie vers l'ecran, qui se regarde sans inscription.
+   *
+   * Quelqu'un de deja inscrit n'arrive jamais ici : son identite gardee le
+   * fait reprendre sa place a la connexion, quelle que soit la phase.
+   */
+  if (!joined && card?.exists && card.open === false && !identity.get(code)) {
+    const finie = card.phase === 'results' || card.phase === 'archived';
+    return (
+      <div className={styles.gate}>
+        <Brand />
+        <span className="pill"><span className="code-chip">{code}</span></span>
+        <h1>{card.name}</h1>
+        <p className="pill err"><span>{finie ? 'Session terminée' : 'La diffusion a commencé'}</span></p>
+        <p className="muted">
+          {finie
+            ? 'Les rendus sont passés et le classement est établi : on ne s’inscrit plus à cette session.'
+            : 'On ne rejoint plus une session une fois la diffusion lancée : chaque absent compte pour la note par défaut, et un arrivant de dernière minute fausserait les rendus déjà passés.'}
+        </p>
+        <a className="btn primary lg block" href={`/screen?code=${encodeURIComponent(code)}`}>
+          <Icon name="oeil" />{finie ? 'Voir le classement' : 'Suivre sans noter'}
+        </a>
+        <p className={styles.roleHint}>
+          {finie
+            ? 'Tu verras le podium tel qu’il a été dévoilé.'
+            : 'Tu verras les rendus et le classement comme sur l’écran de la salle, sans voter.'}
+        </p>
+      </div>
+    );
+  }
+
   if (!joined || !state) {
     return (
       <div className={styles.gate}>
@@ -263,9 +300,6 @@ export function PlayClient() {
             ? `Rendu attendu · ${MEDIA_LABELS[card.mediaType].label}`
             : 'Chargement'}
         </p>
-        {card && !card.open && (
-          <p className="pill err"><span>Inscriptions fermées</span></p>
-        )}
         <div className="field" style={{ width: '100%' }}>
           <label htmlFor="pseudo">Ton pseudo</label>
           <input
