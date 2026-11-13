@@ -465,8 +465,6 @@ export function PlayClient() {
                 )}
               </>
             )}
-            {/* De quoi patienter : l'attente du lobby est le seul moment sans rien a faire. */}
-            <Pads />
           </div>
         );
       case 'creation':
@@ -481,6 +479,12 @@ export function PlayClient() {
                   : 'Dépôt possible dès que le rendu est prêt, sans attendre la fin.'}
             </p>
             {renderSubmission()}
+            {/*
+              * Pendant que les createurs travaillent, un spectateur n'a rien a
+              * faire : le mini-jeu est pour lui, et pour lui seul — un createur
+              * n'a pas a etre distrait de son chrono.
+              */}
+            {you?.spectator && <Pads />}
           </>
         );
       case 'upload':
@@ -493,6 +497,7 @@ export function PlayClient() {
                 : 'Le temps de création est écoulé. Il reste la fenêtre de grâce pour finaliser ton dépôt.'}
             </p>
             {renderSubmission()}
+            {you?.spectator && <Pads />}
           </>
         );
       case 'diffusion': {

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import styles from './Pads.module.css';
 
 /**
- * Le mini-jeu du lobby : cinq pads, une suite a retenir qui s'allonge d'une
+ * Le mini-jeu des spectateurs, pendant la creation : cinq pads, une suite a retenir qui s'allonge d'une
  * note a chaque tour. Il ne sert qu'a patienter : tout se passe dans le
  * navigateur, rien ne part au serveur, et le record reste sur l'appareil.
  */

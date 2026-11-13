@@ -1,4 +1,4 @@
-/* Le mini-jeu du lobby : la console verte d'Arena, cinq pads a rejouer dans l'ordre.
+/* Le mini-jeu des spectateurs : la console verte d'Arena, cinq pads a rejouer dans l'ordre.
    Les couleurs sont fixes : c'est un objet, il ne suit pas le mode sombre. */
 .jeu { width: 100%; max-width: 440px; padding: 18px 18px 16px; border-radius: 24px; background: #1F4E46; color: #F4EFE3; box-shadow: 0 8px 0 #12332D, 0 22px 30px rgba(34,30,26,.22); display: grid; gap: 14px; text-align: left; animation: pop .5s var(--ease-bounce) both; }
 .perdu { animation: shake .4s var(--ease); }
