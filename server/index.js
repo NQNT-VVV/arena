@@ -201,7 +201,7 @@ io.on('connection', (socket) => {
     'host:archive': (s) => battle.archive(s, socket.data.hostToken),
     'host:disqualify': (s, p) => battle.setDisqualified(s, socket.data.hostToken, p?.participantId, p?.on),
     // Manches et Rebuild The Track.
-    'host:next-round': (s, p) => battle.nextRound(s, socket.data.hostToken, { durationMs: p?.durationMs }),
+    'host:next-round': (s, p) => battle.nextRound(s, socket.data.hostToken, { durationMs: p?.durationMs, brief: p?.brief }),
     'host:extrait-edit': (s, p) => {
       battle.editExtrait(s, socket.data.hostToken, p);
       return battle.require(s);

@@ -19,6 +19,7 @@ const { EventEmitter } = require('events');
 
 const config = require('./config');
 const repo = require('./repo');
+const regles = require('./regles');
 const roulette = require('./roulette');
 const storage = require('./storage');
 const transcode = require('./transcode');
@@ -603,28 +604,15 @@ class BattleServer {
 
   /* ---------------------------- assets --------------------------- */
 
-  /**
-   * Phases ou l'animateur peut encore deposer un element.
-   *
-   * `creation` en fait partie : oublier un sample et s'en apercevoir dix
-   * minutes apres le depart arrive, et interdire l'ajout obligerait a relancer
-   * toute la session. Les participants recoivent le nouvel element en direct.
-   */
-  static ASSET_ADD_PHASES = new Set(['config', 'lobby', 'creation']);
-
-  /**
-   * Phases ou il peut en retirer un.
-   *
-   * Volontairement plus etroit que l'ajout : retirer une contrainte alors que
-   * des gens ont deja construit dessus invalide leur travail.
-   */
-  static ASSET_REMOVE_PHASES = new Set(['config', 'lobby']);
+  /** Les regles vivent dans `regles.js`, que les vues envoient aussi a la regie. */
+  static ASSET_ADD_PHASES = regles.ASSET_ADD_PHASES;
+  static ASSET_REMOVE_PHASES = regles.ASSET_REMOVE_PHASES;
 
   /** Verifie qu'un depot d'element est possible, et dit ce qu'il reste comme place. */
   openAssetSlot(code, token) {
     const session = this.requireHost(code, token);
-    if (!BattleServer.ASSET_ADD_PHASES.has(session.phase)) {
-      throw new BattleError('Les éléments ne se déposent plus une fois la création terminée.');
+    if (!regles.peutAjouterElement(session)) {
+      throw new BattleError('Les éléments ne se déposent plus une fois la création terminée, sauf entre deux manches.');
     }
     const totals = repo.assetTotals(session.id);
     const slots = config.limits.maxAssets - totals.n;
@@ -642,8 +630,8 @@ class BattleServer {
 
   removeAsset(code, token, assetId) {
     const session = this.requireHost(code, token);
-    if (!BattleServer.ASSET_REMOVE_PHASES.has(session.phase)) {
-      throw new BattleError('Un élément ne se retire plus une fois la création lancée.');
+    if (!regles.peutRetirerElement(session)) {
+      throw new BattleError('Un élément ne se retire plus une fois la création lancée, sauf entre deux manches.');
     }
     const asset = repo.asset(assetId);
     if (!asset || asset.sessionId !== session.id) throw new BattleError('Élément introuvable.', 404);
@@ -1476,8 +1464,13 @@ class BattleServer {
    * `durationMs` regle le chrono de la manche qui s'ouvre : la consigne veut
    * pouvoir fixer la duree avant chaque manche, et les reglages generaux sont
    * figes depuis le premier lancement.
+   *
+   * `brief` change la consigne pour la manche qui s'ouvre. Sans cela, trois
+   * manches de battle etaient trois fois le meme exercice ; les elements
+   * imposes, eux, se changent entre deux manches par leurs routes habituelles
+   * (`regles.entreDeuxManches`).
    */
-  nextRound(code, token, { durationMs } = {}) {
+  nextRound(code, token, { durationMs, brief } = {}) {
     const s = this.requireHost(code, token);
     if (s.phase !== 'results') throw new BattleError('La manche suivante se lance depuis le classement.');
     const total = s.config.rounds ?? 1;
@@ -1493,7 +1486,11 @@ class BattleServer {
       ? s.config.durationMs
       : clamp(Math.round(num(durationMs, s.config.durationMs)), MIN_DURATION_MS, MAX_DURATION_MS);
     const now = Date.now();
-    s.patch({ round: round + 1, config: { ...s.config, durationMs: duree } });
+    s.patch({
+      round: round + 1,
+      config: { ...s.config, durationMs: duree },
+      ...(brief === undefined || brief === null ? {} : { brief: cleanText(brief, config.limits.maxBriefChars) }),
+    });
     // La chaine est rattachee a la manche : une manche neuve ouvre une
     // histoire neuve, qui repart du premier spectateur.
     s.chainCursor = undefined;

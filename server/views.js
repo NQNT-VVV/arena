@@ -28,6 +28,7 @@
 const AUTHORS_VISIBLE = new Set(['results', 'archived']);
 
 const config = require('./config');
+const regles = require('./regles');
 const repo = require('./repo');
 const roulette = require('./roulette');
 const { rank } = require('./scoring');
@@ -852,6 +853,17 @@ function hostView(session) {
       blindPhases: [...roulette.PHASES_AVEUGLES],
       pointsMax: roulette.POINTS_MAX,
       chronoMaxMs: roulette.CHRONO_MAX_MS,
+    },
+    /**
+     * Ce que la regie peut faire maintenant, dit par le serveur.
+     *
+     * Des reponses, pas des listes de phases : la regle des elements imposes
+     * depend aussi de la manche (entre deux manches, le pack se change), et
+     * la page n'a pas a la reconstituer pour griser un bouton.
+     */
+    rules: {
+      assetAdd: regles.peutAjouterElement(session),
+      assetRemove: regles.peutRetirerElement(session),
     },
     roster: [...session.participants.values()]
       .filter((p) => !p.isHost)

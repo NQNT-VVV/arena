@@ -248,6 +248,55 @@ test('export : en une seule manche, le CSV garde ses colonnes d’avant', () => 
   assert.equal(views.exportView(session).general, null);
 });
 
+test('entre deux manches : la consigne et les elements imposes se changent', () => {
+  const srv = new BattleServer(fakeIo());
+  const { session, hostToken } = srv.createSession({ name: 'Trois manches', mediaType: 'text', brief: 'Consigne 1', config: { rounds: 2 } });
+  srv.publishSession(session.code, hostToken);
+  srv.join(session.code, { pseudo: 'CREA' });
+  const element = (id) => srv.recordAsset(session, {
+    id, filename: `${id}.wav`, storageKey: `sessions/${session.id}/assets/${id}.wav`, bytes: 10, mime: 'audio/wav', kind: 'audio', inline: true, position: 0,
+  });
+  element('avant');
+  srv.start(session.code, hostToken);
+  throws(() => srv.removeAsset(session.code, hostToken, 'avant'), 'ne se retire plus');
+  srv.forceCloseCreation(session.code, hostToken);
+  throws(() => srv.openAssetSlot(session.code, hostToken), 'ne se déposent plus');
+  assert.equal(views.hostView(session).rules.assetAdd, false);
+  srv.startDiffusion(session.code, hostToken);
+  srv.showResults(session.code, hostToken);
+
+  // Classement affiche, une manche reste : tout se change.
+  assert.deepEqual(views.hostView(session).rules, { assetAdd: true, assetRemove: true });
+  srv.openAssetSlot(session.code, hostToken);
+  element('manche2');
+  srv.removeAsset(session.code, hostToken, 'avant');
+  assert.deepEqual(repo.assets(session.id).map((a) => a.id), ['manche2']);
+
+  srv.nextRound(session.code, hostToken, { brief: 'Consigne 2' });
+  assert.equal(session.brief, 'Consigne 2');
+  assert.equal(repo.sessionById(session.id).brief, 'Consigne 2', 'ecrite en base');
+  assert.equal(views.participantView(session).brief, 'Consigne 2');
+
+  // Derniere manche : au classement, plus rien ne se prepare.
+  srv.forceCloseCreation(session.code, hostToken);
+  srv.startDiffusion(session.code, hostToken);
+  srv.showResults(session.code, hostToken);
+  assert.deepEqual(views.hostView(session).rules, { assetAdd: false, assetRemove: false });
+  throws(() => srv.openAssetSlot(session.code, hostToken), 'ne se déposent plus');
+});
+
+test('manche suivante : sans consigne fournie, celle d’avant reste', () => {
+  const srv = new BattleServer(fakeIo());
+  const { session, hostToken } = srv.createSession({ name: 'Meme consigne', mediaType: 'text', brief: 'Toujours la meme', config: { rounds: 2 } });
+  srv.publishSession(session.code, hostToken);
+  srv.start(session.code, hostToken);
+  srv.forceCloseCreation(session.code, hostToken);
+  srv.startDiffusion(session.code, hostToken);
+  srv.showResults(session.code, hostToken);
+  srv.nextRound(session.code, hostToken);
+  assert.equal(session.brief, 'Toujours la meme');
+});
+
 test('creation : code lisible, jeton rendu une seule fois', () => {
   const srv = new BattleServer(fakeIo());
   const { session, hostToken } = srv.createSession({ name: 'Beat Battle #12', mediaType: 'audio', brief: '5 samples imposes' });

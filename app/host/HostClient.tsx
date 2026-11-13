@@ -31,15 +31,6 @@ import styles from './host.module.css';
 /** Seuils proposes en un clic. L'animateur en coche autant qu'il veut. */
 const ALERT_CHOICES = [900, 600, 300, 120, 60, 30];
 
-/**
- * Miroir de `BattleServer.ASSET_ADD_PHASES` et `ASSET_REMOVE_PHASES`.
- *
- * Le serveur reste seul juge — il refuse ce qu'il doit refuser. Ces ensembles
- * ne servent qu'a griser les commandes plutot qu'a laisser cliquer pour rien.
- */
-const ASSET_ADD_PHASES = new Set(['config', 'lobby', 'creation']);
-const ASSET_REMOVE_PHASES = new Set(['config', 'lobby']);
-
 const LATE_POLICIES: { id: LatePolicy; label: string; hint: string }[] = [
   { id: 'reject', label: 'Refusés', hint: 'Passé l’heure, le dépôt est bloqué.' },
   { id: 'unranked', label: 'Hors classement', hint: 'Le rendu passe en diffusion mais ne concourt pas.' },
@@ -532,13 +523,13 @@ export function HostClient() {
           <AssetUploader
             code={state.code}
             token={hostKeys.get(state.code)}
-            disabled={!ASSET_ADD_PHASES.has(phase)}
+            disabled={!state.rules?.assetAdd}
             hint="Ou glisse-les ici — plusieurs à la fois"
           />
           <AssetPack
             assets={state.assets}
             zipUrl={state.assets.length ? state.assetsZipUrl : undefined}
-            onRemove={ASSET_REMOVE_PHASES.has(phase) ? dropAsset : undefined}
+            onRemove={state.rules?.assetRemove ? dropAsset : undefined}
             emptyLabel="Aucun élément pour l’instant. Une session peut très bien s’en passer : une consigne seule suffit."
           />
         </section>
@@ -776,6 +767,13 @@ export function HostClient() {
     return (
       <div className={styles.nextEdition}>
         <span className="section-title">Manche {m.round + 1}/{m.rounds}</span>
+        <label className="field">
+          <span className="meta">Consigne de la manche {m.round + 1}</span>
+          <textarea
+            className="input" rows={3} value={draft.brief} maxLength={4000}
+            onChange={(e) => setDraft((d) => ({ ...d, brief: e.target.value }))}
+          />
+        </label>
         <div className="row wrap">
           <label className="field" style={{ minWidth: 160 }}>
             <span className="meta">Durée de création (minutes)</span>
@@ -789,7 +787,7 @@ export function HostClient() {
             disabled={busy || !pret}
             aria-busy={busy}
             title={pret ? undefined : 'Dévoilez tout le classement d’abord'}
-            onClick={() => act('host:next-round', { durationMs: draft.durationMin * 60_000 })}
+            onClick={() => act('host:next-round', { durationMs: draft.durationMin * 60_000, brief: draft.brief })}
           >
             Lancer la manche {m.round + 1}
           </button>
@@ -800,6 +798,7 @@ export function HostClient() {
               ? 'Rendus, votes et chrono repartent de zéro ; chacun reçoit un nouvel extrait.'
               : 'Rendus, votes et chrono repartent de zéro ; participants et spectateurs restent.')
             : 'Dévoilez tout le classement : la manche est figée à ce moment-là.'}
+          {' '}Consigne et éléments imposés se changent d’ici là : la consigne ci-dessus, le pack dans « Éléments imposés ».
         </span>
       </div>
     );

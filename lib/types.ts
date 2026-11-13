@@ -455,6 +455,8 @@ export interface BattleState {
   pendingSubmissions?: number;
   /** Regie seulement : les roues ne dependent d'aucune session. */
   wheels?: Wheel[];
+  /** Regie seulement : ce que le serveur accepte maintenant, pour griser sans recopier ses regles. */
+  rules?: HostRules;
   /** Regie seulement : les regles du tirage, pour prevenir avant de lancer. */
   rouletteRules?: RouletteRules;
   /**
@@ -500,6 +502,12 @@ export interface OwnSubmission {
   replacedCount: number;
   /** Lien signe, valable pour ce rendu et pour son auteur. Null pour un texte. */
   url: string | null;
+}
+
+/** Ce que la regie peut faire maintenant : calcule par `server/regles.js`, jamais recopie. */
+export interface HostRules {
+  assetAdd: boolean;
+  assetRemove: boolean;
 }
 
 /** Canal personnel : ce que le serveur ne dit qu'a un participant. */
