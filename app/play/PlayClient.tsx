@@ -205,6 +205,22 @@ export function PlayClient() {
   };
 
   const leave = () => {
+    /*
+     * Une fois la partie lancee, on ne « quitte » plus vraiment.
+     *
+     * Le serveur garde la ligne du participant des que le chrono est parti :
+     * effacer son identite ici l'enfermait dehors (« pseudo deja pris », puis
+     * « inscriptions fermees ») et laissait un fantome qui pesait la note par
+     * defaut sur tous les rendus. On garde donc sa place a son nom : il ferme
+     * la page, et le meme lien le ramene.
+     */
+    const lancee = !!state && state.phase !== 'config' && state.phase !== 'lobby';
+    if (lancee) {
+      if (window.confirm('La partie est lancée : ta place reste à ton nom. Tu pourras revenir avec le même lien, sur ce navigateur. Fermer la page ?')) {
+        window.location.assign('/');
+      }
+      return;
+    }
     if (socket) void call(socket, 'play:leave');
     if (code) identity.clear(code);
     setJoined(false);

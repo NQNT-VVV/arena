@@ -688,7 +688,20 @@ export function HostClient() {
                 {d?.autoNext ? 'Enchaînement automatique' : 'Enchaînement manuel — coupé pour commenter'}
               </span>
             </label>
-            {btn('Afficher les résultats', 'host:results', {}, `btn ${last ? 'primary' : ''}`)}
+            {/*
+              * Irreversible : les rendus pas encore passes seraient classes avec
+              * la seule note par defaut, sans que personne les ait ecoutes.
+              */}
+            <button
+              className={`btn ${last ? 'primary' : ''}`} disabled={busy} aria-busy={busy}
+              onClick={() => {
+                const reste = (d?.total ?? 0) - (d?.index ?? 0) - 1;
+                if (reste > 0 && !window.confirm(`Il reste ${reste} rendu(s) à passer : ils seraient classés sans avoir été écoutés, et on ne revient pas en arrière. Afficher les résultats quand même ?`)) return;
+                void act('host:results', {});
+              }}
+            >
+              Afficher les résultats
+            </button>
             {!last && (
               <span className="meta">
                 Il reste {(d?.total ?? 0) - (d?.index ?? 0) - 1} rendu(s) à passer.

@@ -509,7 +509,11 @@ const deleteVotesOfStmt = db.prepare('DELETE FROM vote WHERE submission_id = ?')
 const tallyStmt = db.prepare(`
   SELECT v.submission_id, v.criterion_id, COUNT(*) AS n, SUM(v.value) AS total
     FROM vote v JOIN submission s ON s.id = v.submission_id
+                JOIN participant p ON p.id = v.voter_id
    WHERE v.session_id = @sessionId AND s.round = ${MANCHE}
+     -- Un ecarte ne note plus : il sort deja du nombre de votants attendus, et
+     -- garder ses notes dans la somme faisait depasser le bareme a la moyenne.
+     AND p.disqualified = 0
    GROUP BY v.submission_id, v.criterion_id
 `);
 

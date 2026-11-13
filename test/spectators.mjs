@@ -219,6 +219,40 @@ test('a l’arrivee, chacun recoit son etat personnel avec son role', () => {
 
 /* ------------------------------------------------------------------ */
 
+test('les notes d’un votant ecarte ne comptent plus : la moyenne reste dans le bareme', () => {
+  const { srv, session, hostToken, gens } = ouvrir({ createurs: 2, spectateurs: 2 });
+  const [a, b] = gens.filter((g) => g.role === 'createur');
+  const [j1, j2] = gens.filter((g) => g.role === 'spectateur');
+  srv.setPhase(session, 'creation');
+  for (const g of [a, b]) {
+    const prep = srv.openSubmissionSlot(session.code, g.participant.id, g.token);
+    srv.saveSubmission(session, g.participant, { textBody: 'X', kind: 'text', inline: 1, late: 0 }, prep.existing);
+  }
+  srv.setPhase(session, 'upload');
+  srv.startDiffusion(session.code, hostToken);
+  const live = srv.get(session.code);
+  const courant = live.currentSubmission();
+  const scale = live.config.scale;
+  const critere = live.config.criteria[0]?.id ?? '_';
+  // Tous ceux qui peuvent noter ce rendu donnent la note maximale.
+  for (const g of gens) {
+    if (g.participant.id === courant.participantId) continue;
+    srv.voteAs(live, g.participant, { renditionId: courant.renditionId, criterionId: critere, value: scale });
+  }
+  // Puis l'un d'eux est ecarte : il sort du nombre de votants attendus.
+  srv.setDisqualified(session.code, hostToken, j2.participant.id, true);
+  srv.setPhase(srv.get(session.code), 'results');
+  const podium = views.podiumView({ ...srv.get(session.code), revealedRank: Number.MAX_SAFE_INTEGER });
+  for (const row of podium.rows) {
+    for (const c of row.criteria ?? []) {
+      assert.ok(c.average <= scale, `moyenne ${c.average} au-dessus du bareme ${scale}`);
+    }
+    const note = Number(String(row.raw ?? row.score).replace(',', '.'));
+    assert.ok(Number.isFinite(note) && note <= scale, `note ${row.raw ?? row.score} au-dessus du bareme ${scale}`);
+  }
+  assert.ok(j1, 'il reste un spectateur pour noter');
+});
+
 for (const [name, fn] of checks) {
   try {
     fn();
