@@ -1,0 +1,33 @@
+/* Le mini-jeu du lobby : la console verte d'Arena, cinq pads a rejouer dans l'ordre.
+   Les couleurs sont fixes : c'est un objet, il ne suit pas le mode sombre. */
+.jeu { width: 100%; max-width: 440px; padding: 18px 18px 16px; border-radius: 24px; background: #1F4E46; color: #F4EFE3; box-shadow: 0 8px 0 #12332D, 0 22px 30px rgba(34,30,26,.22); display: grid; gap: 14px; text-align: left; animation: pop .5s var(--ease-bounce) both; }
+.perdu { animation: shake .4s var(--ease); }
+
+.tete { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.titre { color: #F2C230; font-size: 24px; rotate: -1.5deg; }
+.son { border: 1.5px solid rgba(244,239,227,.5); background: transparent; color: #F4EFE3; border-radius: 999px; min-height: 30px; padding: 0 12px; font: 700 12px/1 var(--font-mono); cursor: pointer; transition: background var(--tap), color var(--tap); }
+.son:hover { background: rgba(244,239,227,.12); }
+.son[aria-pressed="false"] { opacity: .65; border-style: dashed; }
+
+.pads { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+/* Un pad : une touche epaisse. Elle s'enfonce sous le doigt et s'eclaire quand la suite passe par elle. */
+.pad { aspect-ratio: 1; border: 0; border-radius: 14px; cursor: pointer; box-shadow: 0 6px 0 rgba(0,0,0,.38); transition: transform .08s var(--ease), box-shadow .08s var(--ease), filter .12s ease; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+.pad:active:not(:disabled) { transform: translateY(6px); box-shadow: 0 0 0 rgba(0,0,0,.38); }
+.pad:disabled { cursor: default; filter: saturate(.75) brightness(.82); }
+.pad.allume { transform: translateY(5px) scale(1.04); box-shadow: 0 1px 0 rgba(0,0,0,.38), 0 0 0 4px rgba(255,255,255,.55), 0 0 26px rgba(255,255,255,.5); filter: brightness(1.25) saturate(1.2); }
+.pad:focus-visible { outline: 3px solid #FFFFFF; outline-offset: 3px; }
+
+.jeu .message { font: 700 17px/1.4 var(--font-mono); color: #F4EFE3; min-height: 2.8em; margin: 0; text-transform: none; letter-spacing: 0; }
+.pied { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.score { font: 700 12px/1 var(--font-mono); text-transform: uppercase; letter-spacing: .05em; opacity: .85; display: inline-flex; align-items: baseline; gap: 6px; }
+.score b { font: 800 26px/1 var(--font-display); color: #F2C230; opacity: 1; font-variant-numeric: tabular-nums; }
+.jouer { --edge: #C8442B; margin-left: auto; background: #F2C230; border-color: #F2C230; color: #221E1A; }
+.jouer:hover:not(:disabled) { color: #221E1A; }
+
+@media (max-width: 420px) {
+  .pads { gap: 7px; }
+  .pad { border-radius: 11px; }
+}
+
+@keyframes pop { 0% { opacity: 0; scale: .8; } 70% { opacity: 1; scale: 1.05; } 100% { opacity: 1; scale: 1; } }
+@keyframes shake { 0%, 100% { translate: 0 0; } 20% { translate: -6px 0; } 40% { translate: 6px 0; } 60% { translate: -4px 0; } 80% { translate: 4px 0; } }

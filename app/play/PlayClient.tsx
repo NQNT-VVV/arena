@@ -10,6 +10,7 @@ import { AssetPack } from '@/components/AssetPack';
 import { Brand } from '@/components/Brand';
 import { ClassementGeneral } from '@/components/ClassementGeneral';
 import { MonExtrait } from '@/components/MonExtrait';
+import { Pads } from '@/components/Pads';
 import { DiffusionStage } from '@/components/DiffusionStage';
 import { Podium } from '@/components/Podium';
 import { OwnFate } from '@/components/Roulette';
@@ -464,6 +465,8 @@ export function PlayClient() {
                 )}
               </>
             )}
+            {/* De quoi patienter : l'attente du lobby est le seul moment sans rien a faire. */}
+            <Pads />
           </div>
         );
       case 'creation':

@@ -43,3 +43,6 @@
   font: var(--t-prose); letter-spacing: var(--ls-prose); text-transform: none;
   color: var(--ink-60); max-width: 46ch; margin-top: var(--sp-1);
 }
+
+/* L'index hexadecimal du type de rendu ne dit rien au joueur. */
+.waiting .bigIcon { display: none; }
