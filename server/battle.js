@@ -578,6 +578,11 @@ class BattleServer {
     }
     const existing = repo.submissionOf(session.id, participant.id);
     if (!existing) throw new BattleError('Vous n’avez rien déposé.', 404);
+    // Delai ecoule et retards refuses : retirer serait sans retour, puisque
+    // plus rien ne se depose. On le refuse comme on refuse le depot.
+    if (session.config.latePolicy === 'reject' && session.graceEndAt && Date.now() > session.graceEndAt) {
+      throw new BattleError('Le temps est écoulé : votre rendu ne se retire plus.');
+    }
     repo.removeSubmission(existing.id);
     repo.logEvent(session.id, 'submission:withdrawn', { participantId: participant.id });
     return { session, participant, removed: existing };

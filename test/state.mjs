@@ -108,6 +108,29 @@ test('devoilement : ecarter ou reintegrer en cours de route ne devoile ni ne rec
   assert.equal(lignes().filter((r) => r.hidden).length, 2);
 });
 
+test('delai ecoule : avec les retards refuses, on ne retire plus ce qu’on ne pourrait pas redeposer', () => {
+  for (const [latePolicy, retirable] of [['reject', false], ['unranked', true]]) {
+    const srv = new BattleServer(fakeIo());
+    const { session, hostToken } = srv.createSession({ name: 'Delai', mediaType: 'text', config: { latePolicy, graceMs: 0 } });
+    srv.publishSession(session.code, hostToken);
+    const g = srv.join(session.code, { pseudo: 'CREA' });
+    srv.start(session.code, hostToken);
+    const prep = srv.openSubmissionSlot(session.code, g.participant.id, g.token);
+    srv.saveSubmission(session, g.participant, { textBody: 'A l’heure', kind: 'text', inline: 1, late: 0 }, prep.existing);
+    srv.forceCloseCreation(session.code, hostToken);
+    session.graceEndAt = Date.now() - 1000;
+    if (retirable) {
+      assert.equal(srv.openSubmissionSlot(session.code, g.participant.id, g.token).late, true, 'accepte, mais en retard');
+      srv.withdrawSubmission(session.code, g.participant.id, g.token);
+      assert.equal(repo.submissionOf(session.id, g.participant.id), null);
+    } else {
+      throws(() => srv.openSubmissionSlot(session.code, g.participant.id, g.token), 'hors délai');
+      throws(() => srv.withdrawSubmission(session.code, g.participant.id, g.token), 'ne se retire plus');
+      assert.ok(repo.submissionOf(session.id, g.participant.id), 'le rendu a l’heure est toujours la');
+    }
+  }
+});
+
 test('creation : code lisible, jeton rendu une seule fois', () => {
   const srv = new BattleServer(fakeIo());
   const { session, hostToken } = srv.createSession({ name: 'Beat Battle #12', mediaType: 'audio', brief: '5 samples imposes' });

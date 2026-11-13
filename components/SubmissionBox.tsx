@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { Icon } from '@/components/Icon';
+import { clock } from '@/lib/clock';
 import { ACCEPTED_HINT, humanBytes } from '@/lib/format';
 import { toast } from '@/lib/toast';
 import { uploadFiles } from '@/lib/uploads';
@@ -31,6 +32,7 @@ export function SubmissionBox({
   config,
   submission,
   closingAt,
+  graceEndAt,
 }: {
   code: string;
   identity: { participantId: string; token: string } | null;
@@ -39,6 +41,8 @@ export function SubmissionBox({
   submission: OwnSubmission | null;
   /** Instant de fermeture des depots, pour prevenir plutot que refuser. */
   closingAt?: number | null;
+  /** Fin de la fenetre de grace, pendant la phase de depot seulement. */
+  graceEndAt?: number | null;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const cancelRef = useRef<(() => void) | null>(null);
@@ -49,6 +53,44 @@ export function SubmissionBox({
 
   const isText = mediaType === 'text';
   const busy = progress !== null || saving;
+
+  /*
+   * Le delai est-il ecoule ?
+   *
+   * La phase de depot dure jusqu'a ce que l'animateur lance la diffusion, donc
+   * bien apres la fin de la fenetre de grace. Passe cet instant le serveur
+   * refuse le depot, ou le marque en retard selon le reglage : la page ne doit
+   * plus inviter a remplacer comme si de rien n'etait — un rendu arrive a
+   * l'heure devenait « hors delai » pour avoir ete remplace.
+   */
+  const [horsDelai, setHorsDelai] = useState(false);
+  useEffect(() => {
+    if (!graceEndAt) { setHorsDelai(false); return; }
+    const reste = graceEndAt - clock.now();
+    setHorsDelai(reste <= 0);
+    if (reste <= 0) return;
+    const t = setTimeout(() => setHorsDelai(true), reste + 50);
+    return () => clearTimeout(t);
+  }, [graceEndAt]);
+
+  const ferme = horsDelai && config.latePolicy === 'reject';
+  const consequence = config.latePolicy === 'penalty'
+    ? `avec une pénalité de ${config.latePenalty} point${config.latePenalty > 1 ? 's' : ''}`
+    : 'hors classement';
+  /** Avant un geste qui ferait d'un rendu a l'heure un rendu en retard. */
+  const confirmerRetard = (geste: string) => {
+    if (!horsDelai || !submission || submission.late) return true;
+    return window.confirm(`Le délai est écoulé. ${geste}, et tout nouveau dépôt sera compté hors délai (${consequence}). Continuer ?`);
+  };
+  const delaiNote = !horsDelai
+    ? null
+    : ferme
+      ? (submission
+        ? 'Le délai est écoulé : ton rendu est déposé, il ne se remplace plus.'
+        : 'Le délai est écoulé : les dépôts sont fermés.')
+      : (submission?.late
+        ? `Ton rendu est arrivé hors délai : il sera diffusé ${consequence}.`
+        : `Le délai est écoulé : un dépôt fait maintenant sera compté hors délai (${consequence}).`);
 
   useEffect(() => {
     if (submission?.textBody) setDraft(submission.textBody);
@@ -91,6 +133,7 @@ export function SubmissionBox({
 
   const sendText = async () => {
     if (!identity || busy || draft.trim().length < 2) return;
+    if (!confirmerRetard('Mettre à jour maintenant remplace ton texte')) return;
     setSaving(true);
     const res = await fetch(`/api/session/${code}/submission`, {
       method: 'POST',
@@ -103,8 +146,14 @@ export function SubmissionBox({
     toast(body.late ? 'Texte enregistré — hors délai' : 'Texte enregistré', body.late ? 'info' : 'ok');
   };
 
+  const choisir = () => {
+    if (submission && !confirmerRetard('Remplacer maintenant retire ton rendu arrivé à l’heure')) return;
+    input.current?.click();
+  };
+
   const withdraw = async () => {
     if (!identity || busy) return;
+    if (!confirmerRetard('Retirer ton rendu maintenant le supprime')) return;
     const res = await fetch(`/api/session/${code}/submission`, { method: 'DELETE', headers });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
@@ -131,17 +180,21 @@ export function SubmissionBox({
           value={draft}
           maxLength={20000}
           placeholder="Écris ici. Tu peux revenir dessus tant que la phase est ouverte."
+          readOnly={ferme}
           onChange={(e) => setDraft(e.target.value)}
         />
-        <div className="row wrap">
-          <button className="btn primary" disabled={busy || !dirty || draft.trim().length < 2} aria-busy={busy} onClick={sendText}>
-            {submission ? 'Mettre à jour' : 'Déposer'}
-          </button>
-          {submission && <button className="btn sm ghost" disabled={busy} aria-busy={busy} onClick={withdraw}>Retirer</button>}
-          <span className="faint grow" style={{ textAlign: 'right' }}>
-            {draft.length} caractères{dirty && submission ? ' • non enregistré' : ''}
-          </span>
-        </div>
+        {!ferme && (
+          <div className="row wrap">
+            <button className="btn primary" disabled={busy || !dirty || draft.trim().length < 2} aria-busy={busy} onClick={sendText}>
+              {submission ? 'Mettre à jour' : 'Déposer'}
+            </button>
+            {submission && <button className="btn sm ghost" disabled={busy} aria-busy={busy} onClick={withdraw}>Retirer</button>}
+            <span className="faint grow" style={{ textAlign: 'right' }}>
+              {draft.length} caractères{dirty && submission ? ' • non enregistré' : ''}
+            </span>
+          </div>
+        )}
+        {delaiNote && <span className="meta">{delaiNote}</span>}
       </div>
     );
   }
@@ -190,14 +243,16 @@ export function SubmissionBox({
             </span>
           )}
 
-          <div className="row wrap">
-            <button className="btn sm" disabled={busy} aria-busy={busy} onClick={() => input.current?.click()}>
-              Remplacer
-            </button>
-            <button className="btn sm ghost" disabled={busy} aria-busy={busy} onClick={withdraw}>Retirer</button>
-          </div>
+          {!ferme && (
+            <div className="row wrap">
+              <button className="btn sm" disabled={busy} aria-busy={busy} onClick={choisir}>
+                Remplacer
+              </button>
+              <button className="btn sm ghost" disabled={busy} aria-busy={busy} onClick={withdraw}>Retirer</button>
+            </div>
+          )}
         </div>
-      ) : (
+      ) : ferme ? null : (
         <div
           className={`${styles.zone} ${dragging ? styles.over : ''}`}
           onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
@@ -233,11 +288,13 @@ export function SubmissionBox({
         onChange={(e) => void sendFile(e.target.files)}
       />
 
-      {closingAt && (
-        <span className="meta">
-          Tu peux remplacer ton fichier jusqu’à la fermeture des dépôts.
-        </span>
-      )}
+      {delaiNote
+        ? <span className="meta">{delaiNote}</span>
+        : closingAt && (
+          <span className="meta">
+            Tu peux remplacer ton fichier jusqu’à la fin du délai.
+          </span>
+        )}
     </div>
   );
 }

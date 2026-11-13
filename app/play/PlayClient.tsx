@@ -458,6 +458,7 @@ export function PlayClient() {
         config={state!.config}
         submission={you?.submission ?? null}
         closingAt={state!.clock.graceEndAt ?? state!.clock.createEndAt}
+        graceEndAt={phase === 'upload' ? state!.clock.graceEndAt : null}
       />
     );
   }
