@@ -184,7 +184,7 @@ test('vote : on ne note pas sa propre creation', async () => {
   const author = Object.values(people).find((p) => p.rendition === target);
   const res = await call(author.sock, 'play:vote', { renditionId: target, value: 5 });
   assert.equal(res.ok, false);
-  assert.match(res.error, /sa propre creation/);
+  assert.match(res.error, /sa propre création/);
 });
 
 test('vote : on ne note pas ce qui n’est pas encore passe', async () => {
@@ -199,7 +199,7 @@ test('vote : on ne note pas ce qui n’est pas encore passe', async () => {
   const voter = Object.values(people).find((p) => p.rendition !== future);
   const res = await call(voter.sock, 'play:vote', { renditionId: future, value: 5 });
   assert.equal(res.ok, false);
-  assert.match(res.error, /pas encore passe/);
+  assert.match(res.error, /pas encore passé/);
   return order;
 });
 

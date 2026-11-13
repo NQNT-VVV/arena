@@ -25,10 +25,10 @@ import styles from './ExtraitsRegie.module.css';
 type Act = (event: string, payload?: Record<string, unknown>) => Promise<boolean>;
 
 const ANALYSE: Record<string, string> = {
-  attente: 'ANALYSE EN ATTENTE',
-  en_cours: 'ANALYSE EN COURS',
+  attente: 'Analyse en attente',
+  en_cours: 'Analyse en cours',
   faite: '',
-  echec: 'ANALYSE IMPOSSIBLE — A SAISIR',
+  echec: 'Analyse impossible — à saisir',
 };
 
 export function ExtraitsRegie({
@@ -59,15 +59,15 @@ export function ExtraitsRegie({
       method: 'DELETE',
       headers: { 'X-Arena-Token': token ?? '' },
     });
-    const body = await res.json().catch(() => ({ error: 'Reponse illisible.' }));
+    const body = await res.json().catch(() => ({ error: 'Réponse illisible.' }));
     if (!res.ok) toast(body.error || 'Retrait impossible.', 'err');
-    else toast('Extrait retire', 'ok');
+    else toast('Extrait retiré', 'ok');
   };
 
   return (
     <section className="card pad col">
       <h2 className="section-title">
-        Extraits a reconstruire
+        Extraits à reconstruire
         {extraits.length > 0 && (
           <span className="faint" style={{ letterSpacing: 0, textTransform: 'none' }}>
             {extraits.length} • {humanBytes(extraits.reduce((n, e) => n + (e.bytes ?? 0), 0))}
@@ -75,14 +75,14 @@ export function ExtraitsRegie({
         )}
       </h2>
       <p className="meta" style={{ textTransform: 'none', letterSpacing: 'var(--ls-prose)' }}>
-        Au lancement de chaque manche, chaque createur recoit un extrait au hasard : un different pour chacun tant
-        qu&apos;il y en a assez, jamais celui qu&apos;il a deja reconstruit, et les neufs avant ceux deja joues.
-        Le tempo et la tonalite sont estimes a l&apos;arrivee du fichier.
+        Au lancement de chaque manche, chaque créateur reçoit un extrait au hasard : un différent pour chacun tant
+        qu’il y en a assez, jamais celui qu’il a déjà reconstruit, et les neufs avant ceux déjà joués.
+        Le tempo et la tonalité sont estimés à l’arrivée du fichier.
       </p>
       {manque && (
         <p className={styles.alerte}>
-          {createurs.length} createurs pour {extraits.length} extrait{extraits.length > 1 ? 's' : ''} : certains
-          auront le meme. Deposez-en {createurs.length - extraits.length} de plus pour que chacun ait le sien.
+          {createurs.length} créateurs pour {extraits.length} extrait{extraits.length > 1 ? 's' : ''} : certains
+          auront le même. Déposez-en {createurs.length - extraits.length} de plus pour que chacun ait le sien.
         </p>
       )}
 
@@ -93,7 +93,7 @@ export function ExtraitsRegie({
         accept="audio/*"
         noun="extrait"
         disabled={phase === 'archived'}
-        hint="Ou glisse-les ici — wav, mp3, flac, plusieurs a la fois"
+        hint="Ou glisse-les ici — wav, mp3, flac, plusieurs à la fois"
       />
 
       {extraits.length === 0 ? (
@@ -106,7 +106,7 @@ export function ExtraitsRegie({
 
       {pendant && attributions.length > 0 && (
         <div className="col">
-          <span className="meta">QUI RECONSTRUIT QUOI — MANCHE {manche.round}</span>
+          <span className="meta">Qui reconstruit quoi — manche {manche.round}</span>
           <div className={styles.attributions}>
             {attributions.map((a) => (
               <div key={a.participantId} className={styles.attribution}>
@@ -149,14 +149,14 @@ function Ligne({ e, act, onRetirer }: { e: ExtraitRegie; act: Act; onRetirer: (e
     if (e.bpm === null) return;
     void act('host:extrait-edit', { extraitId: e.id, bpm: Math.round(e.bpm * facteur * 10) / 10 });
   };
-  const source = (s: string | null) => (s === 'manuel' ? 'MANUEL' : s === 'auto' ? 'AUTO' : '');
+  const source = (s: string | null) => (s === 'manuel' ? 'manuel' : s === 'auto' ? 'auto' : '');
 
   return (
     <li className={styles.ligne}>
       <div className={styles.entete}>
         <span className={styles.nom}>{e.nom}</span>
         {ANALYSE[e.analyse] && <span className={`pill ${e.analyse === 'echec' ? 'err' : ''}`}><span>{ANALYSE[e.analyse]}</span></span>}
-        {e.joues > 0 && <span className="pill">JOUE ×{e.joues}</span>}
+        {e.joues > 0 && <span className="pill">Joué ×{e.joues}</span>}
       </div>
       {e.url && <audio className={styles.lecteur} controls preload="none" src={e.url} />}
 
@@ -178,7 +178,7 @@ function Ligne({ e, act, onRetirer }: { e: ExtraitRegie; act: Act; onRetirer: (e
           </span>
         </label>
         <label className={styles.champ}>
-          <span className="meta">TONALITE {source(e.tonaliteSource)}{e.tonaliteNom ? ` — ${e.tonaliteNom.toUpperCase()}` : ''}</span>
+          <span className="meta">Tonalité {source(e.tonaliteSource)}{e.tonaliteNom ? ` — ${e.tonaliteNom.toUpperCase()}` : ''}</span>
           <input
             className={`input ${styles.tonalite}`} value={ton} placeholder="C#m, F#, Bb…"
             onChange={(ev) => setTon(ev.target.value)}
@@ -190,7 +190,7 @@ function Ligne({ e, act, onRetirer }: { e: ExtraitRegie; act: Act; onRetirer: (e
 
       <div className={styles.pied}>
         <span className="meta">
-          {e.cetteManche.length ? `CETTE MANCHE : ${e.cetteManche.join(', ')}` : 'PAS ATTRIBUE CETTE MANCHE'}
+          {e.cetteManche.length ? `Cette manche : ${e.cetteManche.join(', ')}` : 'Pas attribué cette manche'}
         </span>
         <span className="row">
           <button type="button" className="btn xs ghost" onClick={() => void act('host:extrait-analyser', { extraitId: e.id })}>

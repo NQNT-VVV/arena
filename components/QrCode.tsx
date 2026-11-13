@@ -10,8 +10,8 @@ import { useEffect, useState } from 'react';
  * optique avant d'etre un element de decor — on ne l'inverse pas, on ne le
  * dithere pas, et le contraste reste celui du systeme (13.6:1).
  */
-const DARK = '#060505';
-const LIGHT = '#D9D2C3';
+const DARK = '#221E1A';
+const LIGHT = '#FFFFFF';
 
 export function QrCode({ text, className }: { text: string; className?: string }) {
   const [svg, setSvg] = useState<string | null>(null);

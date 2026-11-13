@@ -8,8 +8,8 @@
 .timelineHead { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-3); }
 .stageLabel { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); }
 .stageTime { font: var(--t-ui); letter-spacing: var(--ls-mono); color: var(--ink); font-variant-numeric: tabular-nums; }
-.bar { width: 100%; height: 8px; border: var(--border-ui); background: transparent; overflow: hidden; }
-.bar > i { display: block; height: 100%; background: var(--ink); transform-origin: left center; transition: none; }
+.bar { width: 100%; height: 8px; border: var(--border-ui); background: transparent; overflow: hidden; border-radius: var(--radius); }
+.bar > i { display: block; height: 100%; background: var(--ink); transform-origin: left center; }
 /* La fenetre de vote est le moment ou il faut agir : elle vit, donc elle saigne. */
 .vote .bar > i { background: var(--accent); }
 .vote .stageLabel { color: var(--accent); animation: blink var(--dur-blink) var(--ease-hold) infinite; }
@@ -18,26 +18,24 @@
 .over .bar > i { display: none; }
 
 .media { display: grid; gap: var(--sp-3); width: 100%; justify-items: stretch; }
-.imageLink { display: block; width: 100%; background: var(--bg); border: var(--border); }
+.imageLink { display: block; width: 100%; background: var(--bg); border: var(--border); border-radius: var(--radius); }
 .image { width: 100%; max-height: 50vh; object-fit: contain; display: block; }
 .text {
   margin: 0; width: 100%; max-height: 42vh; overflow: auto;
   padding: var(--sp-4); background: transparent; border: var(--border);
   /* Un texte de participant se lit tel qu'il a ete ecrit : ni capitales, ni chasse imposee. */
   font-family: var(--font-mono); font-size: var(--fs-2); line-height: 1.6; letter-spacing: 0;
-  text-transform: none; white-space: pre-wrap; overflow-wrap: anywhere;
-}
+  text-transform: none; white-space: pre-wrap; overflow-wrap: anywhere; border-radius: var(--radius); }
 
 .meta { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-55); }
-.tally { font-variant-numeric: tabular-nums; color: var(--ink-60); transition: none; }
+.tally { font-variant-numeric: tabular-nums; color: var(--ink-60); }
 .tallyDone { color: var(--ink); }
 
 .votes { display: grid; gap: var(--sp-4); padding-top: var(--sp-1); }
 .mine {
   position: relative; padding: var(--sp-3) var(--sp-4) var(--sp-3) var(--sp-6);
   font: var(--t-prose); letter-spacing: var(--ls-prose); text-transform: none;
-  border: var(--border-ui); color: var(--ink-90);
-}
+  border: var(--border-ui); color: var(--ink-90); border-radius: var(--radius); }
 /* La texture dit « ferme » depuis le bord, sans passer sous les lettres. */
 .mine::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 8px; background-image: var(--dither-37); background-size: var(--dither-size); }
 
@@ -58,3 +56,6 @@
 .origine { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; border-top: var(--border); border-bottom: var(--border); padding: var(--sp-2) 0; }
 .origineNom { font: var(--t-ui); letter-spacing: var(--ls-mono); overflow-wrap: anywhere; flex: 1 1 160px; min-width: 0; }
 .large .origineNom { font: var(--t-ui-l); letter-spacing: var(--ls-mono); }
+
+/* Animations du socle, recopiees ici : un module CSS ne voit pas les @keyframes globales. */
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }

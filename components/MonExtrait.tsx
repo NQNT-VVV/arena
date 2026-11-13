@@ -20,8 +20,8 @@ export function MonExtrait({ extrait, round, rounds }: { extrait: Extrait; round
   return (
     <section className={`card pad ${styles.carte}`} aria-label="Ton extrait">
       <div className={styles.tete}>
-        <span className="section-title">TON EXTRAIT</span>
-        {rounds > 1 && <span className="pill">MANCHE {round}/{rounds}</span>}
+        <span className="section-title">Ton extrait</span>
+        {rounds > 1 && <span className="pill">Manche {round}/{rounds}</span>}
       </div>
       <p className={styles.nom}>{extrait.nom}</p>
 
@@ -29,25 +29,25 @@ export function MonExtrait({ extrait, round, rounds }: { extrait: Extrait; round
         <div className={styles.valeur}>
           <span className={styles.chiffre}>{extrait.bpm !== null ? Math.round(extrait.bpm) : '—'}</span>
           <span className={styles.unite}>
-            BPM{extrait.bpm !== null && extrait.bpmSource === 'auto' ? ' · AUTO' : ''}
+            BPM{extrait.bpm !== null && extrait.bpmSource === 'auto' ? ' · auto' : ''}
           </span>
         </div>
         <div className={styles.valeur}>
           <span className={styles.chiffre}>{extrait.tonalite ?? '—'}</span>
           <span className={styles.unite}>
-            {extrait.tonaliteNom ? extrait.tonaliteNom.toUpperCase() : 'TONALITE'}
-            {extrait.tonalite && extrait.tonaliteSource === 'auto' ? ' · AUTO' : ''}
+            {extrait.tonaliteNom ? extrait.tonaliteNom.toUpperCase() : 'Tonalité'}
+            {extrait.tonalite && extrait.tonaliteSource === 'auto' ? ' · auto' : ''}
           </span>
         </div>
       </div>
-      {enCours && <p className="meta">Analyse du tempo et de la tonalite en cours…</p>}
+      {enCours && <p className="meta">Analyse du tempo et de la tonalité en cours…</p>}
 
       {extrait.url && (
         <>
           {/* preload="none" : sur un telephone en 4G, on ne charge pas le fichier avant qu'on le demande. */}
           <audio className={styles.lecteur} controls preload="none" src={extrait.url} />
           <a className="btn block" href={`${extrait.url}&dl=1`} download={extrait.nom}>
-            Telecharger l&apos;extrait
+            Télécharger l’extrait
           </a>
         </>
       )}

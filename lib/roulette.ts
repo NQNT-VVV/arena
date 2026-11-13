@@ -39,13 +39,13 @@ export function effectsOf(fate: {
   if (fate.points) {
     const n = Math.abs(fate.points);
     out.push({
-      text: `${fate.points > 0 ? '+' : '−'}${n} POINT${n > 1 ? 'S' : ''}`,
+      text: `${fate.points > 0 ? '+' : '−'}${n} point${n > 1 ? 's' : ''}`,
       applied: fate.pointsApplied,
     });
   }
   if (fate.chronoMs) {
     out.push({
-      text: `${fate.chronoMs > 0 ? '+' : '−'}${humanDuration(Math.abs(fate.chronoMs)).toUpperCase()} DE CHRONO`,
+      text: `${fate.chronoMs > 0 ? '+' : '−'}${humanDuration(Math.abs(fate.chronoMs)).toUpperCase()} de chrono`,
       applied: fate.chronoApplied,
     });
   }
@@ -60,24 +60,24 @@ export function effectsOf(fate: {
  * sans effet mecanique en est une par nature.
  */
 export function statusOf(effects: Effect[]): { text: string; short: string; advice: boolean } {
-  if (!effects.length) return { text: 'CONSIGNE · A RESPECTER', short: 'A RESPECTER', advice: true };
+  if (!effects.length) return { text: 'Consigne · à respecter', short: 'À respecter', advice: true };
   const played = effects.filter((e) => e.applied).length;
   if (played === effects.length) {
-    return { text: 'APPLIQUE AUTOMATIQUEMENT', short: 'APPLIQUE', advice: false };
+    return { text: 'Appliqué automatiquement', short: 'Appliqué', advice: false };
   }
   if (played === 0) {
-    return { text: 'RIEN NE S’APPLIQUE · CONSIGNE A RESPECTER', short: 'A RESPECTER', advice: true };
+    return { text: 'Rien ne s’applique · consigne à respecter', short: 'À respecter', advice: true };
   }
-  return { text: 'EN PARTIE APPLIQUE · LE RESTE EST A RESPECTER', short: 'EN PARTIE', advice: true };
+  return { text: 'En partie appliqué · le reste est à respecter', short: 'En partie', advice: true };
 }
 
 /** « UNE PERSONNE · UN SORT CHACUN ». */
 export function modeOf(spin: Spin): string {
   const who = spin.target === 'one'
-    ? 'UNE PERSONNE'
-    : spin.target === 'all' ? 'TOUTE LA SALLE' : `${hex(spin.howMany)} PERSONNES`;
+    ? 'Une personne'
+    : spin.target === 'all' ? 'Toute la salle' : `${hex(spin.howMany)} personnes`;
   if (spin.fates.length < 2) return who;
-  return `${who} · ${spin.shared ? 'LE MEME SORT POUR TOUS' : 'UN SORT CHACUN'}`;
+  return `${who} · ${spin.shared ? 'le même sort pour tous' : 'un sort chacun'}`;
 }
 
 /* ------------------------------------------------------------------ */

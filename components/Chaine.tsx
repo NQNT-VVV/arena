@@ -79,28 +79,28 @@ export function Chaine({
   return (
     <section className={`card pad ${styles.chaine}`}>
       <header className={styles.tete}>
-        <span className="meta">LA CHAINE · LIGNE {hex(you.position)}</span>
+        <span className="meta">La chaîne · ligne {hex(you.position)}</span>
         <span className="grow" />
-        <span className="meta">{hex(rendus)} / {hex(attendus)} ONT RENDU</span>
+        <span className="meta">{hex(rendus)} / {hex(attendus)} ont rendu</span>
       </header>
 
-      <h2 className={styles.titre}>UNE LIGNE CHACUN</h2>
+      <h2 className={styles.titre}>Une ligne chacun</h2>
       <p className="muted">
-        Vous ne voyez que la ligne precedente. Ajoutez la suivante, passez la main, et
-        l’histoire entiere se lira quand les createurs auront fini. Rien de tout ceci ne
+        Vous ne voyez que la ligne précédente. Ajoutez la suivante, passez la main, et
+        l’histoire entière se lira quand les créateurs auront fini. Rien de tout ceci ne
         compte au classement.
       </p>
 
       <div className={styles.avant}>
         {you.last ? (
           <>
-            <span className="meta">{you.lastBy} A ECRIT</span>
+            <span className="meta">{you.lastBy} a écrit</span>
             <blockquote className={styles.ligne}>{you.last}</blockquote>
           </>
         ) : (
           <>
-            <span className="meta">PERSONNE N’A ENCORE COMMENCE</span>
-            <p className={styles.amorce}>A vous la premiere ligne. Elle donne le ton.</p>
+            <span className="meta">Personne n’a encore commencé</span>
+            <p className={styles.amorce}>À vous la première ligne. Elle donne le ton.</p>
           </>
         )}
       </div>
@@ -108,7 +108,7 @@ export function Chaine({
       {you.mine ? (
         <div className={styles.aVous}>
           <div className={styles.sablier}>
-            <span className="meta">A VOUS</span>
+            <span className="meta">À vous</span>
             <span className="grow" />
             {reste !== null && (
               <span className={`tnum ${reste <= 15 ? styles.presse : ''}`}>{reste} s</span>
@@ -131,17 +131,17 @@ export function Chaine({
             }}
           />
           <div className={styles.actions}>
-            <span className={`meta ${restant < 30 ? styles.presse : ''}`}>{restant} CARACTERES</span>
+            <span className={`meta ${restant < 30 ? styles.presse : ''}`}>{restant} caractères</span>
             <span className="grow" />
-            <button className="btn sm ghost" type="button" onClick={passer} disabled={busy}>PASSER</button>
+            <button className="btn sm ghost" type="button" onClick={passer} disabled={busy}>Passer</button>
             <button className="btn sm primary" type="button" onClick={envoyer} disabled={busy || !texte.trim()} aria-busy={busy}>
-              <Icon name="suivant" />AJOUTER
+              <Icon name="suivant" />Ajouter
             </button>
           </div>
         </div>
       ) : (
         <div className={styles.attente} role="status" aria-live="polite">
-          <span className="meta">AU TOUR DE {chain.turn?.pseudo ?? 'QUELQU’UN'}</span>
+          <span className="meta">Au tour de {chain.turn?.pseudo ?? 'quelqu’un'}</span>
           {reste !== null && <span className="tnum">{reste} s</span>}
           <p className="muted">Votre tour vient ensuite. Laissez la page ouverte.</p>
         </div>
@@ -162,9 +162,9 @@ export function ChaineLue({ chain }: { chain: ChainState }) {
   return (
     <section className={`card pad ${styles.chaine}`}>
       <header className={styles.tete}>
-        <span className="meta">LA CHAINE · {chain.revealed.length} LIGNES</span>
+        <span className="meta">La chaîne · {chain.revealed.length} lignes</span>
       </header>
-      <h2 className={styles.titre}>CE QUE LES SPECTATEURS ONT ECRIT</h2>
+      <h2 className={styles.titre}>Ce que les spectateurs ont écrit</h2>
       <ol className={styles.recit}>
         {chain.revealed.map((l, i) => (
           <li key={`${l.at}-${i}`}>

@@ -573,20 +573,20 @@ export interface SavedIdentity {
  * AGARTHA numerote, il ne decore pas.
  */
 export const MEDIA_LABELS: Record<MediaType, { label: string; icon: string; hint: string }> = {
-  audio: { label: 'AUDIO', icon: '0x01', hint: 'MORCEAU, BEAT, SOUND DESIGN' },
-  image: { label: 'IMAGE', icon: '0x02', hint: 'MONTAGE, COVER, AFFICHE' },
-  video: { label: 'VIDEO', icon: '0x03', hint: 'MONTAGE, EDIT, MOTION' },
-  text:  { label: 'TEXTE', icon: '0x04', hint: 'ECRITURE, PUNCHLINES, PITCH' },
-  file:  { label: 'LIBRE', icon: '0x05', hint: 'N’IMPORTE QUEL FICHIER' },
+  audio: { label: 'Audio', icon: '0x01', hint: 'Morceau, beat, sound design' },
+  image: { label: 'Image', icon: '0x02', hint: 'Montage, cover, affiche' },
+  video: { label: 'Vidéo', icon: '0x03', hint: 'Montage, edit, motion' },
+  text:  { label: 'Texte', icon: '0x04', hint: 'Écriture, punchlines, pitch' },
+  file:  { label: 'Libre', icon: '0x05', hint: 'N’importe quel fichier' },
 };
 
 export const PHASE_STEPS: { phase: Phase; label: string }[] = [
-  { phase: 'config', label: 'REGLAGES' },
-  { phase: 'lobby', label: 'LOBBY' },
-  { phase: 'creation', label: 'CREATION' },
-  { phase: 'upload', label: 'DEPOT' },
-  { phase: 'diffusion', label: 'DIFFUSION' },
-  { phase: 'results', label: 'RESULTATS' },
+  { phase: 'config', label: 'Réglages' },
+  { phase: 'lobby', label: 'Lobby' },
+  { phase: 'creation', label: 'Création' },
+  { phase: 'upload', label: 'Dépôt' },
+  { phase: 'diffusion', label: 'Diffusion' },
+  { phase: 'results', label: 'Résultats' },
 ];
 
 /** Ce que `GET /api/podium/me` rend : le hub, et qui y est connecte. */

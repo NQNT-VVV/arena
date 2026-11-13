@@ -2,7 +2,7 @@
 .wrap { display: grid; gap: var(--sp-3); }
 .legende { margin: 0; font: var(--t-prose); letter-spacing: var(--ls-prose); color: var(--ink-60); }
 
-.list { list-style: none; margin: 0; padding: 0; display: grid; border: var(--border); }
+.list { list-style: none; margin: 0; padding: 0; display: grid; border: var(--border); border-radius: var(--radius); }
 .row {
   display: grid; grid-template-columns: 56px minmax(0, 1fr) auto;
   gap: var(--sp-3); align-items: center;
@@ -19,7 +19,7 @@
 .score { font: var(--t-ui-l); letter-spacing: var(--ls-mono); font-variant-numeric: tabular-nums; text-align: right; }
 
 /* Le premier : le seul or de l'ecran, en aplat sur le rang. */
-.top .place { background: var(--gold); color: var(--bg); padding: 0 var(--sp-1); }
+.top .place { background: var(--gold); color: var(--ink); padding: 0 var(--sp-1); --ink: #221E1A; --ink-90: #2B2622; --ink-60: #4A443C; --ink-55: #4A443C; --ink-45: #6B655C; }
 .mine { background: var(--ink-06); }
 
 .large .row { grid-template-columns: 88px minmax(0, 1fr) auto; padding: var(--sp-4) var(--sp-6); gap: var(--sp-6); }

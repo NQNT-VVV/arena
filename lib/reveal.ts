@@ -252,7 +252,7 @@ function placeSujet(spin: Spin, index: number, champ: string[]): number {
 function puce(spin: Spin, index: number): string {
   const f = spin.fates[index];
   if (f.points) return `${f.points > 0 ? '+' : '−'}${Math.abs(f.points)}`;
-  if (f.chronoMs) return `${f.chronoMs > 0 ? '+' : '−'}${Math.round(Math.abs(f.chronoMs) / 1000)}S`;
+  if (f.chronoMs) return `${f.chronoMs > 0 ? '+' : '−'}${Math.round(Math.abs(f.chronoMs) / 1000)}s`;
   return '·';
 }
 
@@ -272,11 +272,11 @@ export function destinataires(spin: Spin): string {
 }
 
 function destinataire(spin: Spin, plan: Plan): string {
-  if (plan.qui.geste === 'pose' && spin.fates.length > 1) return 'TOUTE LA SALLE';
+  if (plan.qui.geste === 'pose' && spin.fates.length > 1) return 'toute la salle';
   const noms = spin.fates.map((f) => f.pseudo.toUpperCase());
   if (noms.length === 1) return noms[0];
   const joint = noms.join(' · ');
-  return joint.length <= 48 ? joint : `${hex(noms.length)} SUJETS`;
+  return joint.length <= 48 ? joint : `${hex(noms.length)} sujets`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -298,13 +298,13 @@ function poidsSort(f: Spin['fates'][number]): [number, number] {
  */
 export function ligneFinale(spin: Spin): { sur: string; texte: string; vedette: number | null } {
   const n = spin.fates.length;
-  if (!n) return { sur: 'AUCUN SORT DISTRIBUE', texte: hex(0), vedette: null };
+  if (!n) return { sur: 'Aucun sort distribué', texte: hex(0), vedette: null };
 
   const plan = planDeTirage(spin);
   const distincts = new Set(spin.fates.map((f) => f.label)).size;
   if (n === 1 || spin.shared || distincts === 1) {
     return {
-      sur: n === 1 ? spin.fates[0].pseudo.toUpperCase() : `POUR ${destinataire(spin, plan)}`,
+      sur: n === 1 ? spin.fates[0].pseudo.toUpperCase() : `Pour ${destinataire(spin, plan)}`,
       texte: spin.fates[0].label.toUpperCase(),
       vedette: 0,
     };
@@ -313,7 +313,7 @@ export function ligneFinale(spin: Spin): { sur: string; texte: string; vedette: 
   const mecanique = spin.fates.some((f) => f.points !== 0 || f.chronoMs !== 0);
   if (!mecanique) {
     return {
-      sur: `${hex(n)} SORTS DISTRIBUES · AUCUN EFFET MECANIQUE · TOUT EST CONSIGNE`,
+      sur: `${hex(n)} sorts distribués · aucun effet mécanique · tout est consigne`,
       texte: hex(n),
       vedette: null,
     };
@@ -332,7 +332,7 @@ export function ligneFinale(spin: Spin): { sur: string; texte: string; vedette: 
   }).length > 1;
 
   return {
-    sur: exaequo ? 'PARMI LES PLUS LOURDS' : 'LE PLUS LOURD',
+    sur: exaequo ? 'Parmi les plus lourds' : 'Le plus lourd',
     texte: `${spin.fates[tete].pseudo.toUpperCase()} · ${spin.fates[tete].label.toUpperCase()}`,
     vedette: tete,
   };
@@ -395,18 +395,18 @@ function construire(spin: Spin, reglages: Reglages, reduit: boolean): Revelation
   let t = 0;
 
   /* Le pluriel se decide : « 0x01 SUJETS TOUCHES » se lit comme une faute. */
-  const touches = `${hex(nbSorts)} SUJET${nbSorts > 1 ? 'S' : ''} TOUCHE${nbSorts > 1 ? 'S' : ''}`;
-  const repete = (k: number) => `${hex(k)} SORT${k > 1 ? 'S' : ''} SE REPETE${k > 1 ? 'NT' : ''}`;
+  const touches = `${hex(nbSorts)} sujet${nbSorts > 1 ? 's' : ''} touché${nbSorts > 1 ? 's' : ''}`;
+  const repete = (k: number) => `${hex(k)} sort${k > 1 ? 's' : ''} se répète${k > 1 ? 'nt' : ''}`;
   const piedSujets = (designes: number) => {
-    if (!spin.pool.length) return 'CHAMP NON ENREGISTRE · TIRAGE ANTERIEUR';
-    if (n === 1) return '0x01 SUJET DANS LA ROUE · AUCUN CHOIX';
-    const compte = plan.qui.geste === 'pose' ? touches : `${hexOf(designes, plan.qui.k)} DESIGNE`;
-    return `${hex(n)} SUJETS DANS LA ROUE · ${compte}`;
+    if (!spin.pool.length) return 'Champ non enregistré · tirage antérieur';
+    if (n === 1) return '0x01 sujet dans la roue · aucun choix';
+    const compte = plan.qui.geste === 'pose' ? touches : `${hexOf(designes, plan.qui.k)} désigné`;
+    return `${hex(n)} sujets dans la roue · ${compte}`;
   };
   const piedRoue = (suffixe: string) => {
-    if (!spin.slots.length) return 'ROUE NON ENREGISTREE · TIRAGE ANTERIEUR';
-    if (spin.slots.length === 1) return `0x01 CASE JOUABLE · AUCUN CHOIX · ${suffixe}`;
-    return `${hex(spin.slots.length)} CASES JOUABLES · POIDS TOTAL ${hex(poidsTotal)} · ${suffixe}`;
+    if (!spin.slots.length) return 'Roue non enregistrée · tirage antérieur';
+    if (spin.slots.length === 1) return `0x01 case jouable · aucun choix · ${suffixe}`;
+    return `${hex(spin.slots.length)} cases jouables · poids total ${hex(poidsTotal)} · ${suffixe}`;
   };
 
   const image = (
@@ -440,8 +440,8 @@ function construire(spin: Spin, reglages: Reglages, reduit: boolean): Revelation
   /* -------------------------------------------------------------- */
 
   pousser(POSE, image(null, null, {
-    sur: `LA ROUE · ${spin.wheelName.toUpperCase()}`,
-    texte: spin.spent ? 'LA ROUE A REFAIT UN TOUR' : 'ON TIRE',
+    sur: `La roue · ${spin.wheelName.toUpperCase()}`,
+    texte: spin.spent ? 'La roue a refait un tour' : 'On tire',
     vivant: true,
   }, piedSujets(0)));
 
@@ -460,8 +460,8 @@ function construire(spin: Spin, reglages: Reglages, reduit: boolean): Revelation
     for (let i = 0; i < n; i++) plaques[i] = 'tiree';
     const seul = n <= 1 && nbSorts === 1;
     pousser(TENUE_SALLE + (reduit ? RALLONGE_REDUITE : 0), image(null, null, {
-      sur: seul ? 'LE SEUL SUJET' : 'PERSONNE N’A ETE TIRE',
-      texte: seul ? champ[0].toUpperCase() : 'C’EST POUR TOUTE LA SALLE',
+      sur: seul ? 'Le seul sujet' : 'Personne n’a été tiré',
+      texte: seul ? champ[0].toUpperCase() : 'C’est pour toute la salle',
       vivant: false,
     }, piedSujets(nbSorts)));
   } else if (plan.qui.geste === 'passe') {
@@ -474,7 +474,7 @@ function construire(spin: Spin, reglages: Reglages, reduit: boolean): Revelation
         plaques.forEach((_, j) => { plaques[j] = 'vide'; });
         plaques[ou] = 'marque';
         pousser(rampe[i], image('tableau', ou, {
-          sur: 'ON TIRE QUI',
+          sur: 'On tire qui',
           texte: champ[ou].toUpperCase(),
           vivant: true,
         }, piedSujets(0)));
@@ -483,7 +483,7 @@ function construire(spin: Spin, reglages: Reglages, reduit: boolean): Revelation
     plaques.forEach((_, j) => { plaques[j] = 'vide'; });
     plaques[place] = 'tiree';
     pousser(FLASH + (reduit ? TENUE_REDUITE : TENUE_NOM), image(null, null, {
-      sur: 'TIRE',
+      sur: 'Tiré',
       texte: spin.fates[0].pseudo.toUpperCase(),
       vivant: false,
     }, piedSujets(1)));
@@ -509,7 +509,7 @@ function construire(spin: Spin, reglages: Reglages, reduit: boolean): Revelation
           for (const p of restants) plaques[p] = 'vide';
           plaques[ou] = 'marque';
           pousser(rampe[i], image('tableau', ou, {
-            sur: `ON TIRE QUI · ${hexOf(j, k)}`,
+            sur: `On tire qui · ${hexOf(j, k)}`,
             texte: champ[ou].toUpperCase(),
             vivant: true,
           }, piedSujets(j - 1)));
@@ -518,13 +518,13 @@ function construire(spin: Spin, reglages: Reglages, reduit: boolean): Revelation
       for (const p of restants) plaques[p] = 'vide';
       plaques[place] = 'tiree';
       pousser(FLASH, image(null, null, {
-        sur: `ON TIRE QUI · ${hexOf(j, k)}`,
+        sur: `On tire qui · ${hexOf(j, k)}`,
         texte: spin.fates[j - 1].pseudo.toUpperCase(),
         vivant: true,
       }, piedSujets(j)));
     }
     pousser(TENUE_GROUPE + (reduit ? RALLONGE_REDUITE : 0), image(null, null, {
-      sur: `LE GROUPE · ${hex(k)} SUJETS DESIGNES`,
+      sur: `Le groupe · ${hex(k)} sujets désignés`,
       texte: cible,
       vivant: false,
     }, piedSujets(k)));
@@ -547,10 +547,10 @@ function construire(spin: Spin, reglages: Reglages, reduit: boolean): Revelation
         crans.forEach((_, j) => { crans[j] = 'libre'; });
         crans[ou] = 'marque';
         pousser(rampe[i], image('reglette', ou, {
-          sur: `ON TIRE QUOI POUR ${cible}`,
+          sur: `On tire quoi pour ${cible}`,
           texte: spin.slots[ou].label.toUpperCase(),
           vivant: true,
-        }, piedRoue(plan.qui.geste === 'pose' ? touches : `${hexOf(plan.qui.k, plan.qui.k)} DESIGNE`)));
+        }, piedRoue(plan.qui.geste === 'pose' ? touches : `${hexOf(plan.qui.k, plan.qui.k)} désigné`)));
       }
     }
     if (arrivee >= 0) {
@@ -560,7 +560,7 @@ function construire(spin: Spin, reglages: Reglages, reduit: boolean): Revelation
     for (let i = 0; i < nbSorts; i++) sorts[placeDe[i]] = marqueDeSort(spin, i, champ);
     if (reduit) {
       pousser(TENUE_REDUITE, image(null, null, {
-        sur: `POUR ${cible}`,
+        sur: `Pour ${cible}`,
         texte: spin.fates[0]?.label.toUpperCase() ?? '',
         vivant: false,
       }, piedRoue(touches)));
@@ -596,7 +596,7 @@ function construire(spin: Spin, reglages: Reglages, reduit: boolean): Revelation
         if (caseDe[i] >= 0) crans[caseDe[i]] = 'usee';
       }
       pousser(TENUE_REDUITE, image(null, null, {
-        sur: 'LA DONNE',
+        sur: 'La donne',
         texte: hexOf(nbSorts, nbSorts),
         vivant: false,
       }, piedRoue(touches)));
@@ -622,12 +622,12 @@ function construire(spin: Spin, reglages: Reglages, reduit: boolean): Revelation
         }
         const faits = Math.min(nbSorts, (e + 1) * lot);
         pousser(palier, image(null, null, {
-          sur: 'LA DONNE',
+          sur: 'La donne',
           texte: hexOf(faits, nbSorts),
           vivant: true,
         }, tour
-          ? `LA ROUE A REFAIT UN TOUR · ${repete(faits - vus.size)}`
-          : piedRoue(`${hex(consommes.size)} CONSOMMEES`)));
+          ? `La roue a refait un tour · ${repete(faits - vus.size)}`
+          : piedRoue(`${hex(consommes.size)} consommées`)));
       }
     }
     crans.forEach((v, j) => { if (v === 'tiree') crans[j] = 'usee'; });

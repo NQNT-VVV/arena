@@ -33,7 +33,7 @@
  * Reglages avances : fermes par defaut. Le signe dit l'etat — « + » ferme,
  * « − » ouvert — sans fleche dessinee ni animation.
  */
-.avance { border: var(--border); padding: var(--sp-3) var(--sp-4); }
+.avance { border: var(--border); padding: var(--sp-3) var(--sp-4); border-radius: var(--radius); }
 .avance summary { cursor: pointer; list-style: none; font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); min-height: 44px; display: flex; align-items: center; }
 .avance summary::-webkit-details-marker { display: none; }
 .avance summary::before { content: '+'; display: inline-block; width: 2ch; color: var(--ink); }

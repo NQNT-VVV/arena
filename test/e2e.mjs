@@ -201,7 +201,7 @@ test('participant : un pseudo deja pris est refuse', async () => {
   await ready(s);
   const res = await call(s, 'play:join', { code, pseudo: 'alice' });
   assert.equal(res.ok, false);
-  assert.match(res.error, /deja pris/);
+  assert.match(res.error, /déjà pris/);
 });
 
 test('regie : une socket de participant ne pilote rien', async () => {

@@ -16,7 +16,7 @@
 const config = require('../config');
 const views = require('../views');
 
-const MEDIA = { audio: 'Audio', image: 'Image', video: 'Video', text: 'Texte', file: 'Libre' };
+const MEDIA = { audio: 'Audio', image: 'Image', video: 'Vidéo', text: 'Texte', file: 'Libre' };
 const MEDALS = ['\u{1F947}', '\u{1F948}', '\u{1F949}'];
 
 function inviteLine(session) {
@@ -58,7 +58,7 @@ function announceOpen(session) {
       title: `\u{1F3A8} ${session.name}`,
       description: [
         `Le lobby est ouvert — rendu attendu : **${MEDIA[session.mediaType] ?? session.mediaType}**.`,
-        `Temps de creation : **${minutes(session.config.durationMs)}**.`,
+        `Temps de création : **${minutes(session.config.durationMs)}**.`,
         '',
         inviteLine(session),
       ].join('\n'),
@@ -70,8 +70,8 @@ function announceOpen(session) {
 function announceStart(session) {
   return post({
     embeds: [{
-      title: `\u{23F1}\u{FE0F} ${session.name} — c'est parti`,
-      description: `${session.participants.size} participant(s). Fin de la creation dans **${minutes(session.config.durationMs)}**.`,
+      title: `\u{23F1}\u{FE0F} ${session.name} — c’est parti`,
+      description: `${session.participants.size} participant(s). Fin de la création dans **${minutes(session.config.durationMs)}**.`,
       color: 0x22d3ee,
     }],
   });
@@ -90,7 +90,7 @@ function announceResults(session) {
   return post({
     embeds: [{
       title: `\u{1F3C6} ${session.name} — Classement`,
-      description: lines.length ? lines.join('\n') : 'Aucun rendu n\u2019a ete depose.',
+      description: lines.length ? lines.join('\n') : 'Aucun rendu n\u2019a été déposé.',
       color: 0xfbbf24,
     }],
   });

@@ -22,9 +22,9 @@ export function call<T = Record<string, never>>(
     const done = (res?: Ack<T>) => {
       if (settled) return;
       settled = true;
-      resolve(res ?? { ok: false, error: 'Pas de reponse du serveur.' });
+      resolve(res ?? { ok: false, error: 'Pas de réponse du serveur.' });
     };
     socket.emit(event, payload ?? {}, done);
-    setTimeout(() => done({ ok: false, error: 'Le serveur ne repond pas.' }), timeout);
+    setTimeout(() => done({ ok: false, error: 'Le serveur ne répond pas.' }), timeout);
   });
 }

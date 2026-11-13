@@ -1,106 +1,104 @@
-@import './agartha.css';
+@import './bureau.css';
 
 /* ==========================================================================
-   ARENA — au-dela du socle AGARTHA
-   Des contraintes, un chrono, des rendus juges en aveugle. Le sang ne sert
-   qu'au temps qui fuit et au rendu en cours ; l'or au seul premier du
-   classement. Les rendus des participants restent en couleur — c'est le
-   contenu, pas l'interface.
+   ARENA — au-dela du socle « Bureau »
+   Des contraintes, un chrono, des rendus juges en aveugle. Le vert est la
+   couleur d'Arena, le rouge sert au temps qui fuit, le jaune a ce qui est
+   choisi et au premier du classement. Les rendus des participants gardent
+   leurs couleurs — c'est le contenu, pas l'interface.
    ========================================================================== */
+:root { --arena: #1F4E46; }
+:root[data-theme="dark"] { --arena: #2A6B60; }
 
 /* --------------------------------------------------------------------------
-   Barre systeme, presente sur les trois surfaces
+   Barre du haut, presente sur les trois surfaces
    -------------------------------------------------------------------------- */
 .topbar .grow { display: flex; flex-direction: column; gap: var(--sp-1); }
-.topbar .session-name { font: var(--t-ui); letter-spacing: var(--ls-mono); color: var(--ink); }
-.topbar .code { font: var(--t-ui); letter-spacing: var(--ls-mono); color: var(--ink); }
+.topbar .session-name { font: 800 20px/1.1 var(--font-display); color: var(--ink); text-transform: none; letter-spacing: 0; }
+.topbar .code { font: 800 18px/1 var(--font-display); letter-spacing: .06em; color: #221E1A; background: var(--gold); padding: 3px 9px 4px; border-radius: 8px; rotate: -2deg; display: inline-block; --ink: #221E1A; --ink-90: #2B2622; --ink-60: #4A443C; --ink-55: #4A443C; --ink-45: #6B655C; }
 
 /* --------------------------------------------------------------------------
-   Consigne : le texte impose, servi tel quel
+   Consigne : le texte impose, servi tel quel, sur sa fiche
    -------------------------------------------------------------------------- */
 .brief {
   white-space: pre-wrap; overflow-wrap: anywhere;
-  font: var(--t-ui); letter-spacing: var(--ls-mono); line-height: 1.6; color: var(--ink-90);
-  border-left: var(--border-strong); padding-left: var(--sp-3);
+  font: var(--t-read); color: var(--ink-90); text-transform: none; letter-spacing: 0;
+  border-left: 5px solid var(--accent); border-radius: 4px 12px 12px 4px; background: var(--paper-hi); padding: var(--sp-3) var(--sp-4);
 }
-.brief:empty::before { content: 'AUCUNE CONSIGNE DEPOSEE'; color: var(--ink-55); }
+.brief:empty::before { content: 'Aucune consigne déposée'; color: var(--ink-55); }
 
 /* --------------------------------------------------------------------------
-   Trombinoscope : carte joueur du systeme, en grille
+   Trombinoscope : une carte par participant
    -------------------------------------------------------------------------- */
-.roster { grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); border: 0; gap: var(--gutter); }
-.roster-row { border: var(--border); }
-.roster-row .who { min-width: 0; display: grid; gap: var(--sp-1); }
-.roster-row .pseudo { font: var(--t-ui); letter-spacing: var(--ls-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.roster-row .sub { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); }
+.roster { grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); border: 0; background: transparent; gap: var(--sp-3); overflow: visible; }
+.roster-row { border: var(--border); border-radius: var(--radius); background: var(--paper-hi); animation: pop .4s var(--ease-bounce) both; transition: transform .3s var(--ease-bounce), background var(--tap); }
+.roster-row:last-child { border-bottom: var(--border); }
+.roster-row:hover { transform: translateY(-2px); }
+.roster-row .who { min-width: 0; display: grid; gap: 2px; }
+.roster-row .pseudo { font: var(--t-ui); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.roster-row .sub { font: var(--t-meta); color: var(--ink-60); }
 .roster-row.dq .pseudo { text-decoration: line-through; }
 .roster-row.dq .sub, .roster-row.off .sub { color: var(--ink-55); }
-
+.roster-row.off { border-style: dashed; background: transparent; }
 
 /* --------------------------------------------------------------------------
-   Type de rendu : des cases, la choisie inversee
+   Type de rendu : des touches, la choisie en jaune
    -------------------------------------------------------------------------- */
-.media-choice { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 112px), 1fr)); border-top: var(--border); border-left: var(--border); }
+.media-choice { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 112px), 1fr)); gap: var(--sp-3); }
 .media-choice button {
   display: grid; gap: var(--sp-2); justify-items: start; align-content: start;
   padding: var(--sp-3); cursor: pointer; text-align: left;
-  background: transparent; border: 0; border-right: var(--border); border-bottom: var(--border);
-  color: var(--ink-60); font: var(--t-meta); letter-spacing: var(--ls-mono); transition: none;
+  background: var(--paper-hi); border: 2px solid var(--ink-25); border-radius: 14px;
+  color: var(--ink-60); font: var(--t-meta);
+  transition: transform .3s var(--ease-bounce), border-color var(--tap), background var(--tap), box-shadow var(--tap), color var(--tap);
 }
-.media-choice button .ico { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-55); }
-.media-choice button:hover { background: var(--ink-12); color: var(--ink); transform: none; }
-.media-choice button[aria-pressed='true'] { background: var(--ink); background-image: none; color: var(--bg); }
-.media-choice button[aria-pressed='true'] .ico { color: var(--bg); }
+.media-choice button .ico { color: var(--ink-55); }
+.media-choice button:hover { border-color: var(--ink); color: var(--ink); transform: translateY(-3px); box-shadow: 0 4px 0 var(--shade); }
+.media-choice button:active { transform: translateY(2px); box-shadow: 0 0 0 var(--shade); }
+.media-choice button[aria-pressed='true'] { background: var(--gold); border-color: var(--ink); box-shadow: 0 4px 0 var(--shade); color: #221E1A; --ink: #221E1A; --ink-55: #4A443C; --ink-60: #4A443C; }
+.media-choice button[aria-pressed='true'] .ico { color: #221E1A; }
 
-/*
- * Le grain s'eteint pendant la revelation de la roulette.
- *
- * Un bruit statique plein cadre neutralise les macroblocs non reecrits meme sur
- * une image gelee : c'est une taxe de debit permanente, exactement la ou il
- * faut des bits pour les aretes des tres grandes glyphes. `.grain` est rendu en
- * frere de niveau racine, hors de la scene : la regle ne peut etre que globale,
- * et elle est declaree comme telle.
- */
+/* Le grain s'eteint pendant la revelation de la roulette (voir Roulette). */
 body.reveal-on .grain { display: none; }
 
 /* --------------------------------------------------------------------------
-   Grand ecran : lisible a cinq metres, 40 % de vide
+   Grand ecran : lisible a cinq metres
    -------------------------------------------------------------------------- */
-/*
- * L'en-tete de partie est fixe (`.head`, une ligne de meta et ses filets, pres
- * de 42 px) : la scene doit lui reserver sa hauteur. Avec seulement
- * `--sp-8` en haut, le titre de la session passait dessous, rogne de quelques
- * pixels — et davantage des que l'en-tete passe sur deux lignes, sur une
- * source OBS plus etroite.
- */
 .screen-stage {
   min-height: 100dvh; display: grid; align-content: space-between;
   gap: var(--sp-12); padding: calc(var(--sp-8) + var(--sp-12)) var(--margin) var(--sp-12); text-align: left;
 }
-.screen-stage .title { font: var(--t-h1); letter-spacing: var(--ls-display); }
+.screen-stage .title { font: 800 clamp(40px, 6vw, 84px)/1 var(--font-display); letter-spacing: var(--ls-display); animation: rise .6s var(--ease) both; }
 .screen-stage .join-code {
-  font: var(--t-display); letter-spacing: var(--ls-display); white-space: nowrap;
-  padding: var(--sp-4) 0 var(--sp-3); background-image: var(--rule); background-size: 4px 4px;
-}
-/* Le QR reste noir sur clair : c'est un outil optique, pas une decoration. */
-.screen-qr { width: clamp(150px, 18vw, 240px); background: var(--ink); padding: var(--sp-3); border: var(--border-strong); }
+  font: 800 clamp(72px, 15vw, 220px)/.9 var(--font-display); letter-spacing: .04em; white-space: nowrap; justify-self: start;
+  background: var(--gold); color: #221E1A; padding: .08em .22em .14em; border-radius: .16em; rotate: -2deg;
+  box-shadow: 0 .06em 0 var(--shade); outline: 3px dashed rgba(34,30,26,.35); outline-offset: -.09em;
+  animation: pop .7s var(--ease-bounce) .15s both; --ink: #221E1A; --ink-90: #2B2622; --ink-60: #4A443C; --ink-55: #4A443C; --ink-45: #6B655C; }
+/* Le QR reste noir sur blanc : c'est un outil optique, pas une decoration. */
+.screen-qr { width: clamp(150px, 18vw, 240px); background: #FFFFFF; padding: var(--sp-3); border: 3px solid var(--ink); border-radius: 18px; rotate: 3deg; box-shadow: 0 8px 0 var(--shade); animation: pop .7s var(--ease-bounce) .3s both; }
 .screen-qr svg { width: 100%; height: auto; display: block; }
 
-/* En-tete de partie 0x0C : code, sujets en carres, phase, compteur. */
-.screen-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--sp-3) var(--sp-8); padding: var(--sp-3) var(--margin); border-bottom: var(--border); font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); }
-.seats { display: flex; gap: var(--sp-1); flex-wrap: wrap; }
-.seats span { width: 12px; height: 12px; box-sizing: border-box; border: var(--border-ui); }
-.seats span.on { background: var(--ink); border-color: var(--ink); }
-.seats span.off { border: 1px solid var(--ink); background-image: var(--hatch); }
+.screen-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--sp-3) var(--sp-8); padding: var(--sp-3) var(--margin); border-bottom: 2px solid var(--ink-12); font: var(--t-meta); color: var(--ink-60); }
+.seats { display: flex; gap: 5px; flex-wrap: wrap; }
+.seats span { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--ink-35); transition: background .3s var(--ease), scale .3s var(--ease-bounce); }
+.seats span.on { background: var(--ink); border-color: var(--ink); scale: 1.1; }
+.seats span.off { border-color: var(--accent); background-image: var(--hatch); }
 
-/* Une phrase logee dans un emplacement attenue garde sa casse de lecture. */
-p.muted, .muted p, p.meta { text-transform: none; letter-spacing: var(--ls-prose); line-height: 1.6; }
+p.muted, .muted p, p.meta { text-transform: none; letter-spacing: 0; line-height: 1.6; }
 
-/* --------------------------------------------------------------------------
-   Ecrans etroits — reprise apres les regles propres a Arena, qui gagnent sur
-   la media query du socle du seul fait d'arriver plus tard. Arena se joue au
-   telephone : la regie sur ordinateur, la participation dans la poche.
-   -------------------------------------------------------------------------- */
+/* L'egaliseur : l'objet d'Arena. Des barres qui dansent. */
+.eq { display: inline-flex; align-items: flex-end; gap: 6px; height: 28px; }
+.eq i { width: 10px; height: 100%; border-radius: 3px 3px 0 0; background: currentColor; transform-origin: 50% 100%; animation: eq 1s ease-in-out infinite; }
+.eq i:nth-child(1) { animation-duration: .9s; animation-delay: -.6s; }
+.eq i:nth-child(2) { animation-duration: 1.3s; animation-delay: -.35s; }
+.eq i:nth-child(3) { animation-duration: 1s; animation-delay: -.15s; }
+.eq i:nth-child(4) { animation-duration: 1.5s; animation-delay: -.5s; }
+.eq i:nth-child(5) { animation-duration: 1.1s; animation-delay: -.25s; }
+.eq i:nth-child(6) { animation-duration: 1.4s; animation-delay: -.7s; }
+.eq i:nth-child(7) { animation-duration: .95s; animation-delay: -.1s; }
+.eq i:nth-child(8) { animation-duration: 1.25s; animation-delay: -.45s; }
+.eq i:nth-child(9) { animation-duration: 1.05s; animation-delay: -.3s; }
+
 @media (max-width: 640px) {
   .shell { gap: var(--sp-6); }
   .topbar { gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); }
@@ -109,3 +107,10 @@ p.muted, .muted p, p.meta { text-transform: none; letter-spacing: var(--ls-prose
   .roster-row { grid-template-columns: 40px minmax(0, 1fr) auto; padding: var(--sp-2); }
   .roster-row .avatar { width: 40px; height: 40px; font-size: 18px; }
 }
+
+/* Dans Arena, les annotations sont des phrases : elles se lisent, en casse normale. */
+.meta { text-transform: none; letter-spacing: 0; font: 500 14px/1.45 var(--font-mono); }
+.field > label, .field > span:first-child, label.meta, th.meta { text-transform: uppercase; letter-spacing: .05em; font: var(--t-meta); }
+/* Les index hexadecimaux de l'ancien socle ne disent rien a personne. */
+.media-choice button .ico { display: none; }
+.media-choice button { font: 700 15px/1.2 var(--font-mono); text-transform: none; letter-spacing: 0; min-height: 52px; align-content: center; }

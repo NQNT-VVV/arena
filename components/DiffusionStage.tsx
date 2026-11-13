@@ -55,8 +55,8 @@ export function DiffusionStage({
     return (
       <div className={styles.empty}>
         <Icon name="fichier" size="lg" className={styles.icon} />
-        <h2>AUCUN RENDU A DIFFUSER</h2>
-        <p className="muted">Personne n&apos;a depose de creation pour cette session.</p>
+        <h2>Aucun rendu à diffuser</h2>
+        <p className="muted">Personne n’a déposé de création pour cette session.</p>
       </div>
     );
   }
@@ -67,9 +67,9 @@ export function DiffusionStage({
 
   const stageLabel = (() => {
     switch (tick.stage) {
-      case 'play': return timed ? 'Ecoute' : 'Decouverte';
+      case 'play': return timed ? 'Écoute' : 'Découverte';
       case 'vote': return diffusion.advanceAt === null ? 'Votez — l’animateur passera au suivant' : 'Votez';
-      case 'over': return diffusion.index >= diffusion.total - 1 ? 'Diffusion terminee' : 'Rendu suivant…';
+      case 'over': return diffusion.index >= diffusion.total - 1 ? 'Diffusion terminée' : 'Rendu suivant…';
       default: return '';
     }
   })();
@@ -79,7 +79,7 @@ export function DiffusionStage({
       <div className={styles.counter}>
         <span className={styles.position}>{hex(diffusion.index + 1)}</span>
         <span className="faint">/ {hex(diffusion.total)}</span>
-        {card.late && <span className="pill err"><span>HORS DELAI</span></span>}
+        {card.late && <span className="pill err"><span>Hors délai</span></span>}
         <span className="grow" />
         {onToggleAudio && (
           <button
@@ -100,7 +100,7 @@ export function DiffusionStage({
       */}
       {diffusion.extrait && (
         <div className={styles.origine}>
-          <span className="meta">REBUILD DE</span>
+          <span className="meta">Rebuild de</span>
           <span className={styles.origineNom}>{diffusion.extrait.nom}</span>
           {diffusion.extrait.bpm !== null && <span className="pill">{Math.round(diffusion.extrait.bpm)} BPM</span>}
           {diffusion.extrait.tonaliteNom && <span className="pill">{diffusion.extrait.tonaliteNom.toUpperCase()}</span>}
@@ -122,7 +122,7 @@ export function DiffusionStage({
 
       <div className={styles.media}>
         {!card.inline && card.url && (
-          <a className="btn" href={`${card.url}?dl=1`}><Icon name="telecharge" />TELECHARGER POUR OUVRIR</a>
+          <a className="btn" href={`${card.url}?dl=1`}><Icon name="telecharge" />Télécharger pour ouvrir</a>
         )}
 
         {card.inline && card.kind === 'audio' && card.peaksUrl && diffusion.startedAt && diffusion.endsAt && (
@@ -149,7 +149,7 @@ export function DiffusionStage({
         )}
 
         {card.inline && card.kind === 'image' && card.url && (
-          <a href={card.url} target="_blank" rel="noreferrer" className={styles.imageLink} title="OUVRIR EN GRAND">
+          <a href={card.url} target="_blank" rel="noreferrer" className={styles.imageLink} title="Ouvrir en grand">
             <img className={styles.image} src={card.url} alt={`Rendu ${diffusion.index + 1}`} />
           </a>
         )}
@@ -164,13 +164,13 @@ export function DiffusionStage({
           <span>
             {card.durationMs && card.durationMs <= diffusion.playMaxS * 1000
               ? `${Math.round(card.durationMs / 1000)} s`
-              : `Ecoute limitee a ${diffusion.playMaxS} s`}
+              : `Écoute limitée à ${diffusion.playMaxS} s`}
           </span>
         )}
         {card.bytes > 0 && <span>{humanBytes(card.bytes)}</span>}
         <span className="grow" />
         <span className={`${styles.tally} ${everyone ? styles.tallyDone : ''}`}>
-          {diffusion.voted} / {diffusion.eligible} ont note{everyone ? ' · complet' : ''}
+          {diffusion.voted} / {diffusion.eligible} ont noté{everyone ? ' · complet' : ''}
         </span>
       </div>
 
@@ -178,10 +178,10 @@ export function DiffusionStage({
         <div className={styles.votes}>
           {isMine ? (
             <p className={styles.mine}>
-              C&apos;est ta creation : tu ne peux pas la noter, les autres s&apos;en chargent.
+              C’est ta création : tu ne peux pas la noter, les autres s’en chargent.
             </p>
           ) : !canVote ? (
-            <p className={styles.mine}>Tu es hors classement : la notation t&apos;est fermee.</p>
+            <p className={styles.mine}>Tu es hors classement : la notation t’est fermée.</p>
           ) : (
             criteria.map((criterion) => (
               <Rating

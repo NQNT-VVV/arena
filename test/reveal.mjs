@@ -176,7 +176,7 @@ test('un seul sujet : le marqueur ne court jamais sur un champ de un', () => {
   assert.equal(avecMarqueur(r, 'tableau').length, 0);
   assert.ok(avecMarqueur(r, 'reglette').length > 0, 'le suspense se reporte sur la seule inconnue reelle');
   // Et la salle sait POURQUOI rien ne tourne, sinon elle croit a une panne.
-  assert.ok(r.frames[1].pied.includes('AUCUN CHOIX'));
+  assert.ok(r.frames[1].pied.includes('aucun choix'));
 });
 
 test('une seule case jouable : rien ne tourne, et c’est juste', () => {
@@ -303,7 +303,7 @@ test('la donne rend visible la regle sans remise, et l’epuisement avec', () =>
   const usees = r.frames.map((f) => f.crans.filter((c) => c === 'usee').length);
   assert.ok(Math.max(...usees) >= 2);
   // Puis la roue refait un tour, et TOUT se rallume dans la meme image.
-  const tour = r.frames.findIndex((f) => f.pied.includes('LA ROUE A REFAIT UN TOUR'));
+  const tour = r.frames.findIndex((f) => f.pied.includes('La roue a refait un tour'));
   assert.ok(tour > 0, 'le pied annonce le tour');
   assert.equal(r.frames[tour].crans.filter((c) => c === 'usee').length, 0, 'les crans se rallument d’un coup');
 });
@@ -326,17 +326,17 @@ test('la ligne finale ne sacre jamais au hasard en pretendant classer', () => {
     target: 'all', qui: [0, 1, 2], quoi: [0, 1, 2],
     effets: [{ points: -1 }, { points: -3 }, { chronoMs: -30000 }],
   });
-  assert.equal(ligneFinale(pese).sur, 'LE PLUS LOURD');
+  assert.equal(ligneFinale(pese).sur, 'Le plus lourd');
   assert.ok(ligneFinale(pese).texte.startsWith('MAVERICK'), 'celui qui prend −3');
 
   const exaequo = tirage({
     target: 'all', qui: [0, 1], quoi: [0, 1],
     effets: [{ points: -2 }, { points: -2 }],
   });
-  assert.equal(ligneFinale(exaequo).sur, 'PARMI LES PLUS LOURDS');
+  assert.equal(ligneFinale(exaequo).sur, 'Parmi les plus lourds');
 
   const consignes = tirage({ target: 'all', qui: [0, 1, 2], quoi: [0, 1, 2] });
-  assert.ok(ligneFinale(consignes).sur.includes('AUCUN EFFET MECANIQUE'));
+  assert.ok(ligneFinale(consignes).sur.includes('aucun effet mécanique'));
   assert.equal(ligneFinale(consignes).vedette, null, 'aucune puce a poser : rien ne s’est applique');
 });
 
@@ -381,14 +381,14 @@ test('un tirage d’avant le champ s’affiche pose, et se tait sur ce qu’il i
   assert.equal(avecMarqueur(r, 'tableau').length, 0);
   assert.equal(avecMarqueur(r, 'reglette').length, 0);
   assert.deepEqual(r.frames[0].crans, [], 'aucune reglette : on ne dessine pas une roue qu’on ignore');
-  assert.ok(r.frames[0].pied.includes('TIRAGE ANTERIEUR'));
+  assert.ok(r.frames[0].pied.includes('tirage antérieur'));
   // Le tableau se replie sur la bande des pseudos tires : ce qu'on sait encore.
   assert.equal(r.frames[r.frames.length - 1].plaques.length, 1);
 });
 
 test('la roue qui a refait un tour est annoncee des la pose', () => {
   const r = revelation(tirage({ spent: true, target: 'one', qui: [0], quoi: [0] }));
-  assert.ok(r.frames[0].texte.includes('REFAIT UN TOUR'));
+  assert.ok(r.frames[0].texte.includes('refait un tour'));
 });
 
 /* ------------------------------------------------------------------ */

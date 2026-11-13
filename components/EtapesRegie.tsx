@@ -30,16 +30,16 @@ export function EtapesRegie({ state }: { state: BattleState }) {
 
   const etapes: Etape[] = [];
   etapes.push({
-    titre: 'Regler la session',
-    detail: `${state.config.mode === 'rebuild' ? 'Rebuild The Track' : 'Beat Battle'} · ${state.config.rounds} manche${state.config.rounds > 1 ? 's' : ''}. Modifiable tant que rien n’a commence.`,
+    titre: 'Régler la session',
+    detail: `${state.config.mode === 'rebuild' ? 'Rebuild The Track' : 'Beat Battle'} · ${state.config.rounds} manche${state.config.rounds > 1 ? 's' : ''}. Modifiable tant que rien n’a commencé.`,
     etat: 'fait',
   });
   if (rebuild) {
     etapes.push({
-      titre: 'Deposer les extraits',
+      titre: 'Déposer les extraits',
       detail: extraits.length === 0
-        ? 'Un fichier audio par extrait, plus bas sur cette page. Idealement, au moins un par createur.'
-        : `${extraits.length} depose${extraits.length > 1 ? 's' : ''} · ${analyses}/${extraits.length} analyse${analyses > 1 ? 's' : ''}. Verifie le tempo et la tonalite, corrige si besoin.`,
+        ? 'Un fichier audio par extrait, plus bas sur cette page. Idéalement, au moins un par créateur.'
+        : `${extraits.length} déposé${extraits.length > 1 ? 's' : ''} · ${analyses}/${extraits.length} analysé${analyses > 1 ? 's' : ''}. Vérifie le tempo et la tonalité, corrige si besoin.`,
       etat: extraits.length > 0 ? 'fait' : 'maintenant',
     });
   }
@@ -52,31 +52,31 @@ export function EtapesRegie({ state }: { state: BattleState }) {
   etapes.push({
     titre: 'Faire venir les participants',
     detail: lobby
-      ? `${createurs} createur${createurs > 1 ? 's' : ''} inscrit${createurs > 1 ? 's' : ''}. Envoie le lien « pour creer » ou montre le QR ; le lien « pour juger » est pour les spectateurs.`
-      : 'Lien, QR code et ecran de projection sont dans la carte « Inviter ».',
+      ? `${createurs} créateur${createurs > 1 ? 's' : ''} inscrit${createurs > 1 ? 's' : ''}. Envoie le lien « pour créer » ou montre le QR ; le lien « pour juger » est pour les spectateurs.`
+      : 'Lien, QR code et écran de projection sont dans la carte « Inviter ».',
     etat: lobby ? (createurs > 0 ? 'fait' : 'maintenant') : 'ensuite',
   });
   etapes.push({
-    titre: state.config.rounds > 1 ? 'Lancer la manche 1' : 'Lancer la creation',
+    titre: state.config.rounds > 1 ? 'Lancer la manche 1' : 'Lancer la création',
     detail: rebuild
-      ? 'Chacun recoit son extrait a cet instant, et le chrono part.'
-      : 'Le chrono part pour tout le monde a cet instant.',
+      ? 'Chacun reçoit son extrait à cet instant, et le chrono part.'
+      : 'Le chrono part pour tout le monde à cet instant.',
     etat: lobby && createurs > 0 ? 'maintenant' : 'ensuite',
   });
 
   if (rebuild && lobby && extraits.length > 0 && createurs > extraits.length) {
     etapes.splice(etapes.length - 1, 0, {
       titre: 'Ajouter des extraits ?',
-      detail: `${createurs} createurs pour ${extraits.length} extrait${extraits.length > 1 ? 's' : ''} : certains auront le meme. Ce n’est pas bloquant.`,
+      detail: `${createurs} créateurs pour ${extraits.length} extrait${extraits.length > 1 ? 's' : ''} : certains auront le même. Ce n’est pas bloquant.`,
       etat: 'maintenant',
     });
   }
 
   return (
-    <section className={`card pad ${styles.carte}`} aria-label="Etapes avant le depart">
+    <section className={`card pad ${styles.carte}`} aria-label="Étapes avant le départ">
       <div className={styles.tete}>
-        <h2 className="section-title">AVANT LE DEPART</h2>
-        <a className="btn sm ghost" href="/guide" target="_blank" rel="noreferrer">Guide de l&apos;animateur</a>
+        <h2 className="section-title">Avant le départ</h2>
+        <a className="btn sm ghost" href="/guide" target="_blank" rel="noreferrer">Guide de l’animateur</a>
       </div>
       <ol className={styles.liste}>
         {etapes.map((e, i) => (
@@ -86,7 +86,7 @@ export function EtapesRegie({ state }: { state: BattleState }) {
               <span className={styles.titre}>{e.titre}</span>
               <span className={styles.detail}>{e.detail}</span>
             </span>
-            <span className={styles.etat}>{e.etat === 'fait' ? 'FAIT' : e.etat === 'maintenant' ? 'A FAIRE' : ''}</span>
+            <span className={styles.etat}>{e.etat === 'fait' ? 'Fait' : e.etat === 'maintenant' ? 'À faire' : ''}</span>
           </li>
         ))}
       </ol>

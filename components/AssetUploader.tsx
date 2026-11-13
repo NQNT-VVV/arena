@@ -70,14 +70,14 @@ export function AssetUploader({
 
     const body = res.body as Response;
     if (!res.ok) {
-      toast(body?.error || 'Le depot a echoue.', 'err');
+      toast(body?.error || 'Le dépôt a échoué.', 'err');
       return;
     }
     const n = body.added ?? 0;
-    if (n > 0) toast(`${n} ${noun}${n > 1 ? 's' : ''} depose${n > 1 ? 's' : ''}`, 'ok');
+    if (n > 0) toast(`${n} ${noun}${n > 1 ? 's' : ''} déposé${n > 1 ? 's' : ''}`, 'ok');
     // Un refus fichier par fichier se dit, et nomme le fichier : sinon l'envoi
     // parait reussi et l'extrait manque au moment de distribuer.
-    for (const r of body.refused ?? []) toast(`« ${r.filename} » refuse : ${r.reason}`, 'err');
+    for (const r of body.refused ?? []) toast(`« ${r.filename} » refusé : ${r.reason}`, 'err');
     onDone?.(body.assets ?? []);
   };
 
@@ -105,7 +105,7 @@ export function AssetUploader({
           <span className="meta">
             Envoi… {Math.round((progress ?? 0) * 100)} %
           </span>
-          <button className="btn xs ghost" onClick={() => cancelRef.current?.()}>ANNULER</button>
+          <button className="btn xs ghost" onClick={() => cancelRef.current?.()}>Annuler</button>
         </>
       ) : (
         <>
@@ -118,7 +118,7 @@ export function AssetUploader({
             Choisir des fichiers
           </button>
           <span className="faint" style={{ textAlign: 'center' }}>
-            {disabled ? 'Les elements ne se deposent plus a ce stade.' : (hint ?? 'ou glisse-les ici')}
+            {disabled ? 'Les éléments ne se déposent plus à ce stade.' : (hint ?? 'ou glisse-les ici')}
           </span>
         </>
       )}
@@ -130,7 +130,7 @@ export function AssetUploader({
 export function UploadLimits({ count, max, bytes, maxBytes }: { count: number; max: number; bytes: number; maxBytes: number }) {
   return (
     <span className="meta">
-      {count}/{max} elements • {humanBytes(bytes)} / {humanBytes(maxBytes)}
+      {count}/{max} éléments • {humanBytes(bytes)} / {humanBytes(maxBytes)}
     </span>
   );
 }

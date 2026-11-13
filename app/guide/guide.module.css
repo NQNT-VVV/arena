@@ -6,7 +6,7 @@
  */
 .guide { gap: var(--sp-16); counter-reset: etape; }
 .guide b { color: var(--ink); font-weight: 400; background-image: var(--rule); background-size: 4px 4px; background-position: bottom; background-repeat: repeat-x; }
-.guide code { font: var(--t-ui); font-size: .9em; letter-spacing: 0; text-transform: none; border: var(--border); padding: 0 var(--sp-1); }
+.guide code { font: var(--t-ui); font-size: .9em; letter-spacing: 0; text-transform: none; border: var(--border); padding: 0 var(--sp-1); border-radius: var(--radius); }
 .guide [id] { scroll-margin-top: 96px; }
 
 /* Le choix du mode masque ce qui concerne l'autre. Sans :has(), tout reste
@@ -25,8 +25,7 @@
 .choix span {
   display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--sp-4);
   border: var(--border-ui); font: var(--t-ui); font-size: 15px; letter-spacing: var(--ls-mono); color: var(--ink-60);
-  transition: background var(--tap), color var(--tap);
-}
+  transition: background var(--tap), color var(--tap); border-radius: var(--radius); }
 .choix label + label span { border-left: 0; }
 .choix label:hover span { color: var(--ink); background: var(--ink-12); }
 .choix input:checked + span { background: var(--ink); color: var(--bg); }
@@ -34,7 +33,7 @@
 .modeAide { font: var(--t-prose); letter-spacing: var(--ls-prose); color: var(--ink-60); margin: 0; }
 
 /* --- Antiseche : les boutons de la soiree, dans l'ordre --- */
-.antiseche { border: var(--border-strong); padding: var(--sp-6); display: grid; gap: var(--sp-4); }
+.antiseche { border: var(--border-strong); padding: var(--sp-6); display: grid; gap: var(--sp-4); border-radius: var(--radius); }
 .antiseche > p { font: var(--t-read); letter-spacing: var(--ls-prose); color: var(--ink-90); margin: 0; max-width: 70ch; }
 /* Une liste a cocher en deux colonnes, lue de haut en bas : numero, bouton,
    moment. En tuiles de 150 px, les libelles cassaient sur trois lignes et le
@@ -79,8 +78,8 @@
 .captures { display: flex; flex-wrap: wrap; gap: var(--sp-4); align-items: flex-start; }
 .figure { margin: 0; display: grid; gap: var(--sp-2); max-width: 100%; }
 .figure a { display: block; cursor: zoom-in; }
-.figure img { display: block; max-width: 100%; height: auto; border: var(--border); }
-.figure a:hover img, .figure a:focus-visible img { border: var(--border-strong); }
+.figure img { display: block; max-width: 100%; height: auto; border: var(--border); border-radius: var(--radius); }
+.figure a:hover img, .figure a:focus-visible img { border: var(--border-strong); border-radius: var(--radius); }
 .figure figcaption { font: var(--t-prose); letter-spacing: var(--ls-prose); color: var(--ink-60); }
 .telephone { max-width: 260px; }
 
@@ -88,8 +87,7 @@
 .bouton {
   display: inline; font-family: var(--font-mono); font-size: .8em; line-height: 1.9; letter-spacing: var(--ls-mono);
   text-transform: uppercase; color: var(--ink); border: var(--border-strong); padding: .1em .5em;
-  white-space: nowrap; -webkit-box-decoration-break: clone; box-decoration-break: clone;
-}
+  white-space: nowrap; -webkit-box-decoration-break: clone; box-decoration-break: clone; border-radius: var(--radius); }
 .plein { background: var(--ink); color: var(--bg); }
 
 /* Le numero rouge des captures. */
@@ -100,7 +98,7 @@
 }
 
 /* --- Replis : questions, cas particuliers --- */
-.plus { border: var(--border); }
+.plus { border: var(--border); border-radius: var(--radius); }
 .plus summary {
   cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: var(--sp-3);
   min-height: 44px; padding: var(--sp-2) var(--sp-4); font: var(--t-ui); font-size: 15px; letter-spacing: var(--ls-prose); color: var(--ink);
@@ -116,7 +114,7 @@
 .faq { display: grid; max-width: 820px; }
 .faq .plus + .plus { border-top: 0; }
 
-.exemple { border: var(--border); padding: var(--sp-3) var(--sp-4); font-variant-numeric: tabular-nums; }
+.exemple { border: var(--border); padding: var(--sp-3) var(--sp-4); font-variant-numeric: tabular-nums; border-radius: var(--radius); }
 
 .pied { display: flex; justify-content: center; padding-bottom: var(--sp-12); }
 

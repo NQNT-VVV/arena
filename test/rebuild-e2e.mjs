@@ -362,7 +362,7 @@ test('la manche suivante attend que tout le classement soit devoile', async () =
   await call(host, 'host:results');
   const tot = await call(host, 'host:next-round', {});
   assert.equal(tot.ok, false);
-  assert.match(tot.error, /Devoilez/);
+  assert.match(tot.error, /Dévoilez/);
   const etat = (await call(host, 'host:reveal', { all: true })).state;
   assert.equal(etat.general.manches, 1);
   assert.deepEqual(etat.general.rows.map((r) => r.author.pseudo), ['Alice', 'Bob', 'Chloe', 'Dan']);
@@ -430,7 +430,7 @@ test('manche 2 : Chloe ne rend rien ; manche 3 : tout le monde rend', async () =
 test('apres la derniere manche, il n’y en a pas d’autre', async () => {
   const res = await call(host, 'host:next-round', {});
   assert.equal(res.ok, false);
-  assert.match(res.error, /derniere manche/);
+  assert.match(res.error, /dernière manche/);
 });
 
 test('un extrait joue ne se retire pas ; un extrait jamais attribue, si', async () => {

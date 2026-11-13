@@ -31,7 +31,7 @@ export function ClassementGeneral({
       <p className={styles.legende}>
         {fini
           ? `Classement final — moyenne des ${rounds} manches.`
-          : `Apres ${general.manches} manche${general.manches > 1 ? 's' : ''} sur ${rounds} — moyenne, une manche sans rendu compte zero.`}
+          : `Après ${general.manches} manche${general.manches > 1 ? 's' : ''} sur ${rounds} — moyenne, une manche sans rendu compte zéro.`}
       </p>
       <ol className={styles.list}>
         {general.rows.map((row) => (

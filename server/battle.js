@@ -284,7 +284,7 @@ class BattleServer {
 
   require(code) {
     const s = this.get(code);
-    if (!s) throw new BattleError("Cette session n'existe pas ou plus.", 404);
+    if (!s) throw new BattleError("Cette session n’existe pas ou plus.", 404);
     return s;
   }
 
@@ -292,7 +292,7 @@ class BattleServer {
   requireHost(code, token) {
     const s = this.require(code);
     if (!tokenMatches(token, s.hostTokenHash)) {
-      throw new BattleError("Vous n'etes pas l'animateur de cette session.", 403);
+      throw new BattleError("Vous n’êtes pas l’animateur de cette session.", 403);
     }
     return s;
   }
@@ -301,7 +301,7 @@ class BattleServer {
 
   createSession({ name, mediaType, brief, config: rawConfig } = {}) {
     if (this.sessions.size >= config.limits.maxSessions) {
-      throw new BattleError('Le serveur heberge deja trop de sessions ouvertes.');
+      throw new BattleError('Le serveur héberge déjà trop de sessions ouvertes.');
     }
 
     const cleanName = cleanPseudo(name, 60) || 'Battle sans nom';
@@ -333,7 +333,7 @@ class BattleServer {
   configure(code, token, patch = {}) {
     const s = this.requireHost(code, token);
     if (s.phase !== 'config' && s.phase !== 'lobby') {
-      throw new BattleError('Les reglages se figent au lancement de la creation.');
+      throw new BattleError('Les réglages se figent au lancement de la création.');
     }
     const fields = {};
     if (patch.name !== undefined) fields.name = cleanPseudo(patch.name, 60) || s.name;
@@ -389,17 +389,17 @@ class BattleServer {
      */
     if (!BattleServer.JOINABLE.has(s.phase)) {
       throw new BattleError(spectator
-        ? 'La diffusion a commence : on ne rejoint plus, meme pour regarder.'
-        : 'Les inscriptions sont fermees pour cette session.');
+        ? 'La diffusion a commencé : on ne rejoint plus, même pour regarder.'
+        : 'Les inscriptions sont fermées pour cette session.');
     }
     if (s.participants.size >= config.limits.maxParticipants) {
-      throw new BattleError('Cette session est complete.');
+      throw new BattleError('Cette session est complète.');
     }
 
     const name = cleanPseudo(pseudo);
-    if (name.length < 2) throw new BattleError('Choisissez un pseudo d’au moins deux caracteres.');
+    if (name.length < 2) throw new BattleError('Choisissez un pseudo d’au moins deux caractères.');
     if (repo.participantByPseudo(s.id, name)) {
-      throw new BattleError('Ce pseudo est deja pris dans cette session.');
+      throw new BattleError('Ce pseudo est déjà pris dans cette session.');
     }
 
     const fresh = newToken();
@@ -469,7 +469,7 @@ class BattleServer {
     const session = this.require(code);
     const participant = session.participants.get(String(participantId || ''));
     if (!participant || !tokenMatches(token, participant.tokenHash)) {
-      throw new BattleError('Identifiez-vous pour deposer votre rendu.', 403);
+      throw new BattleError('Identifiez-vous pour déposer votre rendu.', 403);
     }
     return { session, participant };
   }
@@ -486,21 +486,21 @@ class BattleServer {
     if (!BattleServer.SUBMIT_PHASES.has(session.phase)) {
       throw new BattleError(
         session.phase === 'lobby' || session.phase === 'config'
-          ? 'La creation n’a pas encore commence.'
-          : 'Les depots sont clos pour cette session.',
+          ? 'La création n’a pas encore commencé.'
+          : 'Les dépôts sont clos pour cette session.',
       );
     }
     if (participant.disqualified) {
-      throw new BattleError('Vous avez ete mis hors classement par l’animateur.', 403);
+      throw new BattleError('Vous avez été mis hors classement par l’animateur.', 403);
     }
     // Un spectateur juge, il ne concourt pas : le depot lui est ferme.
     if (participant.spectator) {
-      throw new BattleError('Vous suivez la session comme spectateur : le depot vous est ferme.', 403);
+      throw new BattleError('Vous suivez la session comme spectateur : le dépôt vous est fermé.', 403);
     }
 
     const late = !!(session.graceEndAt && Date.now() > session.graceEndAt);
     if (late && session.config.latePolicy === 'reject') {
-      throw new BattleError('Le temps est ecoule : les depots hors delai sont refuses.');
+      throw new BattleError('Le temps est écoulé : les dépôts hors délai sont refusés.');
     }
 
     return {
@@ -519,7 +519,7 @@ class BattleServer {
     // cette methode est exposee sur l'objet, et une garde unique en amont est
     // une garde qu'un futur appelant contournera sans le vouloir.
     if (participant && participant.spectator) {
-      throw new BattleError('Vous suivez la session comme spectateur : le depot vous est ferme.', 403);
+      throw new BattleError('Vous suivez la session comme spectateur : le dépôt vous est fermé.', 403);
     }
     const now = Date.now();
     const payload = {
@@ -544,7 +544,7 @@ class BattleServer {
       throw new BattleError('Trop tard pour retirer un rendu.');
     }
     const existing = repo.submissionOf(session.id, participant.id);
-    if (!existing) throw new BattleError('Vous n’avez rien depose.', 404);
+    if (!existing) throw new BattleError('Vous n’avez rien déposé.', 404);
     repo.removeSubmission(existing.id);
     repo.logEvent(session.id, 'submission:withdrawn', { participantId: participant.id });
     return { session, participant, removed: existing };
@@ -573,13 +573,13 @@ class BattleServer {
   openAssetSlot(code, token) {
     const session = this.requireHost(code, token);
     if (!BattleServer.ASSET_ADD_PHASES.has(session.phase)) {
-      throw new BattleError('Les elements ne se deposent plus une fois la creation terminee.');
+      throw new BattleError('Les éléments ne se déposent plus une fois la création terminée.');
     }
     const totals = repo.assetTotals(session.id);
     const slots = config.limits.maxAssets - totals.n;
     const budget = config.limits.maxAssetsBytes - totals.bytes;
-    if (slots <= 0) throw new BattleError(`Pas plus de ${config.limits.maxAssets} elements par session.`, 413);
-    if (budget <= 0) throw new BattleError('Le poids total des elements est atteint.', 413);
+    if (slots <= 0) throw new BattleError(`Pas plus de ${config.limits.maxAssets} éléments par session.`, 413);
+    if (budget <= 0) throw new BattleError('Le poids total des éléments est atteint.', 413);
     return { session, slots, budget, nextPosition: totals.lastPosition + 1 };
   }
 
@@ -592,10 +592,10 @@ class BattleServer {
   removeAsset(code, token, assetId) {
     const session = this.requireHost(code, token);
     if (!BattleServer.ASSET_REMOVE_PHASES.has(session.phase)) {
-      throw new BattleError('Un element ne se retire plus une fois la creation lancee.');
+      throw new BattleError('Un élément ne se retire plus une fois la création lancée.');
     }
     const asset = repo.asset(assetId);
-    if (!asset || asset.sessionId !== session.id) throw new BattleError('Element introuvable.', 404);
+    if (!asset || asset.sessionId !== session.id) throw new BattleError('Élément introuvable.', 404);
     repo.removeAsset(assetId);
     repo.logEvent(session.id, 'asset:removed', { filename: asset.filename });
     return { session, asset };
@@ -613,7 +613,7 @@ class BattleServer {
   setPhase(session, to, extra = {}) {
     const allowed = TRANSITIONS[session.phase] || [];
     if (!allowed.includes(to)) {
-      throw new BattleError(`Impossible de passer de « ${session.phase} » a « ${to} ».`);
+      throw new BattleError(`Impossible de passer de « ${session.phase} » à « ${to} ».`);
     }
     const from = session.phase;
     session.patch({ phase: to, ...extra });
@@ -654,7 +654,7 @@ class BattleServer {
 
   pause(code, token) {
     const s = this.requireHost(code, token);
-    if (s.phase !== 'creation') throw new BattleError('Il n’y a de chrono a mettre en pause que pendant la creation.');
+    if (s.phase !== 'creation') throw new BattleError('Il n’y a de chrono à mettre en pause que pendant la création.');
     if (s.pausedAt) return s;
     const now = Date.now();
     s.patch({ pausedAt: now, remainingMs: Math.max(0, s.createEndAt - now), createEndAt: null });
@@ -695,7 +695,7 @@ class BattleServer {
     } else if (s.phase === 'upload') {
       s.patch({ graceEndAt: Math.max(now, (s.graceEndAt ?? now) + delta) });
     } else {
-      throw new BattleError('Le temps ne se modifie que pendant la creation ou la fenetre de grace.');
+      throw new BattleError('Le temps ne se modifie que pendant la création ou la fenêtre de grâce.');
     }
 
     repo.logEvent(s.id, 'clock:adjusted', { deltaMs: delta, phase: s.phase });
@@ -764,7 +764,7 @@ class BattleServer {
    */
   seek(session, index, { restart = false } = {}) {
     const total = (session.order ?? []).length;
-    if (!total) throw new BattleError('Aucun rendu a diffuser.');
+    if (!total) throw new BattleError('Aucun rendu à diffuser.');
     const next = clamp(Math.trunc(index), 0, total - 1);
     if (next === session.cursor && !restart) return session;
 
@@ -806,7 +806,7 @@ class BattleServer {
   setAutoNext(code, token, on) {
     const s = this.requireHost(code, token);
     if (s.phase !== 'upload' && s.phase !== 'diffusion') {
-      throw new BattleError('Ce reglage se change pendant la diffusion.');
+      throw new BattleError('Ce réglage se change pendant la diffusion.');
     }
     const enabled = on !== false;
     const patch = { config: { ...s.config, autoNext: enabled } };
@@ -843,8 +843,8 @@ class BattleServer {
    * n'apporter aucune garantie de plus.
    */
   voteAs(session, participant, { renditionId, criterionId, value } = {}) {
-    if (session.phase !== 'diffusion') throw new BattleError('Les votes sont fermes.');
-    if (participant.disqualified) throw new BattleError('Vous etes hors classement.', 403);
+    if (session.phase !== 'diffusion') throw new BattleError('Les votes sont fermés.');
+    if (participant.disqualified) throw new BattleError('Vous êtes hors classement.', 403);
 
     const submission = repo.submissionByRendition(String(renditionId || ''));
     if (!submission || submission.sessionId !== session.id) throw new BattleError('Rendu introuvable.', 404);
@@ -854,10 +854,10 @@ class BattleServer {
     // On peut revenir sur un passage deja vu — quelqu'un qui a rate une note
     // doit pouvoir la rattraper — mais pas voter en avance sur ce que
     // l'animateur n'a pas encore diffuse.
-    if (position > session.cursor) throw new BattleError('Ce rendu n’est pas encore passe.');
+    if (position > session.cursor) throw new BattleError('Ce rendu n’est pas encore passé.');
 
     if (submission.participantId === participant.id) {
-      throw new BattleError('On ne note pas sa propre creation.', 403);
+      throw new BattleError('On ne note pas sa propre création.', 403);
     }
 
     const criteria = session.config.criteria.length
@@ -914,7 +914,7 @@ class BattleServer {
    */
   reveal(code, token, { all = false } = {}) {
     const s = this.requireHost(code, token);
-    if (s.phase !== 'results') throw new BattleError('Le classement n’est pas encore affiche.');
+    if (s.phase !== 'results') throw new BattleError('Le classement n’est pas encore affiché.');
     const total = (s.order ?? []).length;
     const current = s.revealedRank ?? 0;
     s.patch({ revealedRank: all ? total : Math.min(total, current + 1) });
@@ -942,7 +942,7 @@ class BattleServer {
   async duplicate(code, token, { name, brief, copyAssets = true } = {}) {
     const src = this.requireHost(code, token);
     if (this.sessions.size >= config.limits.maxSessions) {
-      throw new BattleError('Le serveur heberge deja trop de sessions ouvertes.');
+      throw new BattleError('Le serveur héberge déjà trop de sessions ouvertes.');
     }
 
     const hostToken = newToken();
@@ -1212,10 +1212,10 @@ class BattleServer {
 
   chainWrite(session, participant, body, now = Date.now()) {
     if (!participant.spectator) {
-      throw new BattleError('La chaine est le jeu de ceux qui regardent. Vous, vous creez.', 403);
+      throw new BattleError('La chaîne est le jeu de ceux qui regardent. Vous, vous créez.', 403);
     }
     const { turnId, open } = this.chainResolve(session, now);
-    if (!open) throw new BattleError('La chaine ne tourne que pendant la creation.');
+    if (!open) throw new BattleError('La chaîne ne tourne que pendant la création.');
     if (turnId !== participant.id) throw new BattleError('Ce n\u2019est pas votre tour.');
 
     const text = String(body ?? '').replace(/\s+/g, ' ').trim().slice(0, BattleServer.CHAIN_LINE_MAX);
@@ -1230,9 +1230,9 @@ class BattleServer {
 
   /** Passer son tour. On ne force personne a ecrire. */
   chainPass(session, participant, now = Date.now()) {
-    if (!participant.spectator) throw new BattleError('La chaine est le jeu de ceux qui regardent.', 403);
+    if (!participant.spectator) throw new BattleError('La chaîne est le jeu de ceux qui regardent.', 403);
     const { turnId, open } = this.chainResolve(session, now);
-    if (!open) throw new BattleError('La chaine ne tourne que pendant la creation.');
+    if (!open) throw new BattleError('La chaîne ne tourne que pendant la création.');
     if (turnId !== participant.id) throw new BattleError('Ce n\u2019est pas votre tour.');
     this.chainAdvance(session, now);
     this.publishChain(session);
@@ -1256,7 +1256,7 @@ class BattleServer {
   /** Refuse une transition avant d'avoir rien ecrit, plutot qu'apres. */
   exigerTransition(session, to) {
     if (!(TRANSITIONS[session.phase] || []).includes(to)) {
-      throw new BattleError(`Impossible de passer de « ${session.phase} » a « ${to} ».`);
+      throw new BattleError(`Impossible de passer de « ${session.phase} » à « ${to} ».`);
     }
   }
 
@@ -1281,8 +1281,8 @@ class BattleServer {
     if (s.phase !== 'results') throw new BattleError('La manche suivante se lance depuis le classement.');
     const total = s.config.rounds ?? 1;
     const round = s.round ?? 1;
-    if (round >= total) throw new BattleError(`C’etait la derniere manche (${total}/${total}).`);
-    if (!views.mancheDevoilee(s)) throw new BattleError('Devoilez tout le classement avant de lancer la manche suivante.');
+    if (round >= total) throw new BattleError(`C’était la dernière manche (${total}/${total}).`);
+    if (!views.mancheDevoilee(s)) throw new BattleError('Dévoilez tout le classement avant de lancer la manche suivante.');
     this.exigerTransition(s, 'creation');
     this.exigerExtraits(s);
 
@@ -1336,7 +1336,7 @@ class BattleServer {
   exigerExtraits(session) {
     if ((session.config.mode ?? 'battle') !== 'rebuild') return;
     if (!repo.extraits(session.id).length) {
-      throw new BattleError('Deposez au moins un extrait avant de lancer la manche.');
+      throw new BattleError('Déposez au moins un extrait avant de lancer la manche.');
     }
   }
 
@@ -1396,7 +1396,7 @@ class BattleServer {
   reattribuer(code, token, { participantId, extraitId } = {}) {
     const s = this.requireHost(code, token);
     if (!BattleServer.SUBMIT_PHASES.has(s.phase)) {
-      throw new BattleError('Un extrait ne se change que pendant la creation.');
+      throw new BattleError('Un extrait ne se change que pendant la création.');
     }
     const p = s.participants.get(String(participantId || ''));
     if (!p || p.isHost || p.spectator) throw new BattleError('Participant introuvable.', 404);
@@ -1412,7 +1412,7 @@ class BattleServer {
   /** Un extrait se depose a tout moment, sauf session archivee : on prepare la manche suivante pendant celle-ci. */
   openExtraitSlot(code, token) {
     const session = this.requireHost(code, token);
-    if (session.phase === 'archived') throw new BattleError('La session est archivee.');
+    if (session.phase === 'archived') throw new BattleError('La session est archivée.');
     const totals = repo.extraitTotals(session.id);
     const slots = config.limits.maxExtraits - totals.n;
     const budget = config.limits.maxExtraitsBytes - totals.bytes;
@@ -1443,7 +1443,7 @@ class BattleServer {
         repo.majBpm(e.id, null);
       } else {
         const n = Number(bpm);
-        if (!Number.isFinite(n) || n < 30 || n > 300) throw new BattleError('Un tempo va de 30 a 300 BPM.', 400);
+        if (!Number.isFinite(n) || n < 30 || n > 300) throw new BattleError('Un tempo va de 30 à 300 BPM.', 400);
         repo.majBpm(e.id, Math.round(n * 10) / 10);
       }
     }
@@ -1452,7 +1452,7 @@ class BattleServer {
         repo.majTonalite(e.id, null);
       } else {
         const t = analyse.lireTonalite(tonalite);
-        if (!t) throw new BattleError('Tonalite illisible : ecrivez par exemple C#m, F#, Bb ou « A minor ».', 400);
+        if (!t) throw new BattleError('Tonalité illisible : écrivez par exemple C#m, F#, Bb ou « A minor ».', 400);
         repo.majTonalite(e.id, t);
       }
     }
@@ -1473,7 +1473,7 @@ class BattleServer {
     const e = repo.extrait(String(extraitId || ''));
     if (!e || e.sessionId !== s.id) throw new BattleError('Extrait introuvable.', 404);
     if (repo.toutesAttributions(s.id).some((a) => a.extraitId === e.id)) {
-      throw new BattleError('Cet extrait a deja ete attribue : il reste, pour l’historique de la manche.');
+      throw new BattleError('Cet extrait a déjà été attribué : il reste, pour l’historique de la manche.');
     }
     repo.removeExtrait(e.id);
     repo.logEvent(s.id, 'extrait:retire', { filename: e.filename });

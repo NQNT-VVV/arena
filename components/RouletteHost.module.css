@@ -8,7 +8,7 @@
 
 .wheels { display: grid; gap: var(--gutter); }
 
-.wheel { border: var(--border); display: grid; }
+.wheel { border: var(--border); display: grid; border-radius: var(--radius); }
 .wheel.open { border-color: var(--ink); }
 
 /* La ligne d'une roue : tout le bandeau ouvre, pas une poignee de 16 px. */
@@ -43,7 +43,7 @@
 .slots { display: grid; gap: var(--sp-3); padding: var(--sp-3); border-top: var(--border); }
 .summary { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
 
-.list { list-style: none; margin: 0; padding: 0; display: grid; border: var(--border); }
+.list { list-style: none; margin: 0; padding: 0; display: grid; border: var(--border); border-radius: var(--radius); }
 .row {
   display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
   gap: var(--sp-3); align-items: start;
@@ -73,8 +73,7 @@
 .mark {
   display: inline-flex; align-items: center; height: 24px; padding: 0 var(--sp-2);
   border: var(--border-ui); font: var(--t-meta); letter-spacing: var(--ls-mono);
-  font-variant-numeric: tabular-nums; color: var(--ink-60); white-space: nowrap;
-}
+  font-variant-numeric: tabular-nums; color: var(--ink-60); white-space: nowrap; border-radius: var(--radius); }
 /* Ce qui n'a pas joue porte la bande, jamais l'aplat. */
 .mark.advice { padding-left: 0; color: var(--ink); }
 .mark.advice::before {
@@ -99,8 +98,7 @@
    -------------------------------------------------------------------------- */
 .spin {
   display: grid; gap: var(--sp-4);
-  border: var(--border); padding: var(--sp-4);
-}
+  border: var(--border); padding: var(--sp-4); border-radius: var(--radius); }
 
 /*
  * Ce qu'un mode ne pourra pas faire, dit AVANT le clic.
@@ -113,8 +111,7 @@
 .warnings li {
   display: grid; grid-template-columns: 8px minmax(0, 1fr); gap: var(--sp-3);
   padding: var(--sp-2) var(--sp-3) var(--sp-2) 0; border: 1px solid var(--ink);
-  font: var(--t-prose); letter-spacing: var(--ls-prose); text-transform: none; color: var(--ink);
-}
+  font: var(--t-prose); letter-spacing: var(--ls-prose); text-transform: none; color: var(--ink); border-radius: var(--radius); }
 .warnings li::before {
   content: ''; background-image: var(--hatch); margin: calc(-1 * var(--sp-2)) 0;
 }
@@ -133,7 +130,7 @@
    -------------------------------------------------------------------------- */
 .last { display: grid; gap: var(--sp-3); border-top: var(--border); padding-top: var(--sp-4); }
 
-.fates { list-style: none; margin: 0; padding: 0; display: grid; border: var(--border); }
+.fates { list-style: none; margin: 0; padding: 0; display: grid; border: var(--border); border-radius: var(--radius); }
 .fates li {
   display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto;
   gap: var(--sp-3); align-items: center;
@@ -152,6 +149,5 @@
 .code {
   font: var(--t-meta); letter-spacing: 0; text-transform: none; color: var(--ink-60);
   border: var(--border); padding: var(--sp-1) var(--sp-2); overflow-wrap: anywhere;
-  max-width: 100%;
-}
+  max-width: 100%; border-radius: var(--radius); }
 .seed .meta { flex-basis: 100%; text-transform: none; letter-spacing: var(--ls-prose); }

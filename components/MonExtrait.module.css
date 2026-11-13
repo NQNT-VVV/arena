@@ -3,7 +3,7 @@
 .tete { display: flex; align-items: center; gap: var(--sp-3); justify-content: space-between; flex-wrap: wrap; }
 .nom { margin: 0; font: var(--t-ui); letter-spacing: var(--ls-mono); overflow-wrap: anywhere; color: var(--ink-90); }
 
-.valeurs { display: grid; grid-template-columns: 1fr 1fr; border: var(--border); }
+.valeurs { display: grid; grid-template-columns: 1fr 1fr; border: var(--border); border-radius: var(--radius); }
 .valeur { display: grid; gap: var(--sp-1); padding: var(--sp-3) var(--sp-4); }
 .valeur + .valeur { border-left: var(--border); }
 /* `none` : « C#m » est mineur, « C#M » se lirait majeur. */

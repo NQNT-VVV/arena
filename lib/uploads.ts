@@ -44,7 +44,7 @@ export function uploadFiles<T>(
       try {
         body = JSON.parse(xhr.responseText);
       } catch {
-        body = { error: 'Reponse illisible du serveur.' };
+        body = { error: 'Réponse illisible du serveur.' };
       }
       onProgress?.(1);
       resolve({ ok: xhr.status >= 200 && xhr.status < 300, status: xhr.status, body: body as T });
@@ -54,7 +54,7 @@ export function uploadFiles<T>(
       ok: false, status: 0, body: { error: 'Connexion interrompue pendant l’envoi.' },
     }));
     xhr.addEventListener('abort', () => resolve({
-      ok: false, status: 0, body: { error: 'Envoi annule.' },
+      ok: false, status: 0, body: { error: 'Envoi annulé.' },
     }));
 
     xhr.open('POST', url);

@@ -7,8 +7,10 @@
 }
 
 .joinCode {
-  font: var(--t-display); letter-spacing: var(--ls-display); white-space: nowrap;
-  padding: var(--sp-4) 0 var(--sp-3); background-image: var(--rule); background-size: 4px 4px;
+  font: 800 clamp(72px, 15vw, 220px)/.9 var(--font-display); letter-spacing: .04em; white-space: nowrap; justify-self: start;
+  background: #F2C230; color: #221E1A; padding: .08em .22em .14em; border-radius: .16em; rotate: -2deg;
+  box-shadow: 0 .06em 0 var(--shade); outline: 3px dashed rgba(34,30,26,.35); outline-offset: -.09em;
+  animation: pop .7s var(--ease-bounce) .15s both;
 }
 
 .codeInput {
@@ -16,8 +18,8 @@
   text-transform: uppercase; height: 56px;
 }
 
-.invite { font: var(--t-ui-l); letter-spacing: var(--ls-mono); color: var(--ink-60); }
-.invite b { color: var(--ink); font-weight: 400; }
+.invite { font: 500 26px/1.3 var(--font-mono); color: var(--ink-60); text-transform: none; }
+.invite b { color: var(--ink); font-weight: 700; }
 
 .count { font: var(--t-ui-l); letter-spacing: var(--ls-mono); color: var(--ink-60); }
 .count b { color: var(--ink); font-weight: 400; font-variant-numeric: tabular-nums; }
@@ -25,7 +27,7 @@
 .brief {
   white-space: pre-wrap; max-width: 46ch;
   font: var(--t-ui-l); letter-spacing: var(--ls-mono); line-height: 1.5; color: var(--ink-90);
-  border-left: var(--border-strong); padding-left: var(--sp-4);
+  border-left: 6px solid var(--accent); border-radius: 4px 14px 14px 4px; background: var(--paper-hi); padding: var(--sp-4) var(--sp-6); text-transform: none;
 }
 
 .bigIcon { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-55); }
@@ -39,3 +41,6 @@
 @media (max-width: 1100px) {
   .duo { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Animations du socle, recopiees ici : un module CSS ne voit pas les @keyframes globales. */
+@keyframes pop { 0% { opacity: 0; scale: .8; } 70% { opacity: 1; scale: 1.05; } 100% { opacity: 1; scale: 1; } }

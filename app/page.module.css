@@ -1,58 +1,99 @@
-.wrap { max-width: 1040px; margin: 0 auto; padding: var(--sp-8) var(--margin) var(--sp-16); display: grid; gap: var(--sp-12); }
+/* Accueil : la table d'Arena. Une console verte, un chrono, deux portes d'entree. */
+.wrap { max-width: 1180px; width: 100%; margin: 0 auto; padding: 0 var(--margin) var(--sp-24); }
 
-.topbar { display: flex; align-items: center; gap: var(--sp-4); font: var(--t-meta); letter-spacing: var(--ls-mono); padding: 0; border: 0; position: static; background: none; }
+.topbar { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-3); padding: var(--sp-4) 0; font: var(--t-meta); }
 .topbar .spacer { flex: 1; }
 
-.hero { display: grid; gap: var(--sp-3); border-bottom: var(--border); padding-bottom: var(--sp-8); }
-.badge { justify-self: start; }
-.hero h1 {
-  font: var(--t-display); letter-spacing: var(--ls-display); white-space: nowrap;
-  padding: var(--sp-4) 0 var(--sp-3); border-bottom: var(--border);
-  color: var(--ink);
-}
-.hero p { font: var(--fs-3)/1.35 var(--font-mono); letter-spacing: var(--ls-prose); text-transform: none; color: var(--ink-90); max-width: 46ch; margin: var(--sp-2) 0 0; }
+/* --- Heros ----------------------------------------------------------------- */
+.hero { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: var(--sp-8); align-items: center; padding: var(--sp-8) 0 var(--sp-12); }
+.pitch { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-4); min-width: 0; position: relative; z-index: 2; }
+.kicker { color: var(--accent); font-size: 28px; rotate: -2deg; }
+.title { font: 800 clamp(40px, 5vw, 74px)/1.02 var(--font-display); letter-spacing: var(--ls-display); }
+.hot { color: var(--accent); }
+.stroke { width: min(300px, 70%); height: auto; margin-top: -6px; overflow: visible; }
+.stroke path { fill: none; stroke: var(--accent); stroke-width: 5; stroke-linecap: round; stroke-dasharray: 340; stroke-dashoffset: 340; animation: draw 1s var(--ease) 1.1s forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+.sub { font: 400 19px/1.5 var(--font-mono); color: var(--ink-90); max-width: 46ch; }
+.cta { display: flex; flex-wrap: wrap; gap: var(--sp-4); margin-top: var(--sp-2); }
 
-.choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: var(--gutter); }
+/* --- La scene : la console, le chrono, un mot ------------------------------ */
+.stage { position: relative; height: 440px; min-width: 0; }
+/* La console : un pave vert, l'egaliseur qui danse, cinq pads. */
+.console { position: absolute; left: 6%; top: 16%; width: min(340px, 78%); padding: 26px 26px 20px; border-radius: 26px; background: var(--arena); color: #F2C230; rotate: -5deg; box-shadow: 0 12px 0 #12332D, 0 34px 40px rgba(34,30,26,.28); display: grid; gap: 18px; transition: rotate .5s var(--ease-bounce), scale .5s var(--ease-bounce); }
+.console:hover { rotate: -1deg; scale: 1.03; }
+.eq { height: 120px; justify-content: space-between; }
+.eq i { width: 9%; }
+.pads { display: flex; gap: 10px; }
+.pads i { flex: 1; aspect-ratio: 1; border-radius: 10px; box-shadow: 0 5px 0 rgba(0,0,0,.35); animation: tap 2.4s var(--ease-bounce) infinite; animation-delay: calc(var(--i) * 240ms); }
+@keyframes tap { 0%, 20%, 100% { transform: translateY(0); box-shadow: 0 5px 0 rgba(0,0,0,.35); } 8% { transform: translateY(5px); box-shadow: 0 0 0 rgba(0,0,0,.35); } }
+.consoleNote { color: #F4EFE3; font-size: 24px; }
+/* Le chrono : un cadran, une aiguille qui tourne. */
+.clock { position: absolute; right: 4%; bottom: 4%; width: 150px; height: 150px; border-radius: 50%; background: var(--paper-hi); border: 5px solid var(--ink); box-shadow: 0 8px 0 var(--shade), 0 24px 26px rgba(34,30,26,.22); display: grid; place-items: end center; padding-bottom: 26px; }
+.clock::before { content: ''; position: absolute; left: 50%; top: -19px; width: 26px; height: 16px; margin-left: -13px; border-radius: 6px 6px 0 0; background: var(--accent); }
+.clock b { font: 800 24px/1 var(--font-display); font-variant-numeric: tabular-nums; color: var(--ink); }
+.hand { position: absolute; left: 50%; top: 50%; width: 5px; height: 52px; margin: -52px 0 0 -2.5px; border-radius: 3px; background: var(--accent); transform-origin: 50% 100%; animation: spin 8s linear infinite; }
+.hand::after { content: ''; position: absolute; left: -5px; bottom: -7px; width: 15px; height: 15px; border-radius: 50%; background: var(--ink); }
+.note { position: absolute; right: 2%; top: 6%; padding: 12px 18px; border-radius: 4px; background: var(--gold); color: #221E1A; rotate: 6deg; font-size: 27px; white-space: nowrap; box-shadow: 0 8px 14px rgba(34,30,26,.16); transition: rotate .4s var(--ease-bounce), translate .4s var(--ease); --ink: #221E1A; --ink-90: #2B2622; --ink-60: #4A443C; --ink-55: #4A443C; --ink-45: #6B655C; }
+.note:hover { rotate: 0deg; translate: 0 -4px; }
 
-.choice { padding: var(--sp-6); display: grid; gap: var(--sp-4); align-content: start; position: relative; }
-.choice h2 { font: var(--t-h2); letter-spacing: var(--ls-display); }
-.lead { font: var(--t-prose); letter-spacing: var(--ls-prose); color: var(--ink-90); max-width: 48ch; }
-.icon { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); }
+/* --- Bandeau ---------------------------------------------------------------- */
+.band { width: 106vw; margin-left: calc(50% - 53vw); background: var(--ink); color: var(--bg); rotate: -1.2deg; overflow: hidden; white-space: nowrap; padding: 12px 0; }
+.band > div { display: inline-block; font: 800 24px/1 var(--font-display); animation: marquee 36s linear infinite; }
+.band:hover > div { animation-play-state: paused; }
 
-/* Code de session : quatre a six caracteres, gros, centres, curseur en sang. */
-.codeInput {
-  text-align: center; font: var(--t-ui-l); letter-spacing: .4em; text-indent: .4em;
-  text-transform: uppercase; height: 56px;
-}
+/* --- Les deux portes ------------------------------------------------------- */
+.choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: var(--sp-8); padding-top: var(--sp-16); }
+.choice { position: relative; padding: var(--sp-8); border-radius: 24px; display: grid; grid-template-rows: auto auto 1fr; gap: var(--sp-4); transition: transform .4s var(--ease), box-shadow .4s var(--ease), rotate .4s var(--ease-bounce); }
+.choice:hover { transform: translateY(-5px); }
+.choice h2 { font: 800 clamp(30px, 3.4vw, 42px)/1 var(--font-display); }
+.tag { font-size: 24px; rotate: -2deg; justify-self: start; }
+.lead { font: var(--t-prose); color: inherit; opacity: .92; max-width: 48ch; }
+.host { background: var(--arena); color: #F4EFE3; box-shadow: 0 24px 40px rgba(34,30,26,.28); }
+.host .tag { color: #F2C230; }
+.gold { --edge: #C8442B; background: #F2C230; border-color: #F2C230; color: #221E1A; margin-top: var(--sp-2); align-self: end; --ink: #221E1A; --ink-90: #2B2622; --ink-60: #4A443C; --ink-55: #4A443C; --ink-45: #6B655C; }
+.gold:hover:not(:disabled) { color: #221E1A; }
+/* Le billet d'entree : jaune, avec sa perforation. C'est une ile claire, meme en sombre. */
+.join { background: #F2C230; color: #221E1A; --ink: #221E1A; --ink-90: #2B2622; --ink-60: #4A443C; --ink-55: #4A443C; --ink-45: #6B655C; --paper: #F4EFE3; --paper-hi: #FBF8F1; rotate: .8deg; box-shadow: var(--shadow-lift); outline: 2px dashed rgba(34,30,26,.3); outline-offset: -11px; scroll-margin-top: var(--sp-8); }
+.join:hover, .join:focus-within { rotate: 0deg; }
 
-.examples { display: grid; gap: var(--sp-4); }
-.exampleGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); border-top: var(--border); border-left: var(--border); }
-.example {
-  padding: var(--sp-4); border-right: var(--border); border-bottom: var(--border);
-  display: grid; gap: var(--sp-2); align-content: start;
-}
-.exampleIcon { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-55); }
-.example b { font: var(--t-ui); letter-spacing: var(--ls-mono); font-weight: 400; }
-.example span:last-child { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); line-height: 1.5; }
+.codeInput { text-align: center; font: 800 30px/1 var(--font-display); letter-spacing: .3em; text-indent: .3em; text-transform: uppercase; height: 64px; border-color: var(--ink); box-shadow: 0 4px 0 #221E1A; }
+.codeInput:focus { box-shadow: 0 4px 0 #C8442B; }
+.codeInput::placeholder { font: 700 18px/1 var(--font-mono); letter-spacing: .3em; }
 
-.feats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); border-top: var(--border); border-left: var(--border); }
-.feat { padding: var(--sp-4); border-right: var(--border); border-bottom: var(--border); display: grid; gap: var(--sp-2); align-content: start; }
-.feat b { font: var(--t-ui); letter-spacing: var(--ls-mono); font-weight: 400; }
-.feat span { font: var(--t-prose); letter-spacing: var(--ls-prose); color: var(--ink-90); }
+/* --- Formats et promesses --------------------------------------------------- */
+.examples { display: grid; gap: var(--sp-6); padding-top: var(--sp-16); }
+.exampleGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: var(--sp-6); }
+.example { padding: var(--sp-6); border-radius: 18px; background: var(--paper); border: var(--border); display: grid; gap: var(--sp-2); align-content: start; transition: transform .35s var(--ease-bounce), box-shadow .35s var(--ease); }
+.example:hover { transform: translateY(-5px) rotate(-1.2deg); box-shadow: var(--shadow); }
+.example:nth-child(even):hover { transform: translateY(-5px) rotate(1.2deg); }
+.exampleNum { font: 800 46px/1 var(--font-display); color: var(--accent); }
+.example b { font: 800 24px/1.1 var(--font-display); }
+.example span:last-child { font: var(--t-prose); color: var(--ink-90); }
 
-.footer { border-top: var(--border); padding-top: var(--sp-4); font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); display: flex; flex-wrap: wrap; gap: var(--sp-3) var(--sp-8); justify-content: space-between; }
+.feats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: var(--sp-6) var(--sp-8); padding-top: var(--sp-12); }
+.feat { padding-top: var(--sp-4); border-top: 3px solid var(--ink); display: grid; gap: var(--sp-2); align-content: start; }
+.feat b { font: 700 19px/1.2 var(--font-mono); }
+.feat span { font: var(--t-prose); color: var(--ink-90); }
+
+.footer { margin-top: var(--sp-16); padding-top: var(--sp-6); border-top: 2px solid var(--ink-12); font: var(--t-prose); font-size: 15px; color: var(--ink-60); display: flex; flex-wrap: wrap; gap: var(--sp-3) var(--sp-8); justify-content: space-between; }
 .footer a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 
-
-/* --------------------------------------------------------------------------
-   Ecrans etroits — les classes de ce module sont hachees, la media query du
-   socle ne les atteint pas : elle est reprise ici.
-   -------------------------------------------------------------------------- */
-@media (max-width: 640px) {
-  .wrap { gap: var(--sp-8); padding: var(--sp-6) var(--sp-3) var(--sp-12); }
-  .topbar { flex-wrap: wrap; gap: var(--sp-2); }
-  .topbar .spacer { display: none; }
-  .hero h1 { white-space: normal; overflow-wrap: anywhere; font-size: clamp(44px, 15vw, 92px); }
-  .hero p { font: var(--t-prose); letter-spacing: var(--ls-prose); max-width: none; }
-  .choice { padding: var(--sp-4); }
+@media (max-width: 900px) {
+  .hero { grid-template-columns: minmax(0, 1fr); padding-top: var(--sp-4); }
+  .stage { height: 400px; }
 }
+@media (max-width: 640px) {
+  .topbar .spacer { display: none; }
+  .stage { height: 360px; }
+  .console { left: 2%; top: 10%; width: 74%; padding: 18px; }
+  .eq { height: 84px; }
+  .clock { scale: .76; right: 0; bottom: 0; transform-origin: 100% 100%; }
+  .note { font-size: 21px; padding: 8px 12px; }
+  .choice { padding: var(--sp-6); }
+  .cta { width: 100%; }
+  .cta > :global(.btn) { flex: 1 1 auto; }
+}
+
+/* Animations du socle, recopiees ici : un module CSS ne voit pas les @keyframes globales. */
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes spin { to { rotate: 360deg; } }

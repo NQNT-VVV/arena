@@ -173,7 +173,7 @@ export function RouletteHost({
     if (!name) return;
     if (await send('host:wheel-create', { name })) {
       setNewWheel('');
-      toast(`Roue « ${name} » creee`, 'ok');
+      toast(`Roue « ${name} » créée`, 'ok');
     }
   };
 
@@ -211,7 +211,7 @@ export function RouletteHost({
     setBusy(false);
     if (!res.ok) { toast(res.error, 'err'); return; }
     setAck(res);
-    toast(`Tirage ${hex(res.spins)} lance`, 'ok');
+    toast(`Tirage ${hex(res.spins)} lancé`, 'ok');
   };
 
   /* ---------------------- ce que le mode implique ---------------------- */
@@ -245,23 +245,23 @@ export function RouletteHost({
   if (rules) {
     if (!collective && isBlind(rules, phase)) {
       warnings.push(
-        'Arena vote en aveugle : une contrainte que tout le monde n’a pas se reconnait a l’ecoute, et le rendu cesse d’etre anonyme.',
+        'Arena vote en aveugle : une contrainte que tout le monde n’a pas se reconnaît à l’écoute, et le rendu cesse d’être anonyme.',
       );
     }
     if (playable.some((s) => s.chronoMs !== 0) && !chronoWillApply(rules, phase, target, shared)) {
       warnings.push(
-        'Une case de cette roue touche au chrono, et il ne bougera pas : l’horloge d’Arena est partagee, un sort de temps ne s’applique qu’a toute la salle, avec le meme sort, pendant que le chrono court. Le sort restera une consigne.',
+        'Une case de cette roue touche au chrono, et il ne bougera pas : l’horloge d’Arena est partagée, un sort de temps ne s’applique qu’à toute la salle, avec le même sort, pendant que le chrono court. Le sort restera une consigne.',
       );
     }
     if (playable.some((s) => s.points !== 0) && !pointsWillApply(rules, phase)) {
       warnings.push(
-        'A cette phase, les points ne corrigent plus le classement : le sort sera lisible mais ne comptera pas.',
+        'À cette phase, les points ne corrigent plus le classement : le sort sera lisible mais ne comptera pas.',
       );
     }
   }
   if (!shared && playable.length > 0 && targeted > playable.length) {
     warnings.push(
-      `${hex(targeted)} personnes pour ${hex(playable.length)} cases jouables : la roue recommencera un tour et des sorts se repeteront.`,
+      `${hex(targeted)} personnes pour ${hex(playable.length)} cases jouables : la roue recommencera un tour et des sorts se répéteront.`,
     );
   }
 
@@ -280,19 +280,19 @@ export function RouletteHost({
     const drawn = roulette.last?.fates ?? [];
     if (ack.epuise) {
       outcome.push(
-        'La roue avait moins de cases jouables que de personnes : elle a recommence un tour, et des sorts identiques sont sortis. Ce n’est pas un hasard, c’est une roue trop courte.',
+        'La roue avait moins de cases jouables que de personnes : elle a recommencé un tour, et des sorts identiques sont sortis. Ce n’est pas un hasard, c’est une roue trop courte.',
       );
     }
     if (ack.chronoApplicable && ack.chronoMs !== 0) {
-      outcome.push(`Chrono : ${ack.chronoMs > 0 ? '+' : '−'}${humanDuration(Math.abs(ack.chronoMs))}, applique a toute la salle.`);
+      outcome.push(`Chrono : ${ack.chronoMs > 0 ? '+' : '−'}${humanDuration(Math.abs(ack.chronoMs))}, appliqué à toute la salle.`);
     }
     if (!ack.chronoApplicable && drawn.some((f) => f.chronoMs !== 0)) {
       outcome.push(
-        'Un sort de temps est sorti et le chrono n’a pas bouge : ce mode ne le permet pas. Le sort reste lisible, c’est une consigne.',
+        'Un sort de temps est sorti et le chrono n’a pas bougé : ce mode ne le permet pas. Le sort reste lisible, c’est une consigne.',
       );
     }
     if (!ack.pointsApplicables && drawn.some((f) => f.points !== 0)) {
-      outcome.push('Les points n’ont pas ete comptes : a cette phase, le sort est une consigne.');
+      outcome.push('Les points n’ont pas été comptés : à cette phase, le sort est une consigne.');
     }
   }
 
@@ -301,21 +301,21 @@ export function RouletteHost({
   return (
     <section className="card pad col">
       <h2 className="section-title">
-        LA ROULETTE
-        <span className="meta">TIRAGES {hex(roulette.spins)}</span>
+        La roulette
+        <span className="meta">Tirages {hex(roulette.spins)}</span>
       </h2>
       <p className="meta">
-        Quelqu&apos;un est tire, un sort est tire. La roue des participants se deduit de la salle a
-        l&apos;instant du tirage ; celle des sorts se prepare ici et se garde d&apos;une soiree a
-        l&apos;autre. Le nombre de tirages est affiche a l&apos;ecran : une roue qu&apos;on relance
-        en secret n&apos;a plus aucune autorite.
+        Quelqu’un est tiré, un sort est tiré. La roue des participants se déduit de la salle à
+        l’instant du tirage ; celle des sorts se prépare ici et se garde d’une soirée à
+        l’autre. Le nombre de tirages est affiché à l’écran : une roue qu’on relance
+        en secret n’a plus aucune autorité.
       </p>
 
       {/* ------------------------------ les roues ----------------------- */}
 
       <div className={styles.wheels}>
         {known.length === 0 && (
-          <p className="empty"><span>AUCUNE ROUE. CREEZ-EN UNE, PUIS REMPLISSEZ-LA CASE PAR CASE.</span></p>
+          <p className="empty"><span>Aucune roue. Créez-en une, puis remplissez-la case par case.</span></p>
         )}
         {known.map((w) => (
           <div key={w.id} className={`${styles.wheel} ${openId === w.id ? styles.open : ''}`}>
@@ -326,33 +326,33 @@ export function RouletteHost({
             >
               <Icon name={openId === w.id ? 'fleche-b' : 'fleche-d'} />
               <span className={styles.name}>{w.name}</span>
-              <span className="meta">{hex(w.slots ?? 0)} CASE{(w.slots ?? 0) > 1 ? 'S' : ''}</span>
+              <span className="meta">{hex(w.slots ?? 0)} case{(w.slots ?? 0) > 1 ? 's' : ''}</span>
             </button>
             <div className={styles.tools}>
               <button
                 className="btn xs ghost" type="button"
                 onClick={() => { setRenaming(renaming === w.id ? null : w.id); setOpenId(w.id); }}
               >
-                <Icon name="reglages" />RENOMMER
+                <Icon name="reglages" />Renommer
               </button>
               {confirming === `w:${w.id}` ? (
                 <>
-                  <button className="btn xs ghost" type="button" onClick={() => setConfirming(null)}>ANNULER</button>
+                  <button className="btn xs ghost" type="button" onClick={() => setConfirming(null)}>Annuler</button>
                   <button
                     className="btn xs danger" type="button" disabled={busy} aria-busy={busy}
                     onClick={async () => {
                       if (await send('host:wheel-remove', { wheelId: w.id })) {
-                        toast(`Roue « ${w.name} » supprimee`, 'ok');
+                        toast(`Roue « ${w.name} » supprimée`, 'ok');
                       }
                       setConfirming(null);
                     }}
                   >
-                    CONFIRMER LA SUPPRESSION
+                    Confirmer la suppression
                   </button>
                 </>
               ) : (
                 <button className="btn xs danger" type="button" onClick={() => setConfirming(`w:${w.id}`)}>
-                  SUPPRIMER
+                  Supprimer
                 </button>
               )}
             </div>
@@ -371,11 +371,11 @@ export function RouletteHost({
               <div className={styles.slots}>
                 <div className={styles.summary}>
                   <span className="meta">
-                    {hex(slots.length)} CASE{slots.length > 1 ? 'S' : ''}
-                    {mute > 0 && ` · ${hex(mute)} MUETTE${mute > 1 ? 'S' : ''}`}
-                    {weightTotal > 0 && ` · POIDS ${hex(weightTotal)}`}
+                    {hex(slots.length)} case{slots.length > 1 ? 's' : ''}
+                    {mute > 0 && ` · ${hex(mute)} muette${mute > 1 ? 's' : ''}`}
+                    {weightTotal > 0 && ` · poids ${hex(weightTotal)}`}
                   </span>
-                  {loading && <span className="meta">LECTURE…</span>}
+                  {loading && <span className="meta">Lecture…</span>}
                 </div>
 
                 {slots.length === 0 && !loading && (
@@ -396,7 +396,7 @@ export function RouletteHost({
                           onChange={setEdited}
                           onCancel={() => setEditing(null)}
                           onSave={() => void saveSlot(s.id)}
-                          saveLabel="ENREGISTRER"
+                          saveLabel="Enregistrer"
                         />
                       ) : (
                         <>
@@ -406,21 +406,21 @@ export function RouletteHost({
                             {s.detail && <span className={styles.detail}>{s.detail}</span>}
                             <span className={styles.marks}>
                               {s.weight === 0
-                                ? <span className={styles.mark}>MUETTE · JAMAIS TIREE</span>
+                                ? <span className={styles.mark}>Muette · jamais tirée</span>
                                 : (
                                   <span className={styles.mark}>
-                                    POIDS {s.weight}
+                                    Poids {s.weight}
                                     {weightTotal > 0 && ` · ${Math.round((s.weight / weightTotal) * 100)} %`}
                                   </span>
                                 )}
                               {s.points !== 0 && (
                                 <span className={styles.mark}>
-                                  {s.points > 0 ? '+' : '−'}{Math.abs(s.points)} POINT{Math.abs(s.points) > 1 ? 'S' : ''}
+                                  {s.points > 0 ? '+' : '−'}{Math.abs(s.points)} point{Math.abs(s.points) > 1 ? 's' : ''}
                                 </span>
                               )}
                               {s.chronoMs !== 0 && (
                                 <span className={styles.mark}>
-                                  {s.chronoMs > 0 ? '+' : '−'}{humanDuration(Math.abs(s.chronoMs)).toUpperCase()} DE CHRONO
+                                  {s.chronoMs > 0 ? '+' : '−'}{humanDuration(Math.abs(s.chronoMs)).toUpperCase()} de chrono
                                 </span>
                               )}
                             </span>
@@ -450,16 +450,16 @@ export function RouletteHost({
                                 });
                               }}
                             >
-                              MODIFIER
+                              Modifier
                             </button>
                             {confirming === `s:${s.id}` ? (
                               <>
-                                <button className="btn xs ghost" type="button" onClick={() => setConfirming(null)}>ANNULER</button>
+                                <button className="btn xs ghost" type="button" onClick={() => setConfirming(null)}>Annuler</button>
                                 <button
                                   className="btn xs danger" type="button" disabled={busy} aria-busy={busy}
                                   onClick={() => void onSlot('host:slot-remove', { slotId: s.id })}
                                 >
-                                  CONFIRMER
+                                  Confirmer
                                 </button>
                               </>
                             ) : (
@@ -478,15 +478,15 @@ export function RouletteHost({
                 </ol>
 
                 <div className={styles.add}>
-                  <span className="meta">AJOUTER UNE CASE</span>
+                  <span className="meta">Ajouter une case</span>
                   <SlotForm
                     value={newSlot} busy={busy} rules={rules}
                     onChange={setNewSlot}
                     onSave={() => void addSlot()}
-                    saveLabel="AJOUTER"
+                    saveLabel="Ajouter"
                   />
                   <span className="meta">
-                    Un poids a zero garde le texte sans jamais le tirer : une roue se prepare en
+                    Un poids à zéro garde le texte sans jamais le tirer : une roue se prépare en
                     plusieurs fois.
                   </span>
                 </div>
@@ -500,12 +500,12 @@ export function RouletteHost({
         <label className="sr-only" htmlFor="roulette-new-wheel">Nom de la nouvelle roue</label>
         <input
           id="roulette-new-wheel" className="input grow" value={newWheel} maxLength={60}
-          placeholder="MALUS LEGERS"
+          placeholder="Malus légers"
           onChange={(e) => setNewWheel(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') void createWheel(); }}
         />
         <button className="btn" type="button" disabled={busy || !newWheel.trim()} aria-busy={busy} onClick={() => void createWheel()}>
-          <Icon name="plus" />CREER UNE ROUE
+          <Icon name="plus" />Créer une roue
         </button>
       </div>
 
@@ -513,10 +513,10 @@ export function RouletteHost({
 
       {openId && (
         <div className={styles.spin}>
-          <span className="section-title sub">FAIRE TOURNER</span>
+          <span className="section-title sub">Faire tourner</span>
 
           <div className="field">
-            <label>QUI EST TIRE</label>
+            <label>Qui est tiré</label>
             <div className="seg">
               {TARGETS.map((t) => (
                 <button
@@ -529,14 +529,14 @@ export function RouletteHost({
             </div>
             <span className="meta">
               {pool > 0
-                ? `${hex(targeted)} SUR ${hex(pool)} DANS LA ROUE`
-                : 'PERSONNE DANS LA ROUE : LA SALLE EST VIDE, OU TOUT LE MONDE REGARDE'}
+                ? `${hex(targeted)} sur ${hex(pool)} dans la roue`
+                : 'Personne dans la roue : la salle est vide, ou tout le monde regarde'}
             </span>
           </div>
 
           {target === 'some' && (
             <div className="field">
-              <label htmlFor="roulette-how-many">COMBIEN DE PERSONNES</label>
+              <label htmlFor="roulette-how-many">Combien de personnes</label>
               <input
                 id="roulette-how-many" className="input" type="number" min={1} max={Math.max(1, pool)}
                 value={howMany} onChange={(e) => setHowMany(Number(e.target.value))}
@@ -546,15 +546,15 @@ export function RouletteHost({
 
           {targeted > 1 && (
             <div className="field">
-              <label>QUEL SORT</label>
+              <label>Quel sort</label>
               <div className="seg">
-                <button type="button" aria-pressed={shared} onClick={() => setShared(true)}>Le meme pour tous</button>
+                <button type="button" aria-pressed={shared} onClick={() => setShared(true)}>Le même pour tous</button>
                 <button type="button" aria-pressed={!shared} onClick={() => setShared(false)}>Un chacun</button>
               </div>
               <span className="meta">
                 {shared
-                  ? 'UNE SEULE CASE POUR TOUTE LA CIBLE.'
-                  : 'UNE CASE PAR PERSONNE, DIFFERENTES TANT QUE LA ROUE EN A.'}
+                  ? 'Une seule case pour toute la cible.'
+                  : 'Une case par personne, différentes tant que la roue en a.'}
               </span>
             </div>
           )}
@@ -579,15 +579,15 @@ export function RouletteHost({
           <button
             className="btn primary lg block" type="button"
             disabled={!canSpin} aria-busy={busy}
-            title={!playable.length ? 'Toutes les cases sont a zero' : undefined}
+            title={!playable.length ? 'Toutes les cases sont à zéro' : undefined}
             onClick={() => void spin()}
           >
-            <Icon name="roue" />FAIRE TOURNER LA ROUE
+            <Icon name="roue" />Faire tourner la roue
           </button>
 
           {ack && outcome.length > 0 && (
             <div className={styles.outcome}>
-              <span className="meta">TIRAGE {hex(ack.spins)} · CE QU’IL A FAIT</span>
+              <span className="meta">Tirage {hex(ack.spins)} · ce qu’il a fait</span>
               {outcome.map((line) => <p key={line}>{line}</p>)}
             </div>
           )}
@@ -598,11 +598,11 @@ export function RouletteHost({
 
       {roulette.last && (
         <div className={styles.last}>
-          <span className="section-title sub">DERNIER TIRAGE</span>
+          <span className="section-title sub">Dernier tirage</span>
           <span className="meta">
-            {roulette.last.wheelName} · {hex(roulette.last.fates.length)} SORT
-            {roulette.last.fates.length > 1 ? 'S' : ''}
-            {roulette.last.fates.length > 1 && (roulette.last.shared ? ' · LE MEME POUR TOUS' : ' · UN CHACUN')}
+            {roulette.last.wheelName} · {hex(roulette.last.fates.length)} sort
+            {roulette.last.fates.length > 1 ? 's' : ''}
+            {roulette.last.fates.length > 1 && (roulette.last.shared ? ' · le même pour tous' : ' · un chacun')}
           </span>
           <ul className={styles.fates}>
             {roulette.last.fates.map((f) => {
@@ -623,17 +623,17 @@ export function RouletteHost({
 
           {lastSeed && (
             <div className={styles.seed}>
-              <span className="meta">GRAINE</span>
+              <span className="meta">Graine</span>
               <code className={styles.code}>{lastSeed}</code>
               <button
                 className="btn xs ghost" type="button" aria-label="Copier la graine du dernier tirage"
-                onClick={() => { void copyToClipboard(lastSeed); toast('Graine copiee', 'ok'); }}
+                onClick={() => { void copyToClipboard(lastSeed); toast('Graine copiée', 'ok'); }}
               >
-                <Icon name="copier" />COPIER
+                <Icon name="copier" />Copier
               </button>
               <span className="meta">
-                Meme graine, meme roue, meme liste : le tirage se refait a l&apos;identique. C&apos;est
-                de quoi verifier un tirage conteste devant la salle.
+                Même graine, même roue, même liste : le tirage se refait à l’identique. C’est
+                de quoi vérifier un tirage contesté devant la salle.
               </span>
             </div>
           )}
@@ -661,27 +661,27 @@ function WheelName({
   return (
     <div className={styles.rename}>
       <div className="field">
-        <label htmlFor={`wheel-name-${wheel.id}`}>NOM</label>
+        <label htmlFor={`wheel-name-${wheel.id}`}>Nom</label>
         <input
           id={`wheel-name-${wheel.id}`} className="input" value={name} maxLength={60}
           onChange={(e) => setName(e.target.value)}
         />
       </div>
       <div className="field">
-        <label htmlFor={`wheel-note-${wheel.id}`}>NOTE</label>
+        <label htmlFor={`wheel-note-${wheel.id}`}>Note</label>
         <input
           id={`wheel-note-${wheel.id}`} className="input" value={note} maxLength={280}
-          placeholder="A QUOI CETTE ROUE SERT, ET QUAND"
+          placeholder="À quoi cette roue sert, et quand"
           onChange={(e) => setNote(e.target.value)}
         />
       </div>
       <div className="row wrap">
-        <button className="btn sm ghost" type="button" onClick={onCancel}>ANNULER</button>
+        <button className="btn sm ghost" type="button" onClick={onCancel}>Annuler</button>
         <button
           className="btn sm primary" type="button" disabled={busy || !name.trim()} aria-busy={busy}
           onClick={() => onSave(name, note)}
         >
-          ENREGISTRER
+          Enregistrer
         </button>
       </div>
     </div>
@@ -706,32 +706,32 @@ function SlotForm({
   return (
     <div className={styles.form}>
       <div className="field">
-        <label>TEXTE DE LA CASE</label>
+        <label>Texte de la case</label>
         <input
           className="input" value={value.label} maxLength={120}
-          placeholder="MONO SEULEMENT"
+          placeholder="Mono seulement"
           onChange={(e) => set('label', e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && value.label.trim()) onSave(); }}
         />
       </div>
       <div className="field">
-        <label>DETAIL</label>
+        <label>Détail</label>
         <input
           className="input" value={value.detail} maxLength={280}
-          placeholder="CE QU’IL FAUT COMPRENDRE, SI LE TEXTE NE SUFFIT PAS"
+          placeholder="Ce qu’il faut comprendre, si le texte ne suffit pas"
           onChange={(e) => set('detail', e.target.value)}
         />
       </div>
       <div className={styles.three}>
         <div className="field">
-          <label>POIDS</label>
+          <label>Poids</label>
           <input
             className="input" type="number" min={0} max={99} value={value.weight}
             onChange={(e) => set('weight', Number(e.target.value))}
           />
         </div>
         <div className="field">
-          <label>POINTS</label>
+          <label>Points</label>
           <input
             className="input" type="number" min={rules ? -rules.pointsMax : undefined} max={rules?.pointsMax}
             value={value.points}
@@ -739,7 +739,7 @@ function SlotForm({
           />
         </div>
         <div className="field">
-          <label>CHRONO (SECONDES)</label>
+          <label>Chrono (secondes)</label>
           <input
             className="input" type="number" min={chronoMaxS ? -chronoMaxS : undefined} max={chronoMaxS} step={15}
             value={value.chronoS}
@@ -748,7 +748,7 @@ function SlotForm({
         </div>
       </div>
       <div className="row wrap">
-        {onCancel && <button className="btn sm ghost" type="button" onClick={onCancel}>ANNULER</button>}
+        {onCancel && <button className="btn sm ghost" type="button" onClick={onCancel}>Annuler</button>}
         <button
           className="btn sm primary" type="button"
           disabled={busy || !value.label.trim()} aria-busy={busy}

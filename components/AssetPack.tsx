@@ -27,7 +27,7 @@ export function AssetPack({
   assets,
   zipUrl,
   onRemove,
-  emptyLabel = 'Aucun element impose pour cette session.',
+  emptyLabel = 'Aucun élément imposé pour cette session.',
 }: {
   assets: Asset[];
   zipUrl?: string;
@@ -88,16 +88,16 @@ export function AssetPack({
   const total = assets.reduce((sum, a) => sum + a.bytes, 0);
 
   const removeButton = (asset: Asset) => onRemove && (
-    <button className="btn xs danger" onClick={() => onRemove(asset)} title="RETIRER" aria-label="Retirer cet element"><Icon name="croix" /></button>
+    <button className="btn xs danger" onClick={() => onRemove(asset)} title="Retirer" aria-label="Retirer cet élément"><Icon name="croix" /></button>
   );
 
   return (
     <>
       {zipUrl && (
         <div className="row wrap">
-          <a className="btn sm" href={zipUrl}><Icon name="telecharge" />Tout telecharger ({humanBytes(total)})</a>
+          <a className="btn sm" href={zipUrl}><Icon name="telecharge" />Tout télécharger ({humanBytes(total)})</a>
           <span className="meta">
-            {assets.length} element{assets.length > 1 ? 's' : ''}
+            {assets.length} élément{assets.length > 1 ? 's' : ''}
           </span>
         </div>
       )}
@@ -111,9 +111,9 @@ export function AssetPack({
               </a>
               <span className={styles.thumbBar}>
                 <span className={styles.thumbName}>{asset.filename}</span>
-                <a className={styles.thumbAction} href={`${asset.url}?dl=1`} title="TELECHARGER" aria-label="Telecharger cet element"><Icon name="telecharge" /></a>
+                <a className={styles.thumbAction} href={`${asset.url}?dl=1`} title="Télécharger" aria-label="Télécharger cet élément"><Icon name="telecharge" /></a>
                 {onRemove && (
-                  <button className={styles.thumbAction} onClick={() => onRemove(asset)} title="RETIRER" aria-label="Retirer cet element"><Icon name="croix" /></button>
+                  <button className={styles.thumbAction} onClick={() => onRemove(asset)} title="Retirer" aria-label="Retirer cet élément"><Icon name="croix" /></button>
                 )}
               </span>
             </li>
@@ -134,7 +134,7 @@ export function AssetPack({
               >
                 <button
                   className={styles.play}
-                  aria-label={isPlaying ? `Mettre ${asset.filename} en pause` : `Ecouter ${asset.filename}`}
+                  aria-label={isPlaying ? `Mettre ${asset.filename} en pause` : `Écouter ${asset.filename}`}
                   aria-pressed={isPlaying}
                   onClick={() => toggle(asset)}
                 >
@@ -144,7 +144,7 @@ export function AssetPack({
                   <span className={styles.name}>{asset.filename}</span>
                   <span className={styles.meta}>{humanBytes(asset.bytes)}</span>
                 </span>
-                <a className={styles.action} href={`${asset.url}?dl=1`} title="TELECHARGER" aria-label="Telecharger cet element"><Icon name="telecharge" /></a>
+                <a className={styles.action} href={`${asset.url}?dl=1`} title="Télécharger" aria-label="Télécharger cet élément"><Icon name="telecharge" /></a>
                 {removeButton(asset)}
               </li>
             );
@@ -176,10 +176,10 @@ export function AssetPack({
                     <span className={styles.name}>{asset.filename}</span>
                     <span className={styles.meta}>
                       {humanBytes(asset.bytes)}
-                      {!asset.inline && ' • telechargement seul'}
+                      {!asset.inline && ' • téléchargement seul'}
                     </span>
                   </span>
-                  <a className={styles.action} href={`${asset.url}?dl=1`} title="TELECHARGER" aria-label="Telecharger cet element"><Icon name="telecharge" /></a>
+                  <a className={styles.action} href={`${asset.url}?dl=1`} title="Télécharger" aria-label="Télécharger cet élément"><Icon name="telecharge" /></a>
                   {removeButton(asset)}
                 </div>
                 {expanded && asset.kind === 'video' && (
@@ -208,6 +208,6 @@ function TextPreview({ asset }: { asset: Asset }) {
     return () => { cancelled = true; };
   }, [asset.url]);
 
-  if (body === null) return <p className={styles.loading}>CHARGEMENT…</p>;
+  if (body === null) return <p className={styles.loading}>Chargement…</p>;
   return <pre className={styles.text}>{body}</pre>;
 }

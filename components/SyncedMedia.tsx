@@ -161,14 +161,14 @@ export function SyncedMedia({
       {media}
       {enabled && blocked && !over && (
         <button className={`btn primary ${large ? 'lg' : ''} ${styles.unlock}`} onClick={unlock}>
-          🔊 Lancer l&apos;ecoute
+          🔊 Lancer l’écoute
         </button>
       )}
       {!enabled && (
-        <span className={styles.note}>Son coupe sur cet appareil.</span>
+        <span className={styles.note}>Son coupé sur cet appareil.</span>
       )}
       {over && enabled && (
-        <span className={styles.note}>ECOUTE TERMINEE.</span>
+        <span className={styles.note}>Écoute terminée.</span>
       )}
     </div>
   );

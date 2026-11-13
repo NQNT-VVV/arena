@@ -40,7 +40,7 @@
 .sablier { display: flex; align-items: baseline; gap: var(--sp-3); font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink); }
 
 /* Le sablier du tour. Il descend par pas d'une seconde, comme le reste du jeu. */
-.piste { height: 4px; border: var(--border); overflow: hidden; }
+.piste { height: 4px; border: var(--border); overflow: hidden; border-radius: var(--radius); }
 .piste i { display: block; height: 100%; background: var(--ink); transform-origin: left; transition: transform 1s steps(1, end); }
 
 .presse { color: var(--accent); }

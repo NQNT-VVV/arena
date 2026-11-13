@@ -2,14 +2,13 @@
 .wrap { display: grid; gap: var(--sp-2); width: 100%; }
 .label { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60); }
 
-.row { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; width: 100%; border: var(--border-ui); }
+.row { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; width: 100%; border: var(--border-ui); border-radius: var(--radius); }
 .pip {
   min-width: 0;
   /* Cible large : le vote se fait au pouce, souvent dans le noir. */
   min-height: 52px; cursor: pointer;
   background: transparent; border: 0; border-right: 1px solid var(--ink-25); color: var(--ink-60);
-  font: var(--t-ui); letter-spacing: var(--ls-mono); font-variant-numeric: tabular-nums;
-  transition: none; -webkit-tap-highlight-color: transparent;
+  font: var(--t-ui); letter-spacing: var(--ls-mono); font-variant-numeric: tabular-nums; -webkit-tap-highlight-color: transparent;
 }
 .pip:last-child { border-right: 0; }
 .pip:hover:not(:disabled) { background: var(--ink-12); color: var(--ink); }
@@ -22,3 +21,6 @@
 .value { font: var(--t-ui-l); letter-spacing: var(--ls-mono); font-variant-numeric: tabular-nums; min-width: 4.5em; text-align: right; }
 
 .reason { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-55); }
+
+/* Animations du socle, recopiees ici : un module CSS ne voit pas les @keyframes globales. */
+@keyframes flash { 0% { scale: .96; } 60% { scale: 1.02; } 100% { scale: 1; } }

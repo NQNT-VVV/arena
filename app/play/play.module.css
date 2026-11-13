@@ -15,8 +15,7 @@
 .error {
   display: grid; grid-template-columns: 8px minmax(0, 1fr); gap: var(--sp-3);
   padding: var(--sp-2) var(--sp-3) var(--sp-2) 0; border: 1px solid var(--ink);
-  font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink);
-}
+  font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink); border-radius: var(--radius); }
 .error::before { content: ''; background-image: var(--hatch); margin: calc(-1 * var(--sp-2)) 0; }
 
 .stage { display: grid; gap: var(--sp-6); }

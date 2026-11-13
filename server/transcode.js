@@ -44,7 +44,7 @@ function run(bin, args, { timeoutMs = 10 * 60 * 1000, binary = false } = {}) {
     const err = [];
     const timer = setTimeout(() => {
       child.kill('SIGKILL');
-      reject(new Error(`${path.basename(bin)} a depasse ${Math.round(timeoutMs / 1000)} s`));
+      reject(new Error(`${path.basename(bin)} a dépassé ${Math.round(timeoutMs / 1000)} s`));
     }, timeoutMs);
     child.stdout.on('data', (d) => out.push(d));
     child.stderr.on('data', (d) => { if (err.length < 200) err.push(d); });
@@ -53,7 +53,7 @@ function run(bin, args, { timeoutMs = 10 * 60 * 1000, binary = false } = {}) {
       clearTimeout(timer);
       if (code !== 0) {
         const tail = Buffer.concat(err).toString('utf8').trim().split('\n').slice(-4).join(' | ');
-        reject(new Error(`${path.basename(bin)} a echoue (${code}) : ${tail.slice(0, 400)}`));
+        reject(new Error(`${path.basename(bin)} a échoué (${code}) : ${tail.slice(0, 400)}`));
         return;
       }
       const buf = Buffer.concat(out);
@@ -193,7 +193,7 @@ async function transcodeAudio({ input, dir, playMaxS, fadeS }) {
 
 async function transcodeVideo({ input, dir, playMaxS, fadeS }) {
   const info = await probe(input);
-  if (!info.hasVideo) throw new Error('aucune piste video');
+  if (!info.hasVideo) throw new Error('aucune piste vidéo');
 
   const durationS = info.durationMs ? info.durationMs / 1000 : playMaxS;
   const truncated = durationS > playMaxS + 0.25;

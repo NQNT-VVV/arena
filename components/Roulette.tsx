@@ -200,16 +200,16 @@ function Legende({ spin, roulette, phase, chrono, bandeau }: {
   spin: Spin; roulette: RouletteState; phase: Phase; chrono: PhaseClock; bandeau: boolean;
 }) {
   const rappel = [
-    chrono.kind === 'creation' ? `CREATION ${chrono.label}`
-      : chrono.kind === 'grace' ? `DEPOT ${chrono.label}`
+    chrono.kind === 'creation' ? `Création ${chrono.label}`
+      : chrono.kind === 'grace' ? `Dépôt ${chrono.label}`
         : PHASE_LABELS[phase],
     // Le compte est public : une roue qu'on relance en secret n'a aucune autorite.
-    `TIRAGES ${hex(roulette.spins)}`,
-    spin.spent ? 'LA ROUE A REFAIT UN TOUR' : null,
+    `Tirages ${hex(roulette.spins)}`,
+    spin.spent ? 'La roue a refait un tour' : null,
   ].filter(Boolean).join(' · ');
 
   const tete = (
-    <span><Icon name="roue" /> LA ROULETTE · <b>{spin.wheelName.toUpperCase()}</b> · {modeOf(spin)}</span>
+    <span><Icon name="roue" /> La roulette · <b>{spin.wheelName.toUpperCase()}</b> · {modeOf(spin)}</span>
   );
 
   if (bandeau) return <div className={styles.legende}>{tete}<span className={styles.rappel}> · {rappel}</span></div>;
@@ -332,10 +332,10 @@ function BlocPersistant({ spin, roulette }: { spin: Spin; roulette: RouletteStat
   return (
     <section className={`card pad ${styles.block}`} role="status" aria-live="polite">
       <header className={styles.head}>
-        <span><Icon name="roue" />LA ROULETTE · <b>{spin.wheelName}</b></span>
+        <span><Icon name="roue" />La roulette · <b>{spin.wheelName}</b></span>
         <span className="grow" />
         <span>{modeOf(spin)}</span>
-        <span>TIRAGES <b className="tnum">{hex(roulette.spins)}</b></span>
+        <span>Tirages <b className="tnum">{hex(roulette.spins)}</b></span>
       </header>
 
       {memeSort ? (
@@ -364,7 +364,7 @@ function FateRead({ fate, anonyme = false }: { fate: Fate; anonyme?: boolean }) 
   const status = statusOf(effects);
   return (
     <div className={styles.read}>
-      <span className={styles.who}>{anonyme ? 'POUR TOUTE LA SALLE' : fate.pseudo}</span>
+      <span className={styles.who}>{anonyme ? 'Pour toute la salle' : fate.pseudo}</span>
       <span className={styles.what}>{fate.label}</span>
       {fate.detail && <span className={styles.detail}>{fate.detail}</span>}
       <span className={styles.chips}>
@@ -420,7 +420,7 @@ export function OwnFate({ fate }: { fate: YouFate | null }) {
   return (
     <section key={fate.spinId} className={`card pad pop-in ${styles.own}`} role="status" aria-live="polite">
       <header className={styles.head}>
-        <span><Icon name="roue" />TON SORT · <b>{fate.wheelName}</b></span>
+        <span><Icon name="roue" />Ton sort · <b>{fate.wheelName}</b></span>
       </header>
       <h2 className={styles.big}>{fate.label}</h2>
       {fate.detail && <p className={styles.detail}>{fate.detail}</p>}
@@ -432,8 +432,8 @@ export function OwnFate({ fate }: { fate: YouFate | null }) {
       </span>
       <p className={styles.upshot}>
         {status.advice
-          ? 'Rien ne s’applique tout seul : c’est a toi de tenir cette contrainte.'
-          : 'L’effet est deja pris en compte. Tu n’as rien a faire de plus.'}
+          ? 'Rien ne s’applique tout seul : c’est à toi de tenir cette contrainte.'
+          : 'L’effet est déjà pris en compte. Tu n’as rien à faire de plus.'}
       </p>
     </section>
   );

@@ -133,7 +133,7 @@ io.on('connection', (socket) => {
   /* ------------------------------- regie ------------------------------ */
 
   socket.on('host:create', (payload = {}, cb) => guard(cb, () => {
-    if (!createLimit(addressOf(socket))) throw Object.assign(new Error('Trop de sessions creees. Patientez une minute.'), { expected: true });
+    if (!createLimit(addressOf(socket))) throw Object.assign(new Error('Trop de sessions créées. Patientez une minute.'), { expected: true });
     const { session, hostToken } = battle.createSession(payload);
     socket.data.hostToken = hostToken;
     battle.attachHost(socket, session);

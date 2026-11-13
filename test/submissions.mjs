@@ -125,7 +125,7 @@ test('refus : avant le depart de la creation', async () => {
   const res = await submitFile(code, alice, WAV, 'trop-tot.wav');
   const body = await res.json();
   assert.equal(res.status, 409, JSON.stringify(body));
-  assert.match(body.error, /pas encore commence/);
+  assert.match(body.error, /pas encore commencé/);
 });
 
 test('depot : pendant la creation, sans attendre la fin', async () => {
@@ -194,7 +194,7 @@ test('refus : format hors liste blanche', async () => {
   const res = await submitFile(code, bob, WAV, 'rendu.flac');
   const body = await res.json();
   assert.equal(res.status, 413, JSON.stringify(body));
-  assert.match(body.error, /Format refuse/);
+  assert.match(body.error, /Format refusé/);
 });
 
 test('refus : fichier trop lourd', async () => {
@@ -294,7 +294,7 @@ test('retard : refuse quand la politique est « refuses »', async () => {
   const res = await submitFile(c3, late, WAV, 'trop-tard.wav');
   const body = await res.json();
   assert.equal(res.status, 409, JSON.stringify(body));
-  assert.match(body.error, /hors delai sont refuses/);
+  assert.match(body.error, /hors délai sont refusés/);
 });
 
 test('retard : accepte et marque quand la politique le prevoit', async () => {

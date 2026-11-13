@@ -85,8 +85,8 @@ export function SubmissionBox({
     if (input.current) input.current.value = '';
 
     const body = res.body as Reply;
-    if (!res.ok) { toast(body?.error || 'Le depot a echoue.', 'err'); return; }
-    toast(body.late ? 'Rendu recu — hors delai' : 'Rendu recu', body.late ? 'info' : 'ok');
+    if (!res.ok) { toast(body?.error || 'Le dépôt a échoué.', 'err'); return; }
+    toast(body.late ? 'Rendu reçu — hors délai' : 'Rendu reçu', body.late ? 'info' : 'ok');
   };
 
   const sendText = async () => {
@@ -97,10 +97,10 @@ export function SubmissionBox({
       headers: { ...headers, 'Content-Type': 'application/json' } as HeadersInit,
       body: JSON.stringify({ body: draft }),
     });
-    const body = await res.json().catch(() => ({ error: 'Reponse illisible.' }));
+    const body = await res.json().catch(() => ({ error: 'Réponse illisible.' }));
     setSaving(false);
-    if (!res.ok) { toast(body.error || 'L’enregistrement a echoue.', 'err'); return; }
-    toast(body.late ? 'Texte enregistre — hors delai' : 'Texte enregistre', body.late ? 'info' : 'ok');
+    if (!res.ok) { toast(body.error || 'L’enregistrement a échoué.', 'err'); return; }
+    toast(body.late ? 'Texte enregistré — hors délai' : 'Texte enregistré', body.late ? 'info' : 'ok');
   };
 
   const withdraw = async () => {
@@ -112,7 +112,7 @@ export function SubmissionBox({
       return;
     }
     setDraft('');
-    toast('Rendu retire', 'ok');
+    toast('Rendu retiré', 'ok');
   };
 
   /* ------------------------------ texte ----------------------------- */
@@ -122,7 +122,7 @@ export function SubmissionBox({
     return (
       <div className={styles.box}>
         <div className={styles.head}>
-          <h3>TA CREATION</h3>
+          <h3>Ta création</h3>
           {submission && <Badge submission={submission} />}
         </div>
         <textarea
@@ -130,16 +130,16 @@ export function SubmissionBox({
           rows={10}
           value={draft}
           maxLength={20000}
-          placeholder="Ecris ici. Tu peux revenir dessus tant que la phase est ouverte."
+          placeholder="Écris ici. Tu peux revenir dessus tant que la phase est ouverte."
           onChange={(e) => setDraft(e.target.value)}
         />
         <div className="row wrap">
           <button className="btn primary" disabled={busy || !dirty || draft.trim().length < 2} aria-busy={busy} onClick={sendText}>
-            {submission ? 'Mettre a jour' : 'Deposer'}
+            {submission ? 'Mettre à jour' : 'Déposer'}
           </button>
-          {submission && <button className="btn sm ghost" disabled={busy} aria-busy={busy} onClick={withdraw}>RETIRER</button>}
+          {submission && <button className="btn sm ghost" disabled={busy} aria-busy={busy} onClick={withdraw}>Retirer</button>}
           <span className="faint grow" style={{ textAlign: 'right' }}>
-            {draft.length} caracteres{dirty && submission ? ' • non enregistre' : ''}
+            {draft.length} caractères{dirty && submission ? ' • non enregistré' : ''}
           </span>
         </div>
       </div>
@@ -151,7 +151,7 @@ export function SubmissionBox({
   return (
     <div className={styles.box}>
       <div className={styles.head}>
-        <h3>TA CREATION</h3>
+        <h3>Ta création</h3>
         {submission && <Badge submission={submission} />}
       </div>
 
@@ -175,7 +175,7 @@ export function SubmissionBox({
             <audio className={styles.player} src={submission.url} controls preload="metadata" />
           )}
           {submission.url && submission.inline && submission.kind === 'image' && (
-            <img className={styles.image} src={submission.url} alt="Ta creation" />
+            <img className={styles.image} src={submission.url} alt="Ta création" />
           )}
           {submission.url && submission.inline && submission.kind === 'video' && (
             <video className={styles.player} src={submission.url} controls preload="metadata" playsInline />
@@ -183,9 +183,9 @@ export function SubmissionBox({
 
           {submission.error && submission.status === 'ready' && (
             <span className="meta">
-              Le fichier n&apos;a pas pu etre converti : il sera diffuse tel quel.
+              Le fichier n’a pas pu être converti : il sera diffusé tel quel.
               {submission.kind === 'audio' || submission.kind === 'video'
-                ? ' Verifie qu’il s’ouvre bien chez toi.'
+                ? ' Vérifie qu’il s’ouvre bien chez toi.'
                 : ''}
             </span>
           )}
@@ -194,7 +194,7 @@ export function SubmissionBox({
             <button className="btn sm" disabled={busy} aria-busy={busy} onClick={() => input.current?.click()}>
               Remplacer
             </button>
-            <button className="btn sm ghost" disabled={busy} aria-busy={busy} onClick={withdraw}>RETIRER</button>
+            <button className="btn sm ghost" disabled={busy} aria-busy={busy} onClick={withdraw}>Retirer</button>
           </div>
         </div>
       ) : (
@@ -220,7 +220,7 @@ export function SubmissionBox({
           <div className={styles.bar}><i style={{ transform: `scaleX(${progress})` }} /></div>
           <div className="row">
             <span className="faint grow">Envoi… {Math.round(progress * 100)} %</span>
-            <button className="btn xs ghost" onClick={() => cancelRef.current?.()}>ANNULER</button>
+            <button className="btn xs ghost" onClick={() => cancelRef.current?.()}>Annuler</button>
           </div>
         </>
       )}
@@ -235,7 +235,7 @@ export function SubmissionBox({
 
       {closingAt && (
         <span className="meta">
-          Tu peux remplacer ton fichier jusqu&apos;a la fermeture des depots.
+          Tu peux remplacer ton fichier jusqu’à la fermeture des dépôts.
         </span>
       )}
     </div>
@@ -252,8 +252,8 @@ export function SubmissionBox({
  */
 function Badge({ submission }: { submission: OwnSubmission }) {
   if (submission.status === 'pending' || submission.status === 'transcoding') {
-    return <span className="pill"><span className="dot" /> TRAITEMENT…</span>;
+    return <span className="pill"><span className="dot" /> Traitement…</span>;
   }
-  if (submission.late) return <span className="pill err"><span>HORS DELAI</span></span>;
-  return <span className="pill ok"><span className="dot" /> {submission.transcoded ? 'PRET' : 'DEPOSE'}</span>;
+  if (submission.late) return <span className="pill err"><span>Hors délai</span></span>;
+  return <span className="pill ok"><span className="dot" /> {submission.transcoded ? 'Prêt' : 'Déposé'}</span>;
 }

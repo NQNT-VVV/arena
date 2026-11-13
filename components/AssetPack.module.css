@@ -11,22 +11,19 @@
 .row {
   position: relative; overflow: hidden;
   display: flex; align-items: center; gap: var(--sp-3);
-  padding: var(--sp-2) var(--sp-3); background: transparent; border: var(--border); transition: none;
-}
+  padding: var(--sp-2) var(--sp-3); background: transparent; border: var(--border); border-radius: var(--radius); }
 /* L'avancement de l'ecoute remplit le fond de la ligne par pas nets. */
 .row::before {
   content: ''; position: absolute; inset: 0; pointer-events: none;
   background-image: var(--dither-12); background-size: var(--dither-size);
-  width: calc(var(--p, 0) * 100%); transition: none;
+  width: calc(var(--p, 0) * 100%);
 }
 .active { border-color: var(--accent); }
 
 .play {
   position: relative; width: 40px; height: 40px; flex: none;
   display: grid; place-items: center; font: var(--t-meta); letter-spacing: var(--ls-mono);
-  cursor: pointer; background: transparent; border: var(--border-ui); color: var(--ink);
-  transition: none; -webkit-tap-highlight-color: transparent;
-}
+  cursor: pointer; background: transparent; border: var(--border-ui); color: var(--ink); -webkit-tap-highlight-color: transparent; border-radius: var(--radius); }
 .play:hover { border-color: var(--ink); background: var(--ink-12); }
 .play:active { animation: flash var(--dur-flash) var(--ease-hold); transform: none; }
 .play[aria-pressed='true'] { background: var(--ink); background-image: none; border-color: var(--ink); color: var(--bg); }
@@ -41,8 +38,7 @@
 .action {
   position: relative; width: 28px; height: 28px; flex: none;
   display: grid; place-items: center; font: var(--t-meta); letter-spacing: var(--ls-mono);
-  color: var(--ink-60); border: 1px solid transparent; background: transparent; cursor: pointer; transition: none;
-}
+  color: var(--ink-60); border: 1px solid transparent; background: transparent; cursor: pointer; border-radius: var(--radius); }
 .action:hover { border-color: var(--ink); color: var(--ink); }
 
 /* --------------------------------------------------------------------------
@@ -52,7 +48,7 @@
   list-style: none; margin: 0; padding: 0;
   display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 130px), 1fr)); gap: var(--gutter);
 }
-.thumb { background: transparent; border: var(--border); display: grid; }
+.thumb { background: transparent; border: var(--border); display: grid; border-radius: var(--radius); }
 .thumb a { display: block; background: var(--bg); }
 .thumb img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; }
 .thumbBar { display: flex; align-items: center; gap: var(--sp-1); padding: var(--sp-2); border-top: var(--border); }
@@ -60,18 +56,19 @@
 .thumbAction {
   flex: none; width: 20px; height: 20px; display: grid; place-items: center;
   font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-60);
-  background: transparent; border: 1px solid transparent; cursor: pointer; padding: 0;
-}
+  background: transparent; border: 1px solid transparent; cursor: pointer; padding: 0; border-radius: var(--radius); }
 .thumbAction:hover { border-color: var(--ink); color: var(--ink); }
 
 /* --------------------------------------------------------------------------
    Contenus deplies
    -------------------------------------------------------------------------- */
-.video { width: 100%; max-height: 320px; background: var(--bg); border: var(--border); }
+.video { width: 100%; max-height: 320px; background: var(--bg); border: var(--border); border-radius: var(--radius); }
 .text {
   margin: 0; width: 100%; max-height: 300px; overflow: auto;
   padding: var(--sp-3); background: transparent; border: var(--border);
   font-family: var(--font-mono); font-size: var(--fs-1); line-height: 1.6; letter-spacing: 0;
-  text-transform: none; white-space: pre-wrap; overflow-wrap: anywhere;
-}
+  text-transform: none; white-space: pre-wrap; overflow-wrap: anywhere; border-radius: var(--radius); }
 .loading { font: var(--t-meta); letter-spacing: var(--ls-mono); color: var(--ink-55); }
+
+/* Animations du socle, recopiees ici : un module CSS ne voit pas les @keyframes globales. */
+@keyframes flash { 0% { scale: .96; } 60% { scale: 1.02; } 100% { scale: 1; } }

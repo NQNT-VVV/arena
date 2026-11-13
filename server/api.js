@@ -95,7 +95,7 @@ function mount(app, battle) {
 
   app.get('/api/qr', guard(async (req, res) => {
     const text = String(req.query.text || '').slice(0, 512);
-    if (!text) return res.status(400).send('parametre « text » manquant');
+    if (!text) return res.status(400).send('paramètre « text » manquant');
     const svg = await QRCode.toString(text, {
       type: 'svg',
       margin: 1,
@@ -198,7 +198,7 @@ function mount(app, battle) {
    */
   app.get('/api/asset/:assetId', guard(async (req, res) => {
     const asset = repo.asset(req.params.assetId);
-    if (!asset) return res.status(404).json({ error: 'Element introuvable.' });
+    if (!asset) return res.status(404).json({ error: 'Élément introuvable.' });
     await files.sendStored(req, res, {
       key: asset.storageKey,
       filename: asset.filename,
@@ -304,7 +304,7 @@ function mount(app, battle) {
   app.get('/api/session/:code/assets.zip', guard(async (req, res) => {
     const session = battle.require(req.params.code);
     const assets = repo.assets(session.id);
-    if (!assets.length) return res.status(404).json({ error: 'Aucun element a telecharger.' });
+    if (!assets.length) return res.status(404).json({ error: 'Aucun élément à télécharger.' });
 
     const stem = String(session.name).replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '').slice(0, 60) || 'elements';
     res.set({
@@ -373,7 +373,7 @@ function mount(app, battle) {
           // aurait deja consomme le disque et la bande passante.
           if (allowedExt.length && !allowedExt.includes(ext.replace('.', ''))) {
             stream.resume();
-            throw new UploadError(`Format refuse. Attendus : ${allowedExt.join(', ')}.`);
+            throw new UploadError(`Format refusé. Attendus : ${allowedExt.join(', ')}.`);
           }
           const key = `sessions/${session.id}/submissions/${participant.id}/${uuid()}${ext}`;
           const { bytes } = await storage.put(key, stream);
@@ -389,7 +389,7 @@ function mount(app, battle) {
 
     const textBody = cleanText(fields.body, config.limits.maxTextBodyChars);
     if (!written && !textBody) {
-      return res.status(400).json({ error: 'Aucun fichier ni texte dans la requete.' });
+      return res.status(400).json({ error: 'Aucun fichier ni texte dans la requête.' });
     }
 
     const identity = written
@@ -451,7 +451,7 @@ function mount(app, battle) {
   const requireResults = (code, token) => {
     const session = battle.requireHost(code, token);
     if (session.phase !== 'results' && session.phase !== 'archived') {
-      throw Object.assign(new Error('Le classement n’est pas encore etabli.'), { expected: true, status: 409 });
+      throw Object.assign(new Error('Le classement n’est pas encore établi.'), { expected: true, status: 409 });
     }
     return session;
   };

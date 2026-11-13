@@ -46,7 +46,7 @@ function receiveFiles(req, { maxFiles = 1, maxBytes, maxTotalBytes = Infinity, o
         },
       });
     } catch {
-      reject(new UploadError('Requete de televersement invalide.'));
+      reject(new UploadError('Requête de téléversement invalide.'));
       return;
     }
 
@@ -84,7 +84,7 @@ function receiveFiles(req, { maxFiles = 1, maxBytes, maxTotalBytes = Infinity, o
       let truncated = false;
       stream.on('limit', () => {
         truncated = true;
-        fail(new UploadError(`« ${info.filename || 'ce fichier'} » depasse la taille autorisee.`));
+        fail(new UploadError(`« ${info.filename || 'ce fichier'} » dépasse la taille autorisée.`));
       });
 
       const task = Promise.resolve()
@@ -95,7 +95,7 @@ function receiveFiles(req, { maxFiles = 1, maxBytes, maxTotalBytes = Infinity, o
           if (record) written.push(record);
           if (truncated || firstError) return;
           total += record?.bytes ?? 0;
-          if (total > maxTotalBytes) fail(new UploadError('Le poids total depasse la limite autorisee.'));
+          if (total > maxTotalBytes) fail(new UploadError('Le poids total dépasse la limite autorisée.'));
         })
         .catch(fail);
 
@@ -103,7 +103,7 @@ function receiveFiles(req, { maxFiles = 1, maxBytes, maxTotalBytes = Infinity, o
     });
 
     bb.on('filesLimit', () => fail(new UploadError(
-      maxFiles === 1 ? 'Un seul fichier a la fois.' : `Pas plus de ${maxFiles} fichiers a la fois.`,
+      maxFiles === 1 ? 'Un seul fichier à la fois.' : `Pas plus de ${maxFiles} fichiers à la fois.`,
     )));
     bb.on('error', fail);
     req.on('error', fail);
@@ -126,7 +126,7 @@ function receiveFiles(req, { maxFiles = 1, maxBytes, maxTotalBytes = Infinity, o
     bb.on('close', finish);
     // Filet : si le client raccroche en cours de route, busboy peut ne jamais
     // annoncer sa fin. `settled` empeche la double conclusion.
-    req.on('aborted', () => { fail(new UploadError('Televersement interrompu.')); finish(); });
+    req.on('aborted', () => { fail(new UploadError('Téléversement interrompu.')); finish(); });
 
     req.pipe(bb);
   });

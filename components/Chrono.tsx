@@ -1,8 +1,8 @@
 import type { PhaseClock } from '@/lib/usePhaseClock';
 
 const LABELS: Record<string, string> = {
-  creation: 'TEMPS DE CREATION',
-  grace: 'FENETRE DE DEPOT',
+  creation: 'Temps de création',
+  grace: 'Fenêtre de dépôt',
 };
 
 /**
@@ -14,7 +14,7 @@ const LABELS: Record<string, string> = {
  * page a chaque image, ce qui se voit immediatement sur la regie.
  */
 export function Chrono({ clock, hint }: { clock: PhaseClock; hint?: string }) {
-  const label = clock.paused ? 'EN PAUSE' : (LABELS[clock.kind ?? ''] ?? 'EN ATTENTE');
+  const label = clock.paused ? 'En pause' : (LABELS[clock.kind ?? ''] ?? 'En attente');
   const over = clock.remainingMs <= 0 && !!clock.kind;
   const barTone = over ? 'over' : clock.tone === 'danger' ? 'danger' : clock.tone === 'warn' ? 'warn' : '';
 

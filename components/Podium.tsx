@@ -37,7 +37,7 @@ export function Podium({
 }) {
   /** Le rendu ouvert. Un seul : ouvrir le suivant referme le precedent. */
   const [openId, setOpenId] = useState<string | null>(null);
-  if (!podium.total) return <p className="empty"><span>AUCUN RENDU N&apos;A ETE DEPOSE</span></p>;
+  if (!podium.total) return <p className="empty"><span>Aucun rendu n’a été déposé</span></p>;
   const ratingOf = new Map((ratings ?? []).map((r) => [r.participantId, r]));
 
   return (
@@ -47,7 +47,7 @@ export function Podium({
           return (
             <li key={`h-${row.position}`} className={`${styles.row} ${styles.hidden}`}>
               <span className={styles.place}>{hex(row.position)}</span>
-              <span className={styles.dots} aria-label="Place non encore annoncee">— — —</span>
+              <span className={styles.dots} aria-label="Place non encore annoncée">— — —</span>
             </li>
           );
         }
@@ -68,19 +68,19 @@ export function Podium({
             <span className="avatar" aria-hidden="true"><span>{row.author?.avatar}</span></span>
             <span className={styles.who}>
               <span className={styles.pseudo}>
-                {row.author?.pseudo}{mine ? ' · VOUS' : ''}
+                {row.author?.pseudo}{mine ? ' · vous' : ''}
                 {rating && (
                   <span
                     className={`${styles.rating} ${rating.delta > 0 ? styles.up : rating.delta < 0 ? styles.down : ''}`}
-                    title={`ELO PODIUM : ${rating.before} → ${rating.after}`}
+                    title={`Elo Podium : ${rating.before} → ${rating.after}`}
                   >
                     {rating.delta > 0 ? '+' : ''}{rating.delta}{rating.tier ? ` · ${rating.tier.toUpperCase()}` : ''}
                   </span>
                 )}
               </span>
               <span className={styles.detail}>
-                {hex(row.voters ?? 0)} / {hex(row.expected ?? 0)} VOTES
-                {row.late && ' · HORS DELAI'}
+                {hex(row.voters ?? 0)} / {hex(row.expected ?? 0)} votes
+                {row.late && ' · hors délai'}
                 {row.penalty ? ` · −${row.penalty}` : ''}
                 {/*
                   * Le sort ne se melange pas a la penalite.
@@ -92,7 +92,7 @@ export function Podium({
                   */}
                 {row.fate ? (
                   <span className={styles.fate}>
-                    SORT {row.fate > 0 ? '+' : '−'}{Math.abs(row.fate)}
+                    Sort {row.fate > 0 ? '+' : '−'}{Math.abs(row.fate)}
                   </span>
                 ) : null}
               </span>
@@ -115,8 +115,8 @@ export function Podium({
               </button>
             )}
             {row.rendition?.url && (
-              <a className="btn xs ghost" href={`${row.rendition.url}?dl=1`} title={row.filename ?? 'Telecharger'}>
-                <Icon name="telecharge" />OBTENIR
+              <a className="btn xs ghost" href={`${row.rendition.url}?dl=1`} title={row.filename ?? 'Télécharger'}>
+                <Icon name="telecharge" />Obtenir
               </a>
             )}
             {replay && openId === row.rendition?.renditionId && (
@@ -139,11 +139,11 @@ function canReplay(row: PodiumRow): boolean {
 
 function replayLabel(row: PodiumRow): string {
   switch (row.rendition?.kind) {
-    case 'audio': return 'REECOUTER';
-    case 'video': return 'REVOIR';
-    case 'image': return 'REVOIR';
-    case 'text': return 'RELIRE';
-    default: return 'ROUVRIR';
+    case 'audio': return 'Réécouter';
+    case 'video': return 'Revoir';
+    case 'image': return 'Revoir';
+    case 'text': return 'Relire';
+    default: return 'Rouvrir';
   }
 }
 
@@ -160,9 +160,9 @@ function Replay({ row, onClose }: { row: PodiumRow; onClose: () => void }) {
   return (
     <div className={styles.replay}>
       <div className={styles.replayHead}>
-        <span className="meta">{row.filename ?? 'RENDU'}</span>
-        <button className="btn xs ghost" onClick={onClose} aria-label="Refermer la reecoute">
-          <Icon name="croix" />FERMER
+        <span className="meta">{row.filename ?? 'Rendu'}</span>
+        <button className="btn xs ghost" onClick={onClose} aria-label="Refermer la réécoute">
+          <Icon name="croix" />Fermer
         </button>
       </div>
       {r.kind === 'audio' && r.url && (

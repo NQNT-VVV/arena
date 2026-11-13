@@ -262,7 +262,7 @@ test('ajout apres la creation : refuse', async () => {
   await call(host, 'host:start-diffusion');
   const res = await upload(code, hostToken, [['trop-tard.wav', WAV]]);
   assert.equal(res.status, 409);
-  assert.match((await res.json()).error, /ne se deposent plus/);
+  assert.match((await res.json()).error, /ne se déposent plus/);
 });
 
 test('refus : au-dela du nombre autorise', async () => {

@@ -2,7 +2,7 @@
 .carte { display: grid; gap: var(--sp-3); }
 .tete { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; }
 
-.liste { list-style: none; margin: 0; padding: 0; display: grid; border: var(--border); }
+.liste { list-style: none; margin: 0; padding: 0; display: grid; border: var(--border); border-radius: var(--radius); }
 .etape { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: var(--sp-3); align-items: start; padding: var(--sp-3) var(--sp-4); border-bottom: var(--border); }
 .etape:last-child { border-bottom: 0; }
 

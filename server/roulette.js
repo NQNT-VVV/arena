@@ -113,7 +113,7 @@ function exigerRoue(wheelId) {
 
 function creerRoue({ name, note = '' } = {}) {
   const propre = cleanPseudo(name, LONGUEUR_NOM);
-  if (!propre) throw new RouletteError('Donnez un nom a cette roue.');
+  if (!propre) throw new RouletteError('Donnez un nom à cette roue.');
   const now = Date.now();
   return repo.addWheel({
     id: uuid(), name: propre, note: cleanText(note, LONGUEUR_DETAIL), createdAt: now, updatedAt: now,
@@ -123,7 +123,7 @@ function creerRoue({ name, note = '' } = {}) {
 function renommerRoue({ wheelId, name, note } = {}) {
   const roue = exigerRoue(wheelId);
   const propre = name === undefined ? roue.name : cleanPseudo(name, LONGUEUR_NOM);
-  if (!propre) throw new RouletteError('Donnez un nom a cette roue.');
+  if (!propre) throw new RouletteError('Donnez un nom à cette roue.');
   repo.updateWheel(
     roue.id,
     propre,
@@ -264,12 +264,12 @@ function tirer(session, {
   const roue = exigerRoue(wheelId);
   const cases = repo.slots(roue.id).filter((c) => c.weight > 0);
   if (!cases.length) {
-    throw new RouletteError(`« ${roue.name} » n’a aucune case jouable : toutes sont a zero.`);
+    throw new RouletteError(`« ${roue.name} » n’a aucune case jouable : toutes sont à zéro.`);
   }
 
   const monde = eligibles(session, { includeSpectators });
   if (!monde.length) {
-    throw new RouletteError('Personne a tirer : la salle est vide, ou tout le monde regarde.');
+    throw new RouletteError('Personne à tirer : la salle est vide, ou tout le monde regarde.');
   }
 
   const combien = target === 'all'

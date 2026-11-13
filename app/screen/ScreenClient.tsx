@@ -87,8 +87,8 @@ export function ScreenClient() {
     return (
       <div className="screen-stage">
         <Brand href={null} />
-        <h1 className="title">ECRAN DE PROJECTION</h1>
-        <p className="muted">Saisis le code de la session a afficher.</p>
+        <h1 className="title">Écran de projection</h1>
+        <p className="muted">Saisis le code de la session à afficher.</p>
         <div style={{ width: 'min(340px, 90vw)' }}>
           <JoinForm className="col" inputClassName={styles.codeInput} />
         </div>
@@ -101,7 +101,7 @@ export function ScreenClient() {
       <div className="screen-stage">
         <Brand href={null} />
         <h1 className="title">{error.toUpperCase()}</h1>
-        <p className="muted">CODE DEMANDE · <b>{code}</b></p>
+        <p className="muted">Code demandé · <b>{code}</b></p>
       </div>
     );
   }
@@ -109,7 +109,7 @@ export function ScreenClient() {
   if (!state) {
     return (
       <div className="screen-stage">
-        <span className="pill"><span className="dot" /> {connected ? 'CHARGEMENT' : 'CONNEXION'}</span>
+        <span className="pill"><span className="dot" /> {connected ? 'Chargement' : 'Connexion'}</span>
       </div>
     );
   }
@@ -119,36 +119,36 @@ export function ScreenClient() {
   return (
     <div className="screen-stage">
       <div className={styles.head}>
-        <span>SALLE {state.code}</span>
-        <span>RENDU {media.icon} · {media.label}</span>
+        <span>Salle {state.code}</span>
+        <span>Rendu {media.icon} · {media.label}</span>
         <span>{PHASE_LABELS[state.phase]}</span>
-        {state.manche.rounds > 1 && <span>MANCHE {state.manche.round}/{state.manche.rounds}</span>}
-        {state.config.mode === 'rebuild' && <span>REBUILD THE TRACK</span>}
+        {state.manche.rounds > 1 && <span>Manche {state.manche.round}/{state.manche.rounds}</span>}
+        {state.config.mode === 'rebuild' && <span>Rebuild The Track</span>}
         {/* Le compte des tirages est sur l'ecran de la salle, pas seulement en
             regie : une roue qu'on relance en secret n'a aucune autorite. */}
-        {state.roulette.spins > 0 && <span>TIRAGES {hex(state.roulette.spins)}</span>}
+        {state.roulette.spins > 0 && <span>Tirages {hex(state.roulette.spins)}</span>}
         <span className="seats" aria-label={`${state.counts.connected} sujets en ligne sur ${state.counts.participants}`}>
           {Array.from({ length: Math.max(state.counts.participants, 1) }, (_, i) => (
             <span key={i} className={i < state.counts.connected ? 'on' : ''} />
           ))}
         </span>
-        {!connected && <span className="live">HORS LIGNE · RECONNEXION</span>}
+        {!connected && <span className="live">Hors ligne · reconnexion</span>}
       </div>
 
       <h1 className="title">{state.name}</h1>
 
       {(state.phase === 'config' || state.phase === 'lobby') && (
         <>
-          <p className={styles.invite}>REJOIGNEZ SUR <b>{inviteUrl.replace(/^https?:\/\//, '')}</b></p>
+          <p className={styles.invite}>Rejoignez sur <b>{inviteUrl.replace(/^https?:\/\//, '')}</b></p>
           <span className={styles.joinCode}>{state.code}</span>
           {inviteUrl && <QrCode text={inviteUrl} className="screen-qr" />}
           <p className={styles.count}>
-            SUJETS <b>{hex(state.counts.participants)}</b>
-            {state.counts.participants > 0 && ` · ${hex(state.counts.connected)} EN LIGNE`}
+            Sujets <b>{hex(state.counts.participants)}</b>
+            {state.counts.participants > 0 && ` · ${hex(state.counts.connected)} en ligne`}
           </p>
           <p className="muted">
-            {humanDuration(state.config.durationMs).toUpperCase()} DE CREATION
-            {state.assets.length > 0 && ` · ${hex(state.assets.length)} ELEMENT(S) IMPOSE(S)`}
+            {humanDuration(state.config.durationMs).toUpperCase()} de création
+            {state.assets.length > 0 && ` · ${hex(state.assets.length)} élément(s) imposé(s)`}
           </p>
         </>
       )}
@@ -158,11 +158,11 @@ export function ScreenClient() {
           <Chrono clock={chrono} />
           <p className={styles.brief}>
             {state.config.mode === 'rebuild' && !state.brief
-              ? 'Chacun a recu un extrait different. Reconstruisez-le.'
+              ? 'Chacun a reçu un extrait différent. Reconstruisez-le.'
               : state.brief}
           </p>
           <p className={styles.count}>
-            RENDUS <b>{hex(state.counts.submitted)}</b> / {hex(state.counts.participants)}
+            Rendus <b>{hex(state.counts.submitted)}</b> / {hex(state.counts.participants)}
           </p>
         </>
       )}
@@ -195,14 +195,14 @@ export function ScreenClient() {
         <div className={state.general && state.podium.complete ? styles.duo : styles.wide}>
           <div>
             <span className={styles.bigIcon}>
-              {state.manche.rounds > 1 ? `CLASSEMENT · MANCHE ${state.manche.round}` : 'CLASSEMENT FINAL'} · {hex(state.podium.total ?? 0)} RENDUS
+              {state.manche.rounds > 1 ? `Classement · manche ${state.manche.round}` : 'Classement final'} · {hex(state.podium.total ?? 0)} rendus
             </span>
             <Podium podium={state.podium} large ratings={ratings} />
           </div>
           {state.general && state.podium.complete && (
             <div>
               <span className={styles.bigIcon}>
-                {state.manche.derniere ? 'CLASSEMENT GENERAL FINAL' : 'CLASSEMENT GENERAL'}
+                {state.manche.derniere ? 'Classement général final' : 'Classement général'}
               </span>
               <ClassementGeneral general={state.general} rounds={state.manche.rounds} large />
             </div>

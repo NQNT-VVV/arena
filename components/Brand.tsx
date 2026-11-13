@@ -1,17 +1,26 @@
 import Link from 'next/link';
 
+import { ThemeToggle } from '@/components/ThemeToggle';
+
 /**
- * Marque de l'application. Le pictogramme se tait — le systeme ne decore pas.
- * Le badge « beta » reste : l'application bouge encore.
+ * Marque de l'application, suivie de l'interrupteur jour / nuit : la marque est
+ * presente sur toutes les pages, l'interrupteur aussi. Le badge « beta » reste —
+ * l'application bouge encore.
  */
 export function Brand({ compact = false, href = '/' as string | null }) {
   const content = (
     <>
       {!compact && <span className="brand-name">Arena</span>}
-      <span className="brand-beta">V0.1 · Beta</span>
+      <span className="brand-beta">Bêta</span>
     </>
   );
 
-  if (!href) return <span className="brand">{content}</span>;
-  return <Link className="brand" href={href} aria-label="Arena — accueil">{content}</Link>;
+  return (
+    <>
+      {href
+        ? <Link className="brand" href={href} aria-label="Arena — accueil">{content}</Link>
+        : <span className="brand">{content}</span>}
+      <ThemeToggle />
+    </>
+  );
 }

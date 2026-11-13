@@ -4,7 +4,7 @@ import { Suspense } from 'react';
 import { ScreenClient } from './ScreenClient';
 
 export const metadata: Metadata = {
-  title: 'Ecran',
+  title: 'Écran',
   robots: { index: false, follow: false },
 };
 
