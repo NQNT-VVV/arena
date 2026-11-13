@@ -279,7 +279,7 @@ test('refus : au-dela du nombre autorise', async () => {
   assert.match(body.error, /Pas plus de/);
 });
 
-test('nouvelle edition : reglages et pack repris, le reste repart de zero', async () => {
+test('nouvelle edition : reglages, pack et participants repris, rendus et votes repartent de zero', async () => {
   const h = open(); await ready(h);
   const src = await call(h, 'host:create', {
     name: 'Beat Battle #12', mediaType: 'audio', brief: 'Cinq samples imposes.',
@@ -303,7 +303,9 @@ test('nouvelle edition : reglages et pack repris, le reste repart de zero', asyn
   assert.equal(st.config.durationMs, 45 * 60_000);
   assert.equal(st.config.scale, 10);
   assert.equal(st.config.voteWindowS, 20);
-  assert.equal(st.roster.length, 0, 'aucun participant repris');
+  // Relancer, c'est rejouer avec les gens qui sont la : ils sont reinscrits.
+  assert.equal(st.roster.length, 1, 'le participant de l’ancienne session est repris');
+  assert.equal(st.roster[0].pseudo, 'Ancien');
   assert.equal(st.counts.submitted, 0);
   assert.equal(st.assets.length, 2, 'le pack est copie');
   assert.deepEqual(st.assets.map((a) => a.filename), ['01-kick.wav', '02-snare.wav']);
