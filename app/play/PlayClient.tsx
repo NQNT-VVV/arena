@@ -239,7 +239,7 @@ export function PlayClient() {
     return (
       <div className={styles.gate}>
         <Brand />
-        <h1>Rejoindre une battle</h1>
+        <h1>Rejoindre une session</h1>
         <p className="muted">Saisis le code annoncé par l’animateur.</p>
         <JoinForm className="col" inputClassName={styles.codeInput} />
       </div>
@@ -382,7 +382,7 @@ export function PlayClient() {
 
         {you?.disqualified && (
           <p className={styles.error}>
-            <span>Hors classement, décision de l’animateur. Tu peux continuer à suivre la session.</span>
+            <span>L’animateur t’a écarté : tu ne notes plus et ton rendu ne concourt pas. Tu peux continuer à suivre la session.</span>
           </p>
         )}
 
@@ -574,7 +574,7 @@ export function PlayClient() {
             <p className="muted" style={{ textAlign: 'center' }}>
               {you?.spectator
                 ? 'Le temps de création est écoulé. La diffusion va commencer.'
-                : 'Le temps de création est écoulé. Il reste la fenêtre de grâce pour finaliser ton dépôt.'}
+                : 'Le temps de création est écoulé. Il reste le délai de grâce pour déposer ton rendu.'}
             </p>
             {renderSubmission()}
             {you?.spectator && <Pads />}

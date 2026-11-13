@@ -46,13 +46,13 @@ export function EtapesRegie({ state }: { state: BattleState }) {
   const pretAOuvrir = !rebuild || extraits.length > 0;
   etapes.push({
     titre: 'Ouvrir le lobby',
-    detail: 'Le bouton est dans le cadre du chrono. Les participants peuvent alors entrer.',
+    detail: 'Le bouton est dans le cadre du chrono. Créateurs et spectateurs peuvent alors entrer.',
     etat: lobby ? 'fait' : pretAOuvrir ? 'maintenant' : 'ensuite',
   });
   etapes.push({
-    titre: 'Faire venir les participants',
+    titre: 'Faire venir tout le monde',
     detail: lobby
-      ? `${createurs} créateur${createurs > 1 ? 's' : ''} inscrit${createurs > 1 ? 's' : ''}. Envoie le lien « pour créer » ou montre le QR ; le lien « pour juger » est pour les spectateurs.`
+      ? `${createurs} créateur${createurs > 1 ? 's' : ''} dans la session. Envoie le lien « pour créer » ou montre le QR ; le lien « pour juger » est pour les spectateurs.`
       : 'Lien, QR code et écran de projection sont dans la carte « Inviter ».',
     etat: lobby ? (createurs > 0 ? 'fait' : 'maintenant') : 'ensuite',
   });

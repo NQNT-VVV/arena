@@ -171,7 +171,7 @@ export function SubmissionBox({
     return (
       <div className={styles.box}>
         <div className={styles.head}>
-          <h3>Ta création</h3>
+          <h3>Ton rendu</h3>
           {submission && <Badge submission={submission} />}
         </div>
         <textarea
@@ -204,7 +204,7 @@ export function SubmissionBox({
   return (
     <div className={styles.box}>
       <div className={styles.head}>
-        <h3>Ta création</h3>
+        <h3>Ton rendu</h3>
         {submission && <Badge submission={submission} />}
       </div>
 
@@ -228,7 +228,7 @@ export function SubmissionBox({
             <audio className={styles.player} src={submission.url} controls preload="metadata" />
           )}
           {submission.url && submission.inline && submission.kind === 'image' && (
-            <img className={styles.image} src={submission.url} alt="Ta création" />
+            <img className={styles.image} src={submission.url} alt="Ton rendu" />
           )}
           {submission.url && submission.inline && submission.kind === 'video' && (
             <video className={styles.player} src={submission.url} controls preload="metadata" playsInline />

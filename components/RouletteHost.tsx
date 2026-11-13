@@ -305,7 +305,7 @@ export function RouletteHost({
         <span className="meta">Tirages {hex(roulette.spins)}</span>
       </h2>
       <p className="meta">
-        Quelqu’un est tiré, un sort est tiré. La roue des participants se déduit de la salle à
+        Quelqu’un est tiré, un sort est tiré. La roue des créateurs se déduit de la session à
         l’instant du tirage ; celle des sorts se prépare ici et se garde d’une soirée à
         l’autre. Le nombre de tirages est affiché à l’écran : une roue qu’on relance
         en secret n’a plus aucune autorité.
@@ -315,7 +315,7 @@ export function RouletteHost({
 
       <div className={styles.wheels}>
         {known.length === 0 && (
-          <p className="empty"><span>Aucune roue. Créez-en une, puis remplissez-la case par case.</span></p>
+          <p className="empty"><span>Aucune roue. Crée-en une, puis remplis-la case par case.</span></p>
         )}
         {known.map((w) => (
           <div key={w.id} className={`${styles.wheel} ${openId === w.id ? styles.open : ''}`}>

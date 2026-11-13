@@ -184,7 +184,7 @@ test('vote : on ne note pas sa propre creation', async () => {
   const author = Object.values(people).find((p) => p.rendition === target);
   const res = await call(author.sock, 'play:vote', { renditionId: target, value: 5 });
   assert.equal(res.ok, false);
-  assert.match(res.error, /sa propre création/);
+  assert.match(res.error, /son propre rendu/);
 });
 
 test('vote : on ne note pas ce qui n’est pas encore passe', async () => {
@@ -236,7 +236,7 @@ test('vote : un spectateur sans session ne vote pas', async () => {
   const st = (await call(host, 'host:attach', { code, hostToken })).state;
   const res = await call(intrus, 'play:vote', { renditionId: st.diffusion.current.renditionId, value: 5 });
   assert.equal(res.ok, false);
-  assert.match(res.error, /Rejoignez la session/);
+  assert.match(res.error, /Rejoins la session/);
 });
 
 test('resultats : rien n’est devoile a l’arrivee', async () => {

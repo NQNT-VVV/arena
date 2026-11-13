@@ -1,5 +1,27 @@
 /** Constantes et mises en forme partagees par les pages. */
 
+/**
+ * LE VOCABULAIRE — un mot par notion, sur toutes les surfaces et dans les
+ * messages du serveur.
+ *
+ *   createurs    ceux qui deposent un rendu et concourent
+ *   spectateurs  ceux qui notent sans deposer
+ *                (les deux ensemble : « tout le monde », « createurs et
+ *                spectateurs » — jamais participants, inscrits, sujets)
+ *   animateur    celui qui tient la regie
+ *   session      la partie et son code (jamais « salle » : la salle, c'est le
+ *                public devant l'ecran)
+ *   rendu        ce qu'un createur depose (jamais « creation », qui est la phase)
+ *   depot        la phase `upload`, entre la fin du chrono et la diffusion ;
+ *                le « delai de grace » est le temps qu'elle laisse
+ *   ecarter / reintegrer   la decision de l'animateur sur quelqu'un
+ *   hors delai   un rendu arrive apres le delai — et rien d'autre
+ *   hors classement        le sort d'un rendu hors delai, selon le reglage
+ *
+ * On tutoie : createurs, spectateurs et animateur. Le pluriel ne reste que la
+ * ou l'on parle a la salle entiere, sur l'ecran de projection.
+ */
+
 import type { MediaType, Phase } from './types';
 
 /** Doit rester aligne sur `CODE_LENGTH` dans server/util.js. */

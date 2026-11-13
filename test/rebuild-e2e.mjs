@@ -362,7 +362,7 @@ test('la manche suivante attend que tout le classement soit devoile', async () =
   await call(host, 'host:results');
   const tot = await call(host, 'host:next-round', {});
   assert.equal(tot.ok, false);
-  assert.match(tot.error, /Dévoilez/);
+  assert.match(tot.error, /Dévoile/);
   const etat = (await call(host, 'host:reveal', { all: true })).state;
   assert.equal(etat.general.manches, 1);
   assert.deepEqual(etat.general.rows.map((r) => r.author.pseudo), ['Alice', 'Bob', 'Chloe', 'Dan']);

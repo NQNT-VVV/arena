@@ -82,7 +82,7 @@ export function ExtraitsRegie({
       {manque && (
         <p className={styles.alerte}>
           {createurs.length} créateurs pour {extraits.length} extrait{extraits.length > 1 ? 's' : ''} : certains
-          auront le même. Déposez-en {createurs.length - extraits.length} de plus pour que chacun ait le sien.
+          auront le même. Dépose-en {createurs.length - extraits.length} de plus pour que chacun ait le sien.
         </p>
       )}
 
@@ -113,7 +113,7 @@ export function ExtraitsRegie({
                 <span className={styles.qui}>{a.pseudo ?? '—'}</span>
                 <select
                   className="input"
-                  aria-label={`Extrait de ${a.pseudo ?? 'ce participant'}`}
+                  aria-label={`Extrait de ${a.pseudo ?? 'ce créateur'}`}
                   value={a.extraitId}
                   onChange={(ev) => void act('host:extrait-reattribuer', { participantId: a.participantId, extraitId: ev.target.value })}
                 >

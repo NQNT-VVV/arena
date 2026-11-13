@@ -113,7 +113,7 @@ function exigerRoue(wheelId) {
 
 function creerRoue({ name, note = '' } = {}) {
   const propre = cleanPseudo(name, LONGUEUR_NOM);
-  if (!propre) throw new RouletteError('Donnez un nom à cette roue.');
+  if (!propre) throw new RouletteError('Donne un nom à cette roue.');
   const now = Date.now();
   return repo.addWheel({
     id: uuid(), name: propre, note: cleanText(note, LONGUEUR_DETAIL), createdAt: now, updatedAt: now,
@@ -123,7 +123,7 @@ function creerRoue({ name, note = '' } = {}) {
 function renommerRoue({ wheelId, name, note } = {}) {
   const roue = exigerRoue(wheelId);
   const propre = name === undefined ? roue.name : cleanPseudo(name, LONGUEUR_NOM);
-  if (!propre) throw new RouletteError('Donnez un nom à cette roue.');
+  if (!propre) throw new RouletteError('Donne un nom à cette roue.');
   repo.updateWheel(
     roue.id,
     propre,

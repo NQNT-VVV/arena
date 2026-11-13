@@ -56,7 +56,7 @@ export function DiffusionStage({
       <div className={styles.empty}>
         <Icon name="fichier" size="lg" className={styles.icon} />
         <h2>Aucun rendu à diffuser</h2>
-        <p className="muted">Personne n’a déposé de création pour cette session.</p>
+        <p className="muted">Personne n’a déposé de rendu pour cette session.</p>
       </div>
     );
   }
@@ -68,7 +68,7 @@ export function DiffusionStage({
   const stageLabel = (() => {
     switch (tick.stage) {
       case 'play': return timed ? 'Écoute' : 'Découverte';
-      case 'vote': return diffusion.advanceAt === null ? 'Votez — l’animateur passera au suivant' : 'Votez';
+      case 'vote': return diffusion.advanceAt === null ? 'Vote ouvert — l’animateur passera au suivant' : 'Vote ouvert';
       case 'over': return diffusion.index >= diffusion.total - 1 ? 'Diffusion terminée' : 'Rendu suivant…';
       default: return '';
     }
@@ -178,10 +178,10 @@ export function DiffusionStage({
         <div className={styles.votes}>
           {isMine ? (
             <p className={styles.mine}>
-              C’est ta création : tu ne peux pas la noter, les autres s’en chargent.
+              C’est ton rendu : tu ne peux pas le noter, les autres s’en chargent.
             </p>
           ) : !canVote ? (
-            <p className={styles.mine}>Tu es hors classement : la notation t’est fermée.</p>
+            <p className={styles.mine}>L’animateur t’a écarté : la notation t’est fermée.</p>
           ) : (
             criteria.map((criterion) => (
               <Rating

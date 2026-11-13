@@ -103,7 +103,7 @@ export default function HomePage() {
         </section>
 
         <section id="participer" className={`on-scroll ${styles.choice} ${styles.join}`}>
-          <span className={`hand ${styles.tag}`}>pour les participants</span>
+          <span className={`hand ${styles.tag}`}>pour les créateurs et les spectateurs</span>
           <h2>Je participe</h2>
           <p className={styles.lead}>
             Saisis le code annoncé, choisis ton pseudo, récupère les éléments et lance-toi.

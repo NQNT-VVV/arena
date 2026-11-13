@@ -92,12 +92,12 @@ test('le tour part du premier arrive', () => {
 
 test('un createur n’ecrit pas dans la chaine : il a mieux a faire', () => {
   const { srv, session, gens } = ouvrir();
-  refuse(() => srv.chainWrite(session, gens.C1.participant, 'je passais'), 'ceux qui regardent');
+  refuse(() => srv.chainWrite(session, gens.C1.participant, 'je passais'), 'jeu des spectateurs');
 });
 
 test('on n’ecrit pas au tour d’un autre', () => {
   const { srv, session, gens } = ouvrir();
-  refuse(() => srv.chainWrite(session, gens.S2.participant, 'moi d’abord'), 'pas votre tour');
+  refuse(() => srv.chainWrite(session, gens.S2.participant, 'moi d’abord'), 'pas ton tour');
 });
 
 test('une ligne vide ne prolonge rien', () => {
@@ -127,7 +127,7 @@ test('passer son tour avance la file sans rien ecrire', () => {
   srv.chainPass(session, gens.S1.participant);
   assert.equal(tour(srv, session), gens.S2.participant.id);
   assert.equal(repo.chainLines(session.id).length, 0);
-  refuse(() => srv.chainPass(session, gens.S1.participant), 'pas votre tour');
+  refuse(() => srv.chainPass(session, gens.S1.participant), 'pas ton tour');
 });
 
 test('un spectateur absent ne bloque pas la file : son tour expire', () => {

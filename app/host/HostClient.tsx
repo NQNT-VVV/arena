@@ -525,7 +525,7 @@ export function HostClient() {
             )}
           </h2>
           <p className="meta">
-            Samples, screenshots, rushes, templates. Les participants les consultent directement
+            Samples, screenshots, rushes, templates. Les créateurs les consultent directement
             dans leur page et peuvent récupérer le pack complet.
           </p>
           <AssetUploader
@@ -568,7 +568,9 @@ export function HostClient() {
                     </span>
                     <button
                       className="btn xs ghost"
-                      title={p.disqualified ? 'Réintégrer' : 'Disqualifier'}
+                      title={p.disqualified
+                        ? 'Réintégrer : il note à nouveau, et son rendu concourt s’il a été diffusé'
+                        : 'Écarter : il ne note plus et son rendu sort du classement'}
                       onClick={() => act('host:disqualify', { participantId: p.id, on: !p.disqualified })}
                     >
                       {p.disqualified ? 'Réintégrer' : 'Écarter'}
@@ -594,7 +596,7 @@ export function HostClient() {
         return (
           <div className={styles.controls}>
             <p className="muted">
-              Règle la session ci-dessous, puis ouvre le lobby pour que les participants puissent entrer.
+              Règle la session ci-dessous, puis ouvre le lobby pour que créateurs et spectateurs puissent entrer.
               {' '}Pense à mettre la consigne à jour si c’est une nouvelle édition.
             </p>
             {btn('Ouvrir le lobby', 'host:publish', {}, 'btn primary lg')}
@@ -605,8 +607,8 @@ export function HostClient() {
           <div className={styles.controls}>
             <p className="muted">
               {state!.counts.participants === 0
-                ? 'En attente des participants.'
-                : `${state!.counts.participants} inscrit(s). Le chrono part dès que tu lances.`}
+                ? 'En attente des créateurs.'
+                : `${state!.counts.participants} créateur(s) dans la session. Le chrono part dès que tu lances.`}
             </p>
             <div className="row wrap">
               {btn('Revenir aux réglages', 'host:unpublish')}
@@ -636,7 +638,7 @@ export function HostClient() {
         return (
           <div className={styles.controls}>
             <p className="muted">
-              Fenêtre de dépôt. {state!.counts.submitted} rendu(s) reçu(s) sur {state!.counts.participants} inscrit(s).
+              Dépôt. {state!.counts.submitted} rendu(s) reçu(s) pour {state!.counts.participants} créateur(s).
               {pending > 0 && <> <b>{pending}</b> en cours de traitement.</>}
             </p>
             <div className="row wrap">
@@ -798,7 +800,7 @@ export function HostClient() {
             className="btn primary"
             disabled={busy || !pret}
             aria-busy={busy}
-            title={pret ? undefined : 'Dévoilez tout le classement d’abord'}
+            title={pret ? undefined : 'Dévoile tout le classement d’abord'}
             onClick={() => act('host:next-round', { durationMs: draft.durationMin * 60_000, brief: draft.brief })}
           >
             Lancer la manche {m.round + 1}
@@ -808,8 +810,8 @@ export function HostClient() {
           {pret
             ? (state!.config.mode === 'rebuild'
               ? 'Rendus, votes et chrono repartent de zéro ; chacun reçoit un nouvel extrait.'
-              : 'Rendus, votes et chrono repartent de zéro ; participants et spectateurs restent.')
-            : 'Dévoilez tout le classement : la manche est figée à ce moment-là.'}
+              : 'Rendus, votes et chrono repartent de zéro ; créateurs et spectateurs restent.')
+            : 'Dévoile tout le classement : la manche est figée à ce moment-là.'}
           {' '}Consigne et éléments imposés se changent d’ici là : la consigne ci-dessus, le pack dans « Éléments imposés ».
         </span>
       </div>
@@ -821,7 +823,7 @@ export function HostClient() {
     const hasAssets = (state?.assets.length ?? 0) > 0;
     return (
       <div className={styles.nextEdition}>
-        <span className="section-title">Rejouer avec les mêmes personnes</span>
+        <span className="section-title">Rejouer avec tout le monde</span>
         <div className="row wrap">
           <button className="btn good" disabled={busy} aria-busy={busy} onClick={() => duplicate(true)}>
             <Icon name="chrono" />Nouvelle édition{hasAssets ? ' avec le même pack' : ''}
@@ -833,7 +835,7 @@ export function HostClient() {
           )}
         </div>
         <span className="meta">
-          Réglages et consigne repris, et tout le monde suit : participants, spectateurs et écran de projection
+          Réglages et consigne repris, et tout le monde suit : créateurs, spectateurs et écran de projection
           basculent tout seuls sur la nouvelle session. Rendus et votes repartent de zéro.
         </span>
       </div>
@@ -954,7 +956,7 @@ export function HostClient() {
               : 'Les 5 samples du pack sont obligatoires.\nAucun autre son externe.\nDurée libre.'}
             onChange={(e) => set('brief', e.target.value)}
           />
-          <span className="meta">Affichée en permanence aux participants.</span>
+          <span className="meta">Affichée en permanence aux créateurs.</span>
         </div>
 
         <details className={styles.avance}>
@@ -962,7 +964,7 @@ export function HostClient() {
           <div className={styles.avanceCorps}>
             <div className={styles.two}>
               <div className="field">
-                <label htmlFor="grace">Fenêtre de grâce (minutes)</label>
+                <label htmlFor="grace">Délai de grâce pour le dépôt (minutes)</label>
                 <input
                   id="grace" className="input" type="number" min={0} max={30} value={draft.graceMin}
                   onChange={(e) => set('graceMin', Number(e.target.value))}
@@ -1015,7 +1017,7 @@ export function HostClient() {
             <label className="switch">
               <input type="checkbox" checked={draft.playerAudio} onChange={(e) => set('playerAudio', e.target.checked)} />
               <span className="track" />
-              <span>Jouer le son sur les téléphones des participants</span>
+              <span>Jouer le son sur les téléphones des créateurs et des spectateurs</span>
             </label>
             <span className="faint" style={{ marginTop: 'calc(-1 * var(--sp-2))' }}>
               À couper si une enceinte ou le partage d’écran diffuse déjà pour tout le monde.
@@ -1067,7 +1069,7 @@ export function HostClient() {
                 onChange={(e) => set('autoAdvance', e.target.checked)}
               />
               <span className="track" />
-              <span>Enchaîner sur la diffusion dès la fin de la fenêtre de grâce</span>
+              <span>Enchaîner sur la diffusion dès la fin du délai de grâce</span>
             </label>
           </div>
         </details>

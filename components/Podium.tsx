@@ -68,7 +68,7 @@ export function Podium({
             <span className="avatar" aria-hidden="true"><span>{row.author?.avatar}</span></span>
             <span className={styles.who}>
               <span className={styles.pseudo}>
-                {row.author?.pseudo}{mine ? ' · vous' : ''}
+                {row.author?.pseudo}{mine ? ' · toi' : ''}
                 {rating && (
                   <span
                     className={`${styles.rating} ${rating.delta > 0 ? styles.up : rating.delta < 0 ? styles.down : ''}`}

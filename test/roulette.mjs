@@ -111,7 +111,7 @@ test('une roue se cree, se nomme, et porte ses cases', () => {
 });
 
 test('une roue sans nom est refusee, une case sans texte aussi', () => {
-  refuse(() => roulette.creerRoue({ name: '   ' }), 'Donnez un nom');
+  refuse(() => roulette.creerRoue({ name: '   ' }), 'Donne un nom');
   const w = roue('Vide', []);
   refuse(() => roulette.ajouterCase({ wheelId: w.id, label: '  ' }), 'ne dit rien');
 });

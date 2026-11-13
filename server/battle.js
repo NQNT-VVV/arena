@@ -308,7 +308,7 @@ class BattleServer {
   requireHost(code, token) {
     const s = this.require(code);
     if (!tokenMatches(token, s.hostTokenHash)) {
-      throw new BattleError("Vous n’êtes pas l’animateur de cette session.", 403);
+      throw new BattleError("Tu n’es pas l’animateur de cette session.", 403);
     }
     return s;
   }
@@ -405,7 +405,7 @@ class BattleServer {
      */
     if (!BattleServer.JOINABLE.has(s.phase)) {
       throw new BattleError(spectator
-        ? 'La diffusion a commencé : on ne rejoint plus, même pour regarder.'
+        ? 'La diffusion a commencé : on ne rejoint plus cette session, même pour noter.'
         : 'Les inscriptions sont fermées pour cette session.');
     }
     if (s.participants.size >= config.limits.maxParticipants) {
@@ -413,7 +413,7 @@ class BattleServer {
     }
 
     const name = cleanPseudo(pseudo);
-    if (name.length < 2) throw new BattleError('Choisissez un pseudo d’au moins deux caractères.');
+    if (name.length < 2) throw new BattleError('Choisis un pseudo d’au moins deux caractères.');
     if (repo.participantByPseudo(s.id, name)) {
       throw new BattleError('Ce pseudo est déjà pris dans cette session.');
     }
@@ -461,7 +461,7 @@ class BattleServer {
   setDisqualified(code, token, participantId, on) {
     const s = this.requireHost(code, token);
     const p = s.participants.get(participantId);
-    if (!p) throw new BattleError('Participant introuvable.', 404);
+    if (!p) throw new BattleError('Personne à ce nom dans la session.', 404);
     if (p.disqualified === !!on) return s;
     /*
      * En plein devoilement, ecarter ou reintegrer ne devoile ni ne recache
@@ -516,7 +516,7 @@ class BattleServer {
     const session = this.require(code);
     const participant = session.participants.get(String(participantId || ''));
     if (!participant || !tokenMatches(token, participant.tokenHash)) {
-      throw new BattleError('Identifiez-vous pour déposer votre rendu.', 403);
+      throw new BattleError('Rejoins la session pour déposer ton rendu.', 403);
     }
     return { session, participant };
   }
@@ -538,11 +538,11 @@ class BattleServer {
       );
     }
     if (participant.disqualified) {
-      throw new BattleError('Vous avez été mis hors classement par l’animateur.', 403);
+      throw new BattleError('L’animateur t’a écarté : le dépôt t’est fermé.', 403);
     }
     // Un spectateur juge, il ne concourt pas : le depot lui est ferme.
     if (participant.spectator) {
-      throw new BattleError('Vous suivez la session comme spectateur : le dépôt vous est fermé.', 403);
+      throw new BattleError('Tu suis la session comme spectateur : le dépôt t’est fermé.', 403);
     }
 
     const late = !!(session.graceEndAt && Date.now() > session.graceEndAt);
@@ -566,7 +566,7 @@ class BattleServer {
     // cette methode est exposee sur l'objet, et une garde unique en amont est
     // une garde qu'un futur appelant contournera sans le vouloir.
     if (participant && participant.spectator) {
-      throw new BattleError('Vous suivez la session comme spectateur : le dépôt vous est fermé.', 403);
+      throw new BattleError('Tu suis la session comme spectateur : le dépôt t’est fermé.', 403);
     }
     const now = Date.now();
     const payload = {
@@ -591,11 +591,11 @@ class BattleServer {
       throw new BattleError('Trop tard pour retirer un rendu.');
     }
     const existing = repo.submissionOf(session.id, participant.id);
-    if (!existing) throw new BattleError('Vous n’avez rien déposé.', 404);
+    if (!existing) throw new BattleError('Tu n’as rien déposé.', 404);
     // Delai ecoule et retards refuses : retirer serait sans retour, puisque
     // plus rien ne se depose. On le refuse comme on refuse le depot.
     if (session.config.latePolicy === 'reject' && session.graceEndAt && Date.now() > session.graceEndAt) {
-      throw new BattleError('Le temps est écoulé : votre rendu ne se retire plus.');
+      throw new BattleError('Le temps est écoulé : ton rendu ne se retire plus.');
     }
     repo.removeSubmission(existing.id);
     repo.logEvent(session.id, 'submission:withdrawn', { participantId: participant.id });
@@ -886,7 +886,7 @@ class BattleServer {
    */
   voteAs(session, participant, { renditionId, criterionId, value } = {}) {
     if (session.phase !== 'diffusion') throw new BattleError('Les votes sont fermés.');
-    if (participant.disqualified) throw new BattleError('Vous êtes hors classement.', 403);
+    if (participant.disqualified) throw new BattleError('L’animateur t’a écarté : tu ne notes plus.', 403);
 
     const submission = repo.submissionByRendition(String(renditionId || ''));
     if (!submission || submission.sessionId !== session.id) throw new BattleError('Rendu introuvable.', 404);
@@ -899,7 +899,7 @@ class BattleServer {
     if (position > session.cursor) throw new BattleError('Ce rendu n’est pas encore passé.');
 
     if (submission.participantId === participant.id) {
-      throw new BattleError('On ne note pas sa propre création.', 403);
+      throw new BattleError('On ne note pas son propre rendu.', 403);
     }
 
     const criteria = session.config.criteria.length
@@ -1209,7 +1209,7 @@ class BattleServer {
     // d'un morceau prend quelques secondes ; l'animateur reessaie.
     const pending = repo.countPendingSubmissions(session.id);
     if (pending > 0) {
-      throw new BattleError(`${pending} rendu${pending > 1 ? 's' : ''} encore en traitement. Patientez quelques secondes.`);
+      throw new BattleError(`${pending} rendu${pending > 1 ? 's' : ''} encore en traitement. Patiente quelques secondes.`);
     }
     const all = repo.submissions(session.id);
     const eligible = all.filter((sub) => {
@@ -1407,11 +1407,11 @@ class BattleServer {
 
   chainWrite(session, participant, body, now = Date.now()) {
     if (!participant.spectator) {
-      throw new BattleError('La chaîne est le jeu de ceux qui regardent. Vous, vous créez.', 403);
+      throw new BattleError('La chaîne est le jeu des spectateurs. Toi, tu crées.', 403);
     }
     const { turnId, open } = this.chainResolve(session, now);
     if (!open) throw new BattleError('La chaîne ne tourne que pendant la création.');
-    if (turnId !== participant.id) throw new BattleError('Ce n\u2019est pas votre tour.');
+    if (turnId !== participant.id) throw new BattleError('Ce n\u2019est pas ton tour.');
 
     const text = String(body ?? '').replace(/\s+/g, ' ').trim().slice(0, BattleServer.CHAIN_LINE_MAX);
     if (!text) throw new BattleError('Une ligne vide ne prolonge rien.');
@@ -1425,10 +1425,10 @@ class BattleServer {
 
   /** Passer son tour. On ne force personne a ecrire. */
   chainPass(session, participant, now = Date.now()) {
-    if (!participant.spectator) throw new BattleError('La chaîne est le jeu de ceux qui regardent.', 403);
+    if (!participant.spectator) throw new BattleError('La chaîne est le jeu des spectateurs.', 403);
     const { turnId, open } = this.chainResolve(session, now);
     if (!open) throw new BattleError('La chaîne ne tourne que pendant la création.');
-    if (turnId !== participant.id) throw new BattleError('Ce n\u2019est pas votre tour.');
+    if (turnId !== participant.id) throw new BattleError('Ce n\u2019est pas ton tour.');
     this.chainAdvance(session, now);
     this.publishChain(session);
   }
@@ -1479,7 +1479,7 @@ class BattleServer {
     const total = s.config.rounds ?? 1;
     const round = s.round ?? 1;
     if (round >= total) throw new BattleError(`C’était la dernière manche (${total}/${total}).`);
-    if (!views.mancheDevoilee(s)) throw new BattleError('Dévoilez tout le classement avant de lancer la manche suivante.');
+    if (!views.mancheDevoilee(s)) throw new BattleError('Dévoile tout le classement avant de lancer la manche suivante.');
     this.exigerTransition(s, 'creation');
     this.exigerExtraits(s);
 
@@ -1542,7 +1542,7 @@ class BattleServer {
   exigerExtraits(session) {
     if ((session.config.mode ?? 'battle') !== 'rebuild') return;
     if (!repo.extraits(session.id).length) {
-      throw new BattleError('Déposez au moins un extrait avant de lancer la manche.');
+      throw new BattleError('Dépose au moins un extrait avant de lancer la manche.');
     }
   }
 
@@ -1605,7 +1605,7 @@ class BattleServer {
       throw new BattleError('Un extrait ne se change que pendant la création.');
     }
     const p = s.participants.get(String(participantId || ''));
-    if (!p || p.isHost || p.spectator) throw new BattleError('Participant introuvable.', 404);
+    if (!p || p.isHost || p.spectator) throw new BattleError('Créateur introuvable.', 404);
     const e = repo.extrait(String(extraitId || ''));
     if (!e || e.sessionId !== s.id) throw new BattleError('Extrait introuvable.', 404);
     repo.attribuer({ sessionId: s.id, round: s.round ?? 1, participantId: p.id, extraitId: e.id, at: Date.now() });
@@ -1618,7 +1618,7 @@ class BattleServer {
   /** Un extrait se depose a tout moment, sauf session archivee : on prepare la manche suivante pendant celle-ci. */
   openExtraitSlot(code, token) {
     const session = this.requireHost(code, token);
-    if (session.phase === 'archived') throw new BattleError('La session est archivée.');
+    if (session.phase === 'archived') throw new BattleError('La session est terminée.');
     const totals = repo.extraitTotals(session.id);
     const slots = config.limits.maxExtraits - totals.n;
     const budget = config.limits.maxExtraitsBytes - totals.bytes;
@@ -1658,7 +1658,7 @@ class BattleServer {
         repo.majTonalite(e.id, null);
       } else {
         const t = analyse.lireTonalite(tonalite);
-        if (!t) throw new BattleError('Tonalité illisible : écrivez par exemple C#m, F#, Bb ou « A minor ».', 400);
+        if (!t) throw new BattleError('Tonalité illisible : écris par exemple C#m, F#, Bb ou « A minor ».', 400);
         repo.majTonalite(e.id, t);
       }
     }
@@ -1951,7 +1951,7 @@ class BattleServer {
   participantOfSocket(socket) {
     const session = this.get(socket.data.code);
     const participant = session?.participants.get(socket.data.participantId);
-    if (!session || !participant) throw new BattleError('Rejoignez la session pour voter.', 403);
+    if (!session || !participant) throw new BattleError('Rejoins la session pour voter.', 403);
     return { session, participant };
   }
 

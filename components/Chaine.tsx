@@ -86,7 +86,7 @@ export function Chaine({
 
       <h2 className={styles.titre}>Une ligne chacun</h2>
       <p className="muted">
-        Vous ne voyez que la ligne précédente. Ajoutez la suivante, passez la main, et
+        Tu ne vois que la ligne précédente. Ajoute la suivante, passe la main, et
         l’histoire entière se lira quand les créateurs auront fini. Rien de tout ceci ne
         compte au classement.
       </p>
@@ -100,7 +100,7 @@ export function Chaine({
         ) : (
           <>
             <span className="meta">Personne n’a encore commencé</span>
-            <p className={styles.amorce}>À vous la première ligne. Elle donne le ton.</p>
+            <p className={styles.amorce}>À toi la première ligne. Elle donne le ton.</p>
           </>
         )}
       </div>
@@ -108,7 +108,7 @@ export function Chaine({
       {you.mine ? (
         <div className={styles.aVous}>
           <div className={styles.sablier}>
-            <span className="meta">À vous</span>
+            <span className="meta">À toi</span>
             <span className="grow" />
             {reste !== null && (
               <span className={`tnum ${reste <= 15 ? styles.presse : ''}`}>{reste} s</span>
@@ -117,7 +117,7 @@ export function Chaine({
           <div className={styles.piste} aria-hidden="true">
             <i style={{ transform: `scaleX(${reste === null ? 1 : Math.min(1, reste / (chain.turnMs / 1000))})` }} />
           </div>
-          <label className="sr-only" htmlFor="chaine-ligne">Votre ligne</label>
+          <label className="sr-only" htmlFor="chaine-ligne">Ta ligne</label>
           <textarea
             id="chaine-ligne"
             className="input"
@@ -141,7 +141,7 @@ export function Chaine({
         </div>
       ) : (
         <div className={styles.attente} role="status" aria-live="polite">
-          <span className="meta">Au tour de {chain.turn?.pseudo ?? 'quelqu’un'}</span>
+          <span className="meta">{chain.turn ? `Au tour de ${chain.turn.pseudo ?? 'quelqu’un'}` : 'La chaîne attend un spectateur en ligne'}</span>
           {reste !== null && <span className="tnum">{reste} s</span>}
           <p className="muted">
             {you.ahead === 1

@@ -133,7 +133,7 @@ io.on('connection', (socket) => {
   /* ------------------------------- regie ------------------------------ */
 
   socket.on('host:create', (payload = {}, cb) => guard(cb, () => {
-    if (!createLimit(addressOf(socket))) throw Object.assign(new Error('Trop de sessions créées. Patientez une minute.'), { expected: true });
+    if (!createLimit(addressOf(socket))) throw Object.assign(new Error('Trop de sessions créées. Patiente une minute.'), { expected: true });
     const { session, hostToken } = battle.createSession(payload);
     socket.data.hostToken = hostToken;
     battle.attachHost(socket, session);
@@ -299,7 +299,7 @@ io.on('connection', (socket) => {
   /* ---------------------------- participant --------------------------- */
 
   socket.on('play:join', (payload = {}, cb) => guard(cb, () => {
-    if (!joinLimit(addressOf(socket))) throw Object.assign(new Error('Trop de tentatives. Patientez une minute.'), { expected: true });
+    if (!joinLimit(addressOf(socket))) throw Object.assign(new Error('Trop de tentatives. Patiente une minute.'), { expected: true });
     // Le compte Podium est lu dans le cookie du handshake, cote serveur : un
     // client ne peut pas s'attribuer l'identite d'un autre en l'ecrivant
     // dans la charge utile.
@@ -332,7 +332,7 @@ io.on('connection', (socket) => {
    */
   socket.on('play:vote', (payload = {}, cb) => guard(cb, () => {
     if (socket.data.role !== 'participant') {
-      throw Object.assign(new Error('Rejoignez la session pour voter.'), { expected: true, status: 403 });
+      throw Object.assign(new Error('Rejoins la session pour voter.'), { expected: true, status: 403 });
     }
     const { session, participant } = battle.participantOfSocket(socket);
     const done = battle.voteAs(session, participant, payload);
@@ -347,7 +347,7 @@ io.on('connection', (socket) => {
    */
   socket.on('chain:write', (payload = {}, cb) => guard(cb, () => {
     if (socket.data.role !== 'participant') {
-      throw Object.assign(new Error('Rejoignez la session.'), { expected: true, status: 403 });
+      throw Object.assign(new Error('Rejoins la session.'), { expected: true, status: 403 });
     }
     const { session, participant } = battle.participantOfSocket(socket);
     battle.chainWrite(session, participant, payload.body);
@@ -356,7 +356,7 @@ io.on('connection', (socket) => {
 
   socket.on('chain:pass', (payload = {}, cb) => guard(cb, () => {
     if (socket.data.role !== 'participant') {
-      throw Object.assign(new Error('Rejoignez la session.'), { expected: true, status: 403 });
+      throw Object.assign(new Error('Rejoins la session.'), { expected: true, status: 403 });
     }
     const { session, participant } = battle.participantOfSocket(socket);
     battle.chainPass(session, participant);

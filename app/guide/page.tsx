@@ -369,7 +369,7 @@ export default function GuidePage() {
               <p>Il a zéro pour cette manche et joue les suivantes normalement.</p>
             </Plus>
             <Plus question="Je veux sortir un joueur du classement">
-              <p>Dans la liste des participants de la régie, <B>Écarter</B>. <B>Réintégrer</B> annule.</p>
+              <p>Dans la liste des créateurs et des spectateurs de la régie, <B>Écarter</B>. <B>Réintégrer</B> annule.</p>
             </Plus>
             <Plus question="Un spectateur veut entrer pendant l’écoute">
               <p>Ce n’est plus possible : il n’aurait noté que la moitié des rendus. Il entre avant le début de la diffusion.</p>

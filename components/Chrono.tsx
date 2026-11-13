@@ -2,7 +2,7 @@ import type { PhaseClock } from '@/lib/usePhaseClock';
 
 const LABELS: Record<string, string> = {
   creation: 'Temps de création',
-  grace: 'Fenêtre de dépôt',
+  grace: 'Dépôt — délai de grâce',
 };
 
 /**
