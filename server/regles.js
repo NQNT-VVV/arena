@@ -48,6 +48,17 @@ const peutAjouterElement = (session) => ASSET_ADD_PHASES.has(session.phase) || e
 const peutRetirerElement = (session) => ASSET_REMOVE_PHASES.has(session.phase) || entreDeuxManches(session);
 
 /* ------------------------------------------------------------------ */
+/* La chaine des spectateurs                                           */
+/* ------------------------------------------------------------------ */
+
+/** Phases ou la chaine tourne : pendant qu'on cree, depot compris. */
+const CHAIN_PHASES = new Set(['creation', 'upload']);
+/** Duree d'un tour. Le sablier de la page se dessine avec cette valeur, envoyee dans la vue. */
+const CHAIN_TURN_MS = 90000;
+/** Longueur d'une ligne. La page borne sa saisie avec, le serveur tronque au-dela. */
+const CHAIN_LINE_MAX = 140;
+
+/* ------------------------------------------------------------------ */
 /* Acces aux rendus                                                    */
 /* ------------------------------------------------------------------ */
 
@@ -70,6 +81,7 @@ const rendusReveles = (session, sub) => AUTHORS_PHASES.has(session.phase) || man
 const extraitVisible = (session, sub) => REVEALED_PHASES.has(session.phase) || mancheJouee(session, sub);
 
 module.exports = {
+  CHAIN_PHASES, CHAIN_TURN_MS, CHAIN_LINE_MAX,
   rendusReveles, extraitVisible,
   ASSET_ADD_PHASES, ASSET_REMOVE_PHASES,
   entreDeuxManches, peutAjouterElement, peutRetirerElement,

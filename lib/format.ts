@@ -27,15 +27,29 @@ import type { MediaType, Phase } from './types';
 /** Doit rester aligne sur `CODE_LENGTH` dans server/util.js. */
 export const CODE_LENGTH = 6;
 
-export const PHASE_LABELS: Record<Phase, string> = {
-  config: 'En préparation',
-  lobby: 'Lobby ouvert',
-  creation: 'Création en cours',
-  upload: 'Dépôt des rendus',
-  diffusion: 'Diffusion et vote',
-  results: 'Résultats',
-  archived: 'Session terminée',
-};
+/**
+ * LES PHASES — une seule table.
+ *
+ * Il y en avait deux, a deux endroits : le nom court du rail et la phrase
+ * d'etat des en-tetes. « Depot » d'un cote, « Depot des rendus » de l'autre,
+ * et rien pour garantir qu'on renommait les deux. L'ordre de la table est
+ * celui du rail.
+ */
+export const PHASES: { phase: Phase; label: string; etat: string }[] = [
+  { phase: 'config', label: 'Réglages', etat: 'En préparation' },
+  { phase: 'lobby', label: 'Lobby', etat: 'Lobby ouvert' },
+  { phase: 'creation', label: 'Création', etat: 'Création en cours' },
+  { phase: 'upload', label: 'Dépôt', etat: 'Dépôt des rendus' },
+  { phase: 'diffusion', label: 'Diffusion', etat: 'Diffusion et vote' },
+  { phase: 'results', label: 'Résultats', etat: 'Résultats' },
+  { phase: 'archived', label: 'Terminée', etat: 'Session terminée' },
+];
+
+/** La phrase d'etat d'une phase, pour les en-tetes. */
+export const PHASE_LABELS = Object.fromEntries(PHASES.map((p) => [p.phase, p.etat])) as Record<Phase, string>;
+
+/** Les etapes du rail : une session terminee les a toutes traversees, elle n'en est pas une. */
+export const PHASE_STEPS = PHASES.filter((p) => p.phase !== 'archived');
 
 /** Duree lisible : « 1 h 30 », « 45 min », « 90 s ». */
 export function humanDuration(ms: number): string {

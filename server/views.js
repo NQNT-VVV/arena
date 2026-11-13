@@ -33,8 +33,6 @@ const repo = require('./repo');
 const roulette = require('./roulette');
 const { rank } = require('./scoring');
 
-/** Doit rester egal a `BattleServer.CHAIN_TURN_MS`. Les vues ne dependent pas de la classe. */
-const CHAIN_TURN_MS = 90000;
 const { signMedia } = require('./util');
 const { classementGeneral } = require('./manches');
 const { nomTonalite } = require('./analyse');
@@ -812,7 +810,7 @@ function commonView(session) {
  */
 function chainView(session) {
   const lignes = repo.chainLines(session.id);
-  const enCours = session.phase === 'creation' || session.phase === 'upload';
+  const enCours = regles.CHAIN_PHASES.has(session.phase);
   const auteur = (id) => session.participants.get(id);
   const tour = session.chainTurnEndsAt && enCours ? session.chainTurn : null;
   return {
@@ -824,7 +822,7 @@ function chainView(session) {
     // La duree d'un tour vient d'ici : le sablier de la page se dessine avec,
     // au lieu de reproduire une constante du serveur et de deriver le jour ou
     // elle change.
-    turnMs: CHAIN_TURN_MS,
+    turnMs: regles.CHAIN_TURN_MS,
     open: enCours,
     revealed: enCours ? null : lignes.map((l) => ({ pseudo: l.pseudo, body: l.body, at: l.at })),
   };
@@ -839,8 +837,7 @@ function chainView(session) {
  */
 function youChainView(session, participant) {
   if (!participant.spectator) return null;
-  const enCours = session.phase === 'creation' || session.phase === 'upload';
-  if (!enCours) return null;
+  if (!regles.CHAIN_PHASES.has(session.phase)) return null;
   const lignes = repo.chainLines(session.id);
   const derniere = lignes.length ? lignes[lignes.length - 1] : null;
   return {
@@ -854,7 +851,8 @@ function youChainView(session, participant) {
     last: derniere ? derniere.body : null,
     lastBy: derniere ? derniere.pseudo : null,
     position: lignes.length + 1,
-    max: 140,
+    // La borne de saisie vient du serveur, qui tronque a la meme longueur.
+    max: regles.CHAIN_LINE_MAX,
   };
 }
 

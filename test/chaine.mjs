@@ -167,6 +167,15 @@ test('pendant la creation, on ne voit que la derniere ligne', () => {
   assert.equal(commun.chain.turn.pseudo, 'JUGE3');
 });
 
+test('les regles de la chaine partent du serveur : duree du tour et longueur d’une ligne', () => {
+  const regles = require('../server/regles.js');
+  const { session, gens } = ouvrir();
+  assert.equal(views.participantView(session).chain.turnMs, regles.CHAIN_TURN_MS);
+  assert.equal(views.youView(session, gens.S1.participant).chain.max, regles.CHAIN_LINE_MAX);
+  assert.equal(BattleServer.CHAIN_TURN_MS, regles.CHAIN_TURN_MS, 'une seule definition, pas deux a tenir egales');
+  assert.equal(BattleServer.CHAIN_LINE_MAX, regles.CHAIN_LINE_MAX);
+});
+
 test('un createur ne recoit rien de la chaine sur son canal', () => {
   const { srv, session, gens } = ouvrir();
   srv.chainWrite(session, gens.S1.participant, 'Secrete');

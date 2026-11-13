@@ -1261,9 +1261,9 @@ class BattleServer {
    * ce qui a expire. Sans lui, un tour ecoule ne passait la main que le jour
    * ou quelqu'un d'autre provoquait une diffusion d'etat.
    */
-  static CHAIN_PHASES = new Set(['creation', 'upload']);
-  static CHAIN_TURN_MS = 90000;
-  static CHAIN_LINE_MAX = 140;
+  static CHAIN_PHASES = regles.CHAIN_PHASES;
+  static CHAIN_TURN_MS = regles.CHAIN_TURN_MS;
+  static CHAIN_LINE_MAX = regles.CHAIN_LINE_MAX;
 
   /** Les spectateurs, dans l'ordre ou ils sont arrives. L'ordre du tour. */
   chainOrder(session) {

@@ -616,15 +616,6 @@ export const MEDIA_LABELS: Record<MediaType, { label: string; icon: IconName; hi
   file:  { label: 'Libre', icon: 'fichier', hint: 'N’importe quel fichier' },
 };
 
-export const PHASE_STEPS: { phase: Phase; label: string }[] = [
-  { phase: 'config', label: 'Réglages' },
-  { phase: 'lobby', label: 'Lobby' },
-  { phase: 'creation', label: 'Création' },
-  { phase: 'upload', label: 'Dépôt' },
-  { phase: 'diffusion', label: 'Diffusion' },
-  { phase: 'results', label: 'Résultats' },
-];
-
 /** Ce que `GET /api/podium/me` rend : le hub, et qui y est connecte. */
 export interface PodiumIdentity {
   hubUrl: string | null;

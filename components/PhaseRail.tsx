@@ -2,7 +2,8 @@
 
 import { Fragment, useEffect, useRef } from 'react';
 
-import { PHASE_STEPS, type Phase } from '@/lib/types';
+import { PHASE_STEPS } from '@/lib/format';
+import type { Phase } from '@/lib/types';
 
 /**
  * La machine a etats, rendue lisible — progression 0x09 du systeme : un
