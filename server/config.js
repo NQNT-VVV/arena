@@ -121,7 +121,6 @@ const config = {
     criteria: [],
     latePolicy: str('DEFAULT_LATE_POLICY', 'reject'),
     latePenalty: Number(str('DEFAULT_LATE_PENALTY', '1')),
-    hostVotes: bool('DEFAULT_HOST_VOTES', false),
     /** La diffusion demarre-t-elle seule a la fin de la fenetre de grace ? */
     autoAdvance: bool('DEFAULT_AUTO_ADVANCE', false),
     /** Pendant la diffusion, passe-t-on seul au rendu suivant ? */

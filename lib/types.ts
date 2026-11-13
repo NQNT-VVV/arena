@@ -30,7 +30,6 @@ export interface SessionConfig {
   criteria: Criterion[];
   latePolicy: LatePolicy;
   latePenalty: number;
-  hostVotes: boolean;
   autoAdvance: boolean;
   /** Pendant la diffusion, le serveur passe-t-il seul au rendu suivant ? */
   autoNext: boolean;

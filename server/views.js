@@ -79,7 +79,6 @@ function configView(config) {
     criteria: config.criteria,
     latePolicy: config.latePolicy,
     latePenalty: config.latePenalty,
-    hostVotes: config.hostVotes,
     autoAdvance: config.autoAdvance,
     autoNext: config.autoNext,
     voteWindowS: config.voteWindowS,

@@ -139,7 +139,6 @@ function sanitizeConfig(raw = {}, base = config.defaults) {
     criteria,
     latePolicy: LATE_POLICIES.has(merged.latePolicy) ? merged.latePolicy : base.latePolicy,
     latePenalty: clamp(num(merged.latePenalty, base.latePenalty), 0, scale),
-    hostVotes: merged.hostVotes === true,
     autoAdvance: merged.autoAdvance === true,
     autoNext: merged.autoNext !== false,
     voteWindowS: clamp(Math.round(num(merged.voteWindowS, base.voteWindowS)), 0, 300),
@@ -205,8 +204,8 @@ class LiveSession {
    * « X / Y ont note » et le seuil de l'avancement anticipe.
    */
   eligibleVoters(submission) {
-    // Les spectateurs votent : ils sont venus pour cela. Seuls l'animateur
-    // (sauf reglage) et les mis hors classement restent muets.
+    // Les spectateurs votent : ils sont venus pour cela. Seuls l'animateur et
+    // les ecartes restent muets.
     const voters = [...this.participants.values()].filter((p) => !p.isHost && !p.disqualified);
     const authorVotes = submission && voters.some((p) => p.id === submission.participantId);
     return Math.max(0, voters.length - (authorVotes ? 1 : 0));
