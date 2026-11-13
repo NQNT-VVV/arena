@@ -187,6 +187,67 @@ test('purge : une partie abandonnee en cours de route finit par partir, pas une 
   assert.ok(repo.sessionById(occupee.session.id).touchedAt > vieux, 'sa date est repoussee');
 });
 
+test('export : toutes les manches et le classement general, pas seulement la derniere', () => {
+  const srv = new BattleServer(fakeIo());
+  const { session, hostToken } = srv.createSession({ name: 'Export', mediaType: 'text', config: { rounds: 2, scale: 10, defaultVote: 5 } });
+  srv.publishSession(session.code, hostToken);
+  const a = srv.join(session.code, { pseudo: 'ALPHA' });
+  const b = srv.join(session.code, { pseudo: 'BRAVO' });
+  const juge = srv.join(session.code, { pseudo: 'JUGE', spectator: true });
+  srv.start(session.code, hostToken);
+  /** Une manche complete : les deux deposent, le juge donne `notes` = { pseudo: note }. */
+  const jouer = (notes) => {
+    for (const g of [a, b]) {
+      const prep = srv.openSubmissionSlot(session.code, g.participant.id, g.token);
+      srv.saveSubmission(session, g.participant, { textBody: `M${session.round} ${g.participant.pseudo}`, filename: `${g.participant.pseudo}-m${session.round}.txt`, kind: 'text', inline: 1, late: 0 }, prep.existing);
+    }
+    srv.forceCloseCreation(session.code, hostToken);
+    srv.startDiffusion(session.code, hostToken);
+    srv.moveCursor(session.code, hostToken, { index: 1 });
+    for (const sub of repo.submissions(session.id)) {
+      const auteur = session.participants.get(sub.participantId).pseudo;
+      srv.voteAs(session, juge.participant, { renditionId: sub.renditionId, value: notes[auteur] });
+    }
+    srv.showResults(session.code, hostToken);
+    srv.reveal(session.code, hostToken, { all: true });
+  };
+  jouer({ ALPHA: 10, BRAVO: 2 });
+  srv.nextRound(session.code, hostToken);
+  jouer({ ALPHA: 4, BRAVO: 6 });
+
+  const exp = views.exportView(session);
+  assert.deepEqual(exp.manches.map((m) => m.round), [1, 2]);
+  assert.deepEqual(exp.manches[0].rows.map((r) => r.author.pseudo), ['ALPHA', 'BRAVO'], 'la manche 1 sort de son classement fige');
+  assert.equal(exp.manches[0].rows[0].filename, 'ALPHA-m1.txt', 'avec le fichier de cette manche-la');
+  assert.deepEqual(exp.manches[1].rows.map((r) => r.author.pseudo), ['BRAVO', 'ALPHA']);
+  assert.deepEqual(exp.general.map((l) => l.author.pseudo), ['ALPHA', 'BRAVO'], 'le general est la moyenne des deux');
+  assert.equal(exp.general[0].scores.length, 2);
+
+  const lignes = views.exportCsv(session).trim().split('\n');
+  assert.match(lignes[0], /^manche;rang;pseudo;note/);
+  assert.equal(lignes.filter((l) => l.startsWith('1;')).length, 2);
+  assert.equal(lignes.filter((l) => l.startsWith('2;')).length, 2);
+  assert.equal(lignes.filter((l) => l.startsWith('general;')).length, 2);
+  assert.ok(lignes.every((l) => l.split(';').length === lignes[0].split(';').length), 'toutes les lignes ont le meme nombre de colonnes');
+});
+
+test('export : en une seule manche, le CSV garde ses colonnes d’avant', () => {
+  const srv = new BattleServer(fakeIo());
+  const { session, hostToken } = srv.createSession({ name: 'Export simple', mediaType: 'text' });
+  srv.publishSession(session.code, hostToken);
+  const a = srv.join(session.code, { pseudo: 'ALPHA' });
+  srv.start(session.code, hostToken);
+  const prep = srv.openSubmissionSlot(session.code, a.participant.id, a.token);
+  srv.saveSubmission(session, a.participant, { textBody: 'Seul', kind: 'text', inline: 1, late: 0 }, prep.existing);
+  srv.forceCloseCreation(session.code, hostToken);
+  srv.startDiffusion(session.code, hostToken);
+  srv.showResults(session.code, hostToken);
+  const lignes = views.exportCsv(session).trim().split('\n');
+  assert.match(lignes[0], /^rang;pseudo;note/);
+  assert.equal(lignes.length, 2);
+  assert.equal(views.exportView(session).general, null);
+});
+
 test('creation : code lisible, jeton rendu une seule fois', () => {
   const srv = new BattleServer(fakeIo());
   const { session, hostToken } = srv.createSession({ name: 'Beat Battle #12', mediaType: 'audio', brief: '5 samples imposes' });

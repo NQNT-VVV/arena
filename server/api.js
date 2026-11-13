@@ -477,51 +477,21 @@ function mount(app, battle) {
       participants: views.rosterView(session),
       assets: views.assetsView(session).map(({ url, ...rest }) => rest),
       results: podium.rows,
+      // Toutes les manches (les passees depuis leur classement fige) et le
+      // general ; `results` reste la manche courante, pour qui le lisait deja.
+      ...views.exportView(session),
       events: repo.events(session.id),
     });
   }));
 
   app.get('/api/session/:code/results.csv', guard(async (req, res) => {
     const session = requireResults(req.params.code, tokenOf(req));
-    const podium = fullPodium(session);
-
-    // Guillemets doubles pour echapper un guillemet : c'est la convention que
-    // les tableurs comprennent tous, contrairement a l'antislash.
-    const cell = (v) => {
-      const text = v === null || v === undefined ? '' : String(v);
-      return /[",;\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-    };
-
-    // En mono-critere, la colonne du critere repeterait la note : on ne detaille
-    // que lorsqu'un bareme a plusieurs axes a montrer.
-    const criteria = session.config.criteria.length ? session.config.criteria : [];
-// `sort` a cote de `penalite`, et jamais melange : une penalite est une regle
-    // annoncee, un sort est un hasard assume. Sans cette colonne, une session ou
-    // la roue a bouge un score s'exporte avec une note qu'on ne peut pas recomposer.
-    const header = ['rang', 'pseudo', 'note', ...criteria.map((c) => c.label), 'votants', 'attendus', 'hors_delai', 'penalite', 'sort', 'fichier'];
-    const lines = [header.join(';')];
-
-    for (const row of podium.rows) {
-      lines.push([
-        row.unranked ? 'HC' : row.rank,
-        row.author?.pseudo ?? '',
-        row.score ?? row.raw,
-        ...criteria.map((c) => row.criteria.find((x) => x.id === c.id)?.average ?? ''),
-        row.voters,
-        row.expected,
-        row.late ? 'oui' : 'non',
-        row.penalty || '',
-        row.fate || '',
-        row.filename ?? '',
-      ].map(cell).join(';'));
-    }
-
     // Le prefixe BOM evite qu'Excel lise les accents de travers.
     res.set({
       'Content-Type': 'text/csv; charset=utf-8',
       'Content-Disposition': files.contentDisposition('attachment', `${session.code}-classement.csv`),
       'X-Content-Type-Options': 'nosniff',
-    }).send(`\ufeff${lines.join('\n')}\n`);
+    }).send(`\ufeff${views.exportCsv(session)}`);
   }));
 
   /**

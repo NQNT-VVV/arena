@@ -519,6 +519,121 @@ function podiumView(session) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Export de l'animateur                                               */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Tout ce que la partie a classe : chaque manche, puis le general.
+ *
+ * L'export ne portait que la manche en cours — trois manches jouees, un tiers
+ * de la soiree dans le fichier, et aucun classement general.
+ *
+ * Les manches passees sortent de leur classement FIGE (`manche_resultat`) :
+ * rang et note, tels qu'ils ont ete annonces. Le detail — votants, criteres,
+ * penalite — n'a pas ete fige et ne se recalcule pas honnetement apres coup,
+ * la liste des votants ayant pu changer ; il n'est donne que pour la manche
+ * courante. Reserve a l'animateur, une fois le classement affiche : l'appelant
+ * le verifie.
+ */
+function exportView(session) {
+  const round = session.round ?? 1;
+  const arrondi = (v) => (v === null || v === undefined ? null : Math.round(v * 100) / 100);
+  const figees = repo.manchesFigees(session.id).filter((m) => m.round < round);
+
+  const passees = figees.map((m) => {
+    const rendus = new Map(repo.submissions(session.id, m.round).map((sub) => [sub.participantId, sub]));
+    // Les hors classement (rang nul) vont en bas, comme sur le podium.
+    const rows = [...m.rows].sort((a, b) => (a.rank ?? Infinity) - (b.rank ?? Infinity));
+    return {
+      round: m.round,
+      courante: false,
+      rows: rows.map((r) => ({
+        rank: r.rank,
+        unranked: r.rank === null,
+        score: arrondi(r.score),
+        author: classeDe(session, r.participantId),
+        late: !!rendus.get(r.participantId)?.late,
+        filename: rendus.get(r.participantId)?.filename ?? null,
+      })),
+    };
+  });
+  const courante = podiumView({ ...session, revealedRank: Number.MAX_SAFE_INTEGER });
+  const manches = [...passees, { round, courante: true, rows: courante ? courante.rows : [] }];
+
+  let general = null;
+  if ((session.config.rounds ?? 1) > 1) {
+    const classables = [...session.participants.values()].filter((p) => !p.isHost && !p.disqualified && !p.spectator);
+    general = classementGeneral({
+      manches: [...figees, { round, rows: rangsManche(session) }],
+      participants: classables,
+    }).map((l) => ({
+      rank: l.rank,
+      moyenne: l.moyenne,
+      scores: l.scores.map(arrondi),
+      joues: l.joues,
+      author: classeDe(session, l.participantId),
+    }));
+  }
+  return { manches, general };
+}
+
+/**
+ * Le meme contenu, en CSV.
+ *
+ * En une seule manche, le fichier est celui d'avant, colonne pour colonne :
+ * des tableurs le lisent deja. En plusieurs, une colonne `manche` passe en
+ * tete, et le general suit sous la valeur « general » — un seul tableau, qu'un
+ * filtre sur la premiere colonne decoupe.
+ */
+function exportCsv(session) {
+  const { manches, general } = exportView(session);
+  // Guillemets doubles pour echapper un guillemet : c'est la convention que
+  // les tableurs comprennent tous, contrairement a l'antislash.
+  const cell = (v) => {
+    const text = v === null || v === undefined ? '' : String(v);
+    return /[",;\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  };
+
+  // En mono-critere, la colonne du critere repeterait la note : on ne detaille
+  // que lorsqu'un bareme a plusieurs axes a montrer.
+  const criteria = session.config.criteria.length ? session.config.criteria : [];
+  const plusieurs = (session.config.rounds ?? 1) > 1;
+  const tete = (m) => (plusieurs ? [m] : []);
+  // `sort` a cote de `penalite`, et jamais melange : une penalite est une regle
+  // annoncee, un sort est un hasard assume. Sans cette colonne, une session ou
+  // la roue a bouge un score s'exporte avec une note qu'on ne peut pas recomposer.
+  const header = [...tete('manche'), 'rang', 'pseudo', 'note', ...criteria.map((c) => c.label), 'votants', 'attendus', 'hors_delai', 'penalite', 'sort', 'fichier'];
+  const lines = [header.join(';')];
+
+  for (const m of manches) {
+    for (const row of m.rows) {
+      lines.push([
+        ...tete(m.round),
+        row.unranked ? 'HC' : row.rank,
+        row.author?.pseudo ?? '',
+        row.score ?? row.raw ?? '',
+        ...criteria.map((c) => row.criteria?.find((x) => x.id === c.id)?.average ?? ''),
+        row.voters ?? '',
+        row.expected ?? '',
+        row.late ? 'oui' : 'non',
+        row.penalty || '',
+        row.fate || '',
+        row.filename ?? '',
+      ].map(cell).join(';'));
+    }
+  }
+  for (const l of general ?? []) {
+    // La note du general est la moyenne des manches ; les autres colonnes
+    // decrivent un rendu, et un general n'en a pas.
+    lines.push([
+      'general', l.rank, l.author?.pseudo ?? '', l.moyenne,
+      ...new Array(header.length - 4).fill(''),
+    ].map(cell).join(';'));
+  }
+  return `${lines.join('\n')}\n`;
+}
+
+/* ------------------------------------------------------------------ */
 /* Vues par audience                                                   */
 /* ------------------------------------------------------------------ */
 
@@ -816,5 +931,6 @@ module.exports = {
   chainView, youChainView,
   rouletteView, youFateView,
   mancheView, extraitCarte, extraitsView, attributionsView, monExtraitView, extraitDuRendu,
+  exportView, exportCsv,
   rendusClasses, totalClasses, classer, rangsManche, mancheDevoilee, classementGeneralDe, generalView,
 };
