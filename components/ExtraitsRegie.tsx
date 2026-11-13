@@ -190,7 +190,9 @@ function Ligne({ e, act, onRetirer }: { e: ExtraitRegie; act: Act; onRetirer: (e
 
       <div className={styles.pied}>
         <span className="meta">
-          {e.cetteManche.length ? `Cette manche : ${e.cetteManche.join(', ')}` : 'Pas attribué cette manche'}
+          {e.cetteManche === null
+            ? 'Attributions masquées pendant la diffusion'
+            : e.cetteManche.length ? `Cette manche : ${e.cetteManche.join(', ')}` : 'Pas attribué cette manche'}
         </span>
         <span className="row">
           <button type="button" className="btn xs ghost" onClick={() => void act('host:extrait-analyser', { extraitId: e.id })}>

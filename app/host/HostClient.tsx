@@ -459,6 +459,14 @@ export function HostClient() {
         {phase === 'diffusion' && state.diffusion && (
           <section className="card pad col">
             <h2 className="section-title">Rendu diffusé</h2>
+            {/* Sans extrait transcode, c'est le fichier d'origine qui passe,
+                metadonnees comprises : l'animateur doit le savoir. */}
+            {(state.uncleaned ?? 0) > 0 && (
+              <p className="meta">
+                {state.uncleaned} rendu{state.uncleaned! > 1 ? 's' : ''} diffusé{state.uncleaned! > 1 ? 's' : ''} sans
+                nettoyage des métadonnées : le fichier d’origine est servi tel quel.
+              </p>
+            )}
             {/* La regie voit exactement ce que voit la salle : aucun auteur,
                 aucun nom de fichier. Elle partage souvent son ecran. */}
             <DiffusionStage

@@ -206,7 +206,8 @@ export interface ExtraitRegie extends Extrait {
   /** Nombre de manches passees ou il a servi. */
   joues: number;
   /** Pseudos de ceux qui le reconstruisent dans la manche en cours. */
-  cetteManche: string[];
+  /** Qui l'a recu cette manche. Nul pendant la diffusion : l'attribution y est masquee, regie comprise. */
+  cetteManche: string[] | null;
   /** Faux des qu'il a servi une fois : il porte l'histoire d'une manche. */
   retirable: boolean;
 }
@@ -467,6 +468,8 @@ export interface BattleState {
   isScreen?: boolean;
   /** Regie seulement : rendus recus mais pas encore prets a diffuser. */
   pendingSubmissions?: number;
+  /** Regie seulement : rendus diffuses sans nettoyage de leurs metadonnees. */
+  uncleaned?: number;
   /** Regie seulement : les roues ne dependent d'aucune session. */
   wheels?: Wheel[];
   /** Regie seulement : ce que le serveur accepte maintenant, pour griser sans recopier ses regles. */

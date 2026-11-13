@@ -343,12 +343,14 @@ function extraitDuRendu(session, submission) {
 function extraitsView(session) {
   const toutes = repo.toutesAttributions(session.id);
   const round = session.round ?? 1;
+  const masque = attributionsMasquees(session);
   return repo.extraits(session.id).map((e) => {
     const siennes = toutes.filter((a) => a.extraitId === e.id);
     return {
       ...extraitCarte(e, { avecFichier: true }),
       joues: new Set(siennes.filter((a) => a.round < round).map((a) => a.round)).size,
-      cetteManche: siennes.filter((a) => a.round === round)
+      // Nul, et non vide : « masque » n'est pas « attribue a personne ».
+      cetteManche: masque ? null : siennes.filter((a) => a.round === round)
         .map((a) => session.participants.get(a.participantId)?.pseudo)
         .filter(Boolean),
       retirable: siennes.length === 0,
@@ -356,8 +358,21 @@ function extraitsView(session) {
   });
 }
 
-/** Qui reconstruit quoi dans la manche en cours, pour l'animateur. */
+/**
+ * Pendant la diffusion et le vote, « qui a quel extrait » ne sort plus.
+ *
+ * Chaque rendu diffuse affiche le nom de l'extrait qu'il reconstruit. Avec un
+ * extrait par createur, la table nominative de la regie suffisait donc a
+ * savoir qui avait fait quoi — or la regie n'echappe pas a l'anonymat de la
+ * diffusion (voir `AUTHORS_VISIBLE`) : elle est souvent en partage d'ecran.
+ * Avant, la table sert a changer l'extrait de quelqu'un ; apres, les auteurs
+ * sont reveles. Entre les deux, elle se tait.
+ */
+const attributionsMasquees = (session) => session.phase === 'diffusion';
+
+/** Qui reconstruit quoi dans la manche en cours, pour l'animateur. Vide pendant la diffusion. */
 function attributionsView(session) {
+  if (attributionsMasquees(session)) return [];
   return repo.attributions(session.id).map((a) => ({
     participantId: a.participantId,
     pseudo: session.participants.get(a.participantId)?.pseudo ?? null,
@@ -868,6 +883,24 @@ function participantView(session) {
  * pour relancer les retardataires ; savoir lequel des rendus anonymes lui
  * appartient ne l'est pas.
  */
+/**
+ * Combien de rendus passent en diffusion sans avoir ete nettoyes.
+ *
+ * Sans extrait transcode — transcodage rate, ou type « Libre » qui ne se
+ * transcode pas —, c'est le fichier d'origine qui est servi a la salle, avec
+ * ses metadonnees : auteur, logiciel, tags. L'anonymat du vote n'est alors
+ * garanti que par ce que le createur a laisse dans son fichier. La regie doit
+ * le savoir ; elle n'en apprend rien de plus — un nombre, pas des noms. Un
+ * texte n'a pas de fichier, donc rien a nettoyer.
+ */
+function nonNettoyes(session) {
+  if (session.phase !== 'diffusion') return 0;
+  return (session.order ?? [])
+    .map((id) => repo.submission(id))
+    .filter((sub) => sub && sub.originalKey && !sub.renditions?.files?.preview)
+    .length;
+}
+
 function hostView(session) {
   // Qui a rendu quelque chose : necessaire pour relancer les retardataires.
   // Ce n'est pas une fuite d'anonymat — l'ensemble des auteurs est de toute
@@ -879,6 +912,8 @@ function hostView(session) {
     isHost: true,
     /** Rendus recus mais pas encore prets a diffuser. */
     pendingSubmissions: repo.countPendingSubmissions(session.id),
+    /** Rendus diffuses tels quels, metadonnees comprises. Zero hors diffusion. */
+    uncleaned: nonNettoyes(session),
     /**
      * Les roues, et la graine du dernier tirage.
      *

@@ -379,6 +379,58 @@ test('manches passees : leurs rendus restent joignables une fois la suite lancee
   assert.equal(passees[0].podium.complete, true);
 });
 
+test('Rebuild : pendant la diffusion, la regie ne voit plus qui a quel extrait', () => {
+  const srv = new BattleServer(fakeIo());
+  const { session, hostToken } = srv.createSession({ name: 'Rebuild', mediaType: 'text', config: { mode: 'rebuild' } });
+  for (const id of ['e1', 'e2']) {
+    repo.addExtrait({ id: `${session.id}-${id}`, sessionId: session.id, filename: `${id}.wav`, storageKey: `x/${id}.wav`, bytes: 10, mime: 'audio/wav', position: 0, createdAt: Date.now() });
+  }
+  srv.publishSession(session.code, hostToken);
+  const gens = ['A', 'B'].map((p) => srv.join(session.code, { pseudo: `CREA${p}` }));
+  srv.start(session.code, hostToken);
+  const nominatif = (vue) => vue.attributions.length > 0 || vue.extraits.some((e) => e.cetteManche?.length);
+
+  assert.equal(views.hostView(session).attributions.length, 2, 'pendant la creation, la table sert a changer un extrait');
+  for (const g of gens) {
+    const prep = srv.openSubmissionSlot(session.code, g.participant.id, g.token);
+    srv.saveSubmission(session, g.participant, { textBody: g.participant.pseudo, kind: 'text', inline: 1, late: 0 }, prep.existing);
+  }
+  srv.forceCloseCreation(session.code, hostToken);
+  assert.equal(nominatif(views.hostView(session)), true, 'au depot aussi');
+
+  srv.startDiffusion(session.code, hostToken);
+  const diffusion = views.hostView(session);
+  assert.deepEqual(diffusion.attributions, [], 'plus de table nominative');
+  assert.ok(diffusion.extraits.every((e) => e.cetteManche === null), 'ni de pseudos sous les extraits');
+  assert.ok(!JSON.stringify({ a: diffusion.attributions, e: diffusion.extraits }).includes('CREA'), 'aucun pseudo ne sort par ce chemin');
+  assert.ok(diffusion.diffusion.extrait, 'le rendu, lui, dit toujours ce qu’il reconstruit');
+
+  srv.showResults(session.code, hostToken);
+  assert.equal(nominatif(views.hostView(session)), true, 'auteurs reveles : la table revient');
+});
+
+test('diffusion : la regie est prevenue des rendus diffuses sans nettoyage', () => {
+  const srv = new BattleServer(fakeIo());
+  const { session, hostToken } = srv.createSession({ name: 'Libre', mediaType: 'file' });
+  srv.publishSession(session.code, hostToken);
+  const gens = ['A', 'B', 'C'].map((p) => srv.join(session.code, { pseudo: `CREA${p}` }));
+  srv.start(session.code, hostToken);
+  const deposer = (g, data) => {
+    const prep = srv.openSubmissionSlot(session.code, g.participant.id, g.token);
+    return srv.saveSubmission(session, g.participant, { inline: 0, late: 0, ...data }, prep.existing);
+  };
+  // Un fichier « Libre » jamais transcode, un audio nettoye, un texte.
+  deposer(gens[0], { kind: 'file', filename: 'projet.zip', originalKey: 'x/projet.zip', originalBytes: 10 });
+  const propre = deposer(gens[1], { kind: 'audio', filename: 'beat.wav', originalKey: 'x/beat.wav', originalBytes: 10 });
+  repo.setSubmissionStatus(propre.id, 'ready', { files: { preview: { key: 'x/beat.preview.mp3', mime: 'audio/mpeg', bytes: 5 } }, durationMs: 1000 });
+  deposer(gens[2], { kind: 'text', textBody: 'Un texte n’a pas de metadonnees', inline: 1 });
+  srv.forceCloseCreation(session.code, hostToken);
+  assert.equal(views.hostView(session).uncleaned, 0, 'rien n’est encore diffuse');
+  srv.startDiffusion(session.code, hostToken);
+  assert.equal(views.hostView(session).uncleaned, 1, 'seul le fichier servi tel quel compte');
+  assert.equal(views.participantView(session).uncleaned, undefined, 'une information de regie');
+});
+
 test('creation : code lisible, jeton rendu une seule fois', () => {
   const srv = new BattleServer(fakeIo());
   const { session, hostToken } = srv.createSession({ name: 'Beat Battle #12', mediaType: 'audio', brief: '5 samples imposes' });
