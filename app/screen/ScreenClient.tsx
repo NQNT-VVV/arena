@@ -133,7 +133,7 @@ export function ScreenClient() {
   return (
     <div className="screen-stage">
       <div className={styles.head}>
-        <span>Salle {state.code}</span>
+        <span>Session {state.code}</span>
         <span>Rendu · {media.label}</span>
         <span>{PHASE_LABELS[state.phase]}</span>
         {state.manche.rounds > 1 && <span>Manche {state.manche.round}/{state.manche.rounds}</span>}

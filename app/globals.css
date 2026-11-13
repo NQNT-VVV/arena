@@ -112,5 +112,4 @@ p.muted, .muted p, p.meta { text-transform: none; letter-spacing: 0; line-height
 .meta { text-transform: none; letter-spacing: 0; font: 500 14px/1.45 var(--font-mono); }
 .field > label, .field > span:first-child, label.meta, th.meta { text-transform: uppercase; letter-spacing: .05em; font: var(--t-meta); }
 /* Les index hexadecimaux de l'ancien socle ne disent rien a personne. */
-.media-choice button .ico { display: none; }
 .media-choice button { font: 700 15px/1.2 var(--font-mono); text-transform: none; letter-spacing: 0; min-height: 52px; align-content: center; }

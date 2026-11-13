@@ -5,6 +5,8 @@
  * champs oublies avant qu'une page ne rende `undefined` en pleine soiree.
  */
 
+import type { IconName } from '@/components/Icon';
+
 export type Phase = 'config' | 'lobby' | 'creation' | 'upload' | 'diffusion' | 'results' | 'archived';
 export type MediaType = 'audio' | 'image' | 'video' | 'text' | 'file';
 export type LatePolicy = 'reject' | 'unranked' | 'penalty';
@@ -601,12 +603,17 @@ export interface SavedIdentity {
  * Types de rendu. L'« icone » n'est plus un pictogramme mais un code systeme :
  * AGARTHA numerote, il ne decore pas.
  */
-export const MEDIA_LABELS: Record<MediaType, { label: string; icon: string; hint: string }> = {
-  audio: { label: 'Audio', icon: '', hint: 'Morceau, beat, sound design' },
-  image: { label: 'Image', icon: '', hint: 'Montage, cover, affiche' },
-  video: { label: 'Vidéo', icon: '', hint: 'Montage, edit, motion' },
-  text:  { label: 'Texte', icon: '', hint: 'Écriture, punchlines, pitch' },
-  file:  { label: 'Libre', icon: '', hint: 'N’importe quel fichier' },
+/**
+ * `icon` nomme un picto de `components/Icon.tsx`, dans la langue du reste :
+ * c'etait une chaine vide — un reste d'emoji retire — et les pages rendaient
+ * un espace reserve a rien.
+ */
+export const MEDIA_LABELS: Record<MediaType, { label: string; icon: IconName; hint: string }> = {
+  audio: { label: 'Audio', icon: 'musique', hint: 'Morceau, beat, sound design' },
+  image: { label: 'Image', icon: 'image', hint: 'Montage, cover, affiche' },
+  video: { label: 'Vidéo', icon: 'jouer', hint: 'Montage, edit, motion' },
+  text:  { label: 'Texte', icon: 'liste', hint: 'Écriture, punchlines, pitch' },
+  file:  { label: 'Libre', icon: 'fichier', hint: 'N’importe quel fichier' },
 };
 
 export const PHASE_STEPS: { phase: Phase; label: string }[] = [

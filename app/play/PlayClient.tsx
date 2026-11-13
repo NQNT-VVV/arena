@@ -512,7 +512,7 @@ export function PlayClient() {
       case 'lobby':
         return (
           <div className={styles.waiting}>
-            <span className={styles.bigIcon} aria-hidden="true">{MEDIA_LABELS[state!.mediaType].icon}</span>
+            <Icon name={MEDIA_LABELS[state!.mediaType].icon} size="xl" className={styles.bigIcon} />
             <h2>En attente du départ</h2>
             {/*
               * Un spectateur n'a ni consigne a lire ni materiel a preparer : lui

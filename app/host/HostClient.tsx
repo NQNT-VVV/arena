@@ -939,7 +939,7 @@ export function HostClient() {
                 aria-pressed={draft.mediaType === type}
                 onClick={() => set('mediaType', type)}
               >
-                <span className="ico" aria-hidden="true">{MEDIA_LABELS[type].icon}</span>
+                <Icon name={MEDIA_LABELS[type].icon} />
                 {MEDIA_LABELS[type].label}
               </button>
             ))}
