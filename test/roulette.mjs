@@ -284,7 +284,7 @@ test('un disqualifie n’est jamais tire', () => {
 test('sans personne a tirer, on le dit plutot que de tirer dans le vide', () => {
   const { session } = ouvrir({ createurs: 0, spectateurs: 2 });
   const w = roue('Personne', MALUS);
-  refuse(() => roulette.tirer(session, { wheelId: w.id }), 'Personne a tirer');
+  refuse(() => roulette.tirer(session, { wheelId: w.id }), 'Personne à tirer');
 });
 
 /* ------------------------------------------------------------------ */

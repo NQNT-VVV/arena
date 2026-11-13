@@ -12,7 +12,9 @@ import { CODE_LENGTH } from '@/lib/format';
  * l'alphabet des codes : un code recopie depuis une capture d'ecran arrive
  * souvent avec un espace ou un tiret au milieu.
  */
-export function JoinForm({ className = '', inputClassName = '' }: { className?: string; inputClassName?: string }) {
+export function JoinForm({
+  className = '', inputClassName = '', destination = '/play', label = 'Rejoindre',
+}: { className?: string; inputClassName?: string; destination?: string; label?: string }) {
   const router = useRouter();
   const [code, setCode] = useState('');
 
@@ -20,7 +22,7 @@ export function JoinForm({ className = '', inputClassName = '' }: { className?: 
     event.preventDefault();
     const clean = code.trim().toUpperCase();
     if (clean.length !== CODE_LENGTH) return;
-    router.push(`/play?code=${encodeURIComponent(clean)}`);
+    router.push(`${destination}?code=${encodeURIComponent(clean)}`);
   };
 
   return (
@@ -38,7 +40,7 @@ export function JoinForm({ className = '', inputClassName = '' }: { className?: 
         maxLength={CODE_LENGTH}
       />
       <button className="btn primary block" type="submit" disabled={code.length !== CODE_LENGTH}>
-        Rejoindre
+        {label}
       </button>
     </form>
   );

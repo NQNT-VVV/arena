@@ -99,7 +99,7 @@ test('un spectateur ne peut pas rejoindre une fois la diffusion commencee', () =
   srv.setPhase(session, 'creation');
   srv.setPhase(session, 'upload');
   srv.setPhase(session, 'diffusion');
-  throws(() => srv.join(session.code, { pseudo: 'RETARDATAIRE', spectator: true }), 'diffusion a commence');
+  throws(() => srv.join(session.code, { pseudo: 'RETARDATAIRE', spectator: true }), 'diffusion a commencé');
 });
 
 test('les compteurs n’attendent pas de rendu d’un spectateur', () => {

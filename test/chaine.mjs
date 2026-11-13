@@ -61,14 +61,14 @@ const tour = (srv, session) => srv.chainResolve(session).turnId;
 
 /* ------------------------------------------------------------------ */
 
-test('la chaine ne tourne que pendant la creation', () => {
+test('la chaine ne tourne que pendant la création', () => {
   const { srv, session, gens } = ouvrir();
   assert.equal(srv.chainResolve(session).open, true);
   srv.setPhase(session, 'upload');
   assert.equal(srv.chainResolve(session).open, true, 'la fenetre de grace compte encore');
   srv.setPhase(session, 'diffusion');
   assert.equal(srv.chainResolve(session).open, false);
-  refuse(() => srv.chainWrite(session, gens.S1.participant, 'trop tard'), 'que pendant la creation');
+  refuse(() => srv.chainWrite(session, gens.S1.participant, 'trop tard'), 'que pendant la création');
 });
 
 test('sans spectateur, il n’y a pas de chaine', () => {

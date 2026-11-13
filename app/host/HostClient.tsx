@@ -123,10 +123,15 @@ export function HostClient() {
     if (res.ok) {
       setCode(res.code);
     } else {
-      // Session purgee, ou jeton d'une autre installation : on repart a zero
-      // plutot que de laisser la page tourner sur une regie fantome.
-      hostKeys.clear(known);
-      toast(res.error, 'err');
+      /*
+       * Un refus explicite — session purgee, jeton d'une autre installation —
+       * fait repartir de zero. Un simple delai, non : le serveur ne garde que
+       * l'empreinte du jeton, et l'effacer ici sur une coupure de reseau
+       * laissait la session sans animateur, joueurs bloques dans la phase.
+       * La prochaine reconnexion retentera toute seule.
+       */
+      if (!res.timedOut) hostKeys.clear(known);
+      toast(res.timedOut ? 'Connexion instable : la régie se rattache dès que le serveur répond.' : res.error, 'err');
     }
     setBooted(true);
   }, [code]);
@@ -194,6 +199,24 @@ export function HostClient() {
   const act = async (event: string, payload: Record<string, unknown> = {}) => {
     if (!socket) return false;
     setBusy(true);
+    /*
+     * Ouvrir le lobby ou lancer enregistre d'abord ce qui est a l'ecran.
+     *
+     * « Enregistrer les reglages » est tout en bas du formulaire, ces deux
+     * boutons tout en haut : une duree ou une consigne corrigee puis un clic
+     * sur « Ouvrir le lobby » revenait en silence aux valeurs du serveur — et
+     * une fois la creation lancee, les reglages sont figes.
+     */
+    if ((event === 'host:publish' || event === 'host:start') && state && (state.phase === 'config' || state.phase === 'lobby')) {
+      const enregistre = await call(socket, 'host:configure', {
+        name: draft.name, mediaType: draft.mediaType, brief: draft.brief, config: draftToConfig(draft),
+      });
+      if (!enregistre.ok) {
+        setBusy(false);
+        toast(enregistre.error, 'err');
+        return false;
+      }
+    }
     const res = await call(socket, event, payload);
     setBusy(false);
     if (!res.ok) toast(res.error, 'err');
@@ -309,6 +332,10 @@ export function HostClient() {
   });
 
   const quit = () => {
+    // Quitter efface le jeton de ce navigateur : en pleine partie, plus personne
+    // ne pourrait piloter. On le fait dire avant de le faire.
+    const enCours = state && !['config', 'archived'].includes(state.phase);
+    if (enCours && !window.confirm('Quitter la régie ? La session continuera sans animateur : plus personne ne pourra la piloter depuis ce navigateur.')) return;
     if (code) hostKeys.clear(code);
     hostKeys.clear('last');
     setCode(null);
@@ -452,7 +479,7 @@ export function HostClient() {
           </section>
         )}
 
-        {phase === 'results' && state.podium && (
+        {(phase === 'results' || phase === 'archived') && state.podium && (
           <section className="card pad col">
             <h2 className="section-title">
               Classement{state.manche.rounds > 1 ? ` — manche ${state.manche.round}` : ''}
@@ -473,7 +500,7 @@ export function HostClient() {
           <h2 className="section-title">Consigne</h2>
           <p className="brief">{state.brief}</p>
           <div className="row wrap faint">
-            <span>{MEDIA_LABELS[state.mediaType].icon} {MEDIA_LABELS[state.mediaType].label}</span>
+            <span>{MEDIA_LABELS[state.mediaType].label}</span>
             <span>•</span>
             <span>{humanDuration(state.config.durationMs)} de création</span>
             <span>•</span>
@@ -639,7 +666,7 @@ export function HostClient() {
                 <Icon name="precedent" />Précédent
               </button>
               <button className="btn sm" disabled={busy || !d?.current} aria-busy={busy} title="Relancer ce rendu depuis le début, pour tout le monde" onClick={() => act('host:diffusion-replay')}>
-                <Icon name="chrono" />Relancer
+                <Icon name="chrono" />Rejouer ce rendu
               </button>
               <button
                 className={`btn ${everyone ? 'good' : ''}`}
@@ -690,7 +717,7 @@ export function HostClient() {
             <div className="row wrap">
               <button className="btn sm ghost" onClick={() => download('csv')}><Icon name="telecharge" />CSV</button>
               <button className="btn sm ghost" onClick={() => download('json')}><Icon name="telecharge" />JSON</button>
-              {btn('Archiver la session', 'host:archive', {}, 'btn sm ghost')}
+              {btn('Terminer la session', 'host:archive', {}, 'btn sm ghost')}
             </div>
             {renderNextRound()}
             {/* Pas de « nouvelle edition » tant qu'il reste des manches : en
@@ -770,14 +797,14 @@ export function HostClient() {
     const hasAssets = (state?.assets.length ?? 0) > 0;
     return (
       <div className={styles.nextEdition}>
-        <span className="section-title">Nouvelle édition</span>
+        <span className="section-title">Rejouer avec les mêmes personnes</span>
         <div className="row wrap">
           <button className="btn good" disabled={busy} aria-busy={busy} onClick={() => duplicate(true)}>
-            <Icon name="chrono" />Relancer{hasAssets ? ' avec le même pack' : ''}
+            <Icon name="chrono" />Nouvelle édition{hasAssets ? ' avec le même pack' : ''}
           </button>
           {hasAssets && (
             <button className="btn sm ghost" disabled={busy} aria-busy={busy} onClick={() => duplicate(false)}>
-              Relancer sans les éléments
+              Nouvelle édition sans les éléments
             </button>
           )}
         </div>

@@ -25,6 +25,8 @@ export function call<T = Record<string, never>>(
       resolve(res ?? { ok: false, error: 'Pas de réponse du serveur.' });
     };
     socket.emit(event, payload ?? {}, done);
-    setTimeout(() => done({ ok: false, error: 'Le serveur ne répond pas.' }), timeout);
+    // `timedOut` distingue le silence du refus : on ne tire pas les memes
+    // consequences d'un serveur qui dit non et d'un reseau qui ne dit rien.
+    setTimeout(() => done({ ok: false, error: 'Le serveur ne répond pas.', timedOut: true }), timeout);
   });
 }

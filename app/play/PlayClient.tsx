@@ -244,7 +244,7 @@ export function PlayClient() {
         <h1>{card?.name ?? '…'}</h1>
         <p className="muted">
           {card?.mediaType
-            ? `Rendu attendu · ${MEDIA_LABELS[card.mediaType].icon} ${MEDIA_LABELS[card.mediaType].label}`
+            ? `Rendu attendu · ${MEDIA_LABELS[card.mediaType].label}`
             : 'Chargement'}
         </p>
         {card && !card.open && (
@@ -350,7 +350,7 @@ export function PlayClient() {
           <h2 className="section-title">Consigne</h2>
           <p className="brief">{state.brief}</p>
           <div className="row wrap meta">
-            <span>{MEDIA_LABELS[state.mediaType].icon} · {MEDIA_LABELS[state.mediaType].label}</span>
+            <span>{MEDIA_LABELS[state.mediaType].label}</span>
             <span>·</span>
             <span>{humanDuration(state.config.durationMs).toUpperCase()}</span>
             <span>·</span>
@@ -543,10 +543,24 @@ export function PlayClient() {
         );
       }
       case 'results':
+      case 'archived':
+        // Terminer la session ne retire rien : le podium, la reecoute et le
+        // telechargement restent sur les telephones comme sur le grand ecran.
+        if (!state!.podium) {
+          return (
+            <div className={styles.waiting}>
+              <h2>Session terminée</h2>
+              <p className="muted">Merci d’avoir joué.</p>
+              {state!.general && (
+                <ClassementGeneral general={state!.general} rounds={state!.manche.rounds} mineId={you?.id ?? null} />
+              )}
+            </div>
+          );
+        }
         return state!.podium ? (
           <div className={styles.results}>
-            <h2>Classement</h2>
-            {state!.podium.complete
+            <h2>{phase === 'archived' ? 'Session terminée — le classement' : 'Classement'}</h2>
+            {state!.podium.complete || phase === 'archived'
               ? null
               : <p className="meta">L’animateur dévoile les places une par une.</p>}
             <Podium replay podium={state!.podium} meId={you?.id} ratings={ratings} />

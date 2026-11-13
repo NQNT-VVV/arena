@@ -1057,6 +1057,20 @@ class BattleServer {
 
   archive(code, token) {
     const s = this.requireHost(code, token);
+    /*
+     * Terminer devoile ce qui restait cache.
+     *
+     * `reveal` refuse hors de la phase resultats : une session terminee apres
+     * trois places devoilees sur huit gardait les cinq autres cachees pour
+     * toujours, sur l'ecran comme sur les telephones.
+     */
+    const total = (s.order ?? []).length;
+    const avant = s.revealedRank ?? 0;
+    if (s.phase === 'results' && avant < total) {
+      s.patch({ revealedRank: total });
+      repo.logEvent(s.id, 'results:reveal', { revealed: total, raison: 'fin de session' });
+      if (total > 0) this.events.emit('results:complete', { session: s });
+    }
     return this.setPhase(s, 'archived', { endedAt: s.endedAt ?? Date.now() });
   }
 

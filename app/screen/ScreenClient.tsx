@@ -104,7 +104,7 @@ export function ScreenClient() {
         <h1 className="title">Écran de projection</h1>
         <p className="muted">Saisis le code de la session à afficher.</p>
         <div style={{ width: 'min(340px, 90vw)' }}>
-          <JoinForm className="col" inputClassName={styles.codeInput} />
+          <JoinForm className="col" inputClassName={styles.codeInput} destination="/screen" label="Afficher" />
         </div>
       </div>
     );
@@ -134,7 +134,7 @@ export function ScreenClient() {
     <div className="screen-stage">
       <div className={styles.head}>
         <span>Salle {state.code}</span>
-        <span>Rendu {media.icon} · {media.label}</span>
+        <span>Rendu · {media.label}</span>
         <span>{PHASE_LABELS[state.phase]}</span>
         {state.manche.rounds > 1 && <span>Manche {state.manche.round}/{state.manche.rounds}</span>}
         {state.config.mode === 'rebuild' && <span>Rebuild The Track</span>}

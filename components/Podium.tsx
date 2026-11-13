@@ -114,9 +114,20 @@ export function Podium({
                 {replayLabel(row)}
               </button>
             )}
-            {row.rendition?.url && (
-              <a className="btn xs ghost" href={`${row.rendition.url}?dl=1`} title={row.filename ?? 'Télécharger'}>
-                <Icon name="telecharge" />Obtenir
+            {/*
+              * Le rendu ENTIER, pas l'extrait de diffusion : la route complete est
+              * ouverte a tous une fois le classement affiche, mais ce bouton
+              * pointait vers l'extrait coupe a la duree d'ecoute. Createurs et
+              * spectateurs repartent avec le meme fichier. Rien sur le grand
+              * ecran : on le regarde, on n'y clique pas.
+              */}
+            {!large && row.rendition?.renditionId && (
+              <a
+                className="btn xs ghost"
+                href={`/api/media/${encodeURIComponent(row.rendition.renditionId)}?dl=1`}
+                title={row.filename ? `Télécharger ${row.filename}` : 'Télécharger le rendu complet'}
+              >
+                <Icon name="telecharge" />Télécharger
               </a>
             )}
             {replay && openId === row.rendition?.renditionId && (

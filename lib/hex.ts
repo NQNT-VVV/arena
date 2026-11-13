@@ -1,9 +1,16 @@
-/** Numerotation et formats AGARTHA : hexadecimal partout, 0x00 est le systeme. */
+/**
+ * Numerotation et formats.
+ *
+ * `hex` et `hexOf` gardent leur nom — ils sont appeles partout — mais rendent
+ * des nombres ordinaires : l'ancien habillage ecrivait tout en hexadecimal, et
+ * un rang « 0x10 » se lisait dix quand il valait seize.
+ */
 
-/** 3 → « 0x03 », 8010 → « 0x1F4A ». */
-export const hex = (n: number, pad = 2): string => `0x${Math.max(0, Math.trunc(Number(n) || 0)).toString(16).toUpperCase().padStart(pad, '0')}`;
+/** 3 → « 3 ». Le second argument (largeur) est accepte pour compatibilite et ignore. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const hex = (n: number, _pad = 2): string => String(Math.max(0, Math.trunc(Number(n) || 0)));
 
-/** « 0x03 / 0x0C » */
+/** « 3 / 12 » */
 export const hexOf = (n: number, total: number): string => `${hex(n)} / ${hex(total)}`;
 
 /** Entier avec espace fine insecable : 1 480 → « 1 480 ». */

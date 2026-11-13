@@ -58,7 +58,7 @@ test('creation : code lisible, jeton rendu une seule fois', () => {
 test('regie : un jeton faux ne pilote rien', () => {
   const srv = new BattleServer(fakeIo());
   const { session } = srv.createSession({ name: 'X' });
-  throws(() => srv.requireHost(session.code, 'pas-le-bon'), "n'etes pas l'animateur");
+  throws(() => srv.requireHost(session.code, 'pas-le-bon'), "pas l’animateur");
   throws(() => srv.start(session.code, 'pas-le-bon'));
 });
 
@@ -120,8 +120,8 @@ test('participants : pseudo unique, reconnexion par jeton', () => {
   assert.equal(a.resumed, false);
   assert.equal(a.participant.pseudo, 'Alex');
 
-  throws(() => srv.join(session.code, { pseudo: 'alex' }), 'deja pris');
-  throws(() => srv.join(session.code, { pseudo: 'a' }), 'deux caracteres');
+  throws(() => srv.join(session.code, { pseudo: 'alex' }), 'déjà pris');
+  throws(() => srv.join(session.code, { pseudo: 'a' }), 'deux caractères');
 
   const again = srv.join(session.code, { pseudo: 'peu importe', participantId: a.participant.id, token: a.token });
   assert.equal(again.resumed, true, 'un rafraichissement retrouve sa place');
@@ -136,7 +136,7 @@ test('participants : pseudo unique, reconnexion par jeton', () => {
   assert.equal(usurp.participant.pseudo, 'Mallory');
 
   // Et sans jeton du tout, le pseudo seul ne suffit pas a redevenir Alex.
-  throws(() => srv.join(session.code, { pseudo: 'Alex' }), 'deja pris');
+  throws(() => srv.join(session.code, { pseudo: 'Alex' }), 'déjà pris');
 });
 
 test('inscriptions : fermees des la diffusion, reconnexion toujours possible', () => {
@@ -149,7 +149,7 @@ test('inscriptions : fermees des la diffusion, reconnexion toujours possible', (
   srv.forceCloseCreation(session.code, hostToken);
   srv.join(session.code, { pseudo: 'TresEnRetard' });        // grace : encore ouvert
   srv.startDiffusion(session.code, hostToken);
-  throws(() => srv.join(session.code, { pseudo: 'Spectateur' }), 'fermees');
+  throws(() => srv.join(session.code, { pseudo: 'Spectateur' }), 'fermées');
   const back = srv.join(session.code, { pseudo: 'Alex', participantId: a.participant.id, token: a.token });
   assert.equal(back.resumed, true, 'un participant connu revient meme en diffusion');
 });

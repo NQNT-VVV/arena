@@ -559,7 +559,7 @@ export interface SessionCard {
 }
 
 /** Reponse d'un `socket.emit` avec accuse de reception. */
-export type Ack<T = Record<string, never>> = ({ ok: true } & T) | { ok: false; error: string };
+export type Ack<T = Record<string, never>> = ({ ok: true } & T) | { ok: false; error: string; timedOut?: boolean };
 
 /** Identite conservee dans le navigateur pour survivre a un rafraichissement. */
 export interface SavedIdentity {
@@ -573,11 +573,11 @@ export interface SavedIdentity {
  * AGARTHA numerote, il ne decore pas.
  */
 export const MEDIA_LABELS: Record<MediaType, { label: string; icon: string; hint: string }> = {
-  audio: { label: 'Audio', icon: '0x01', hint: 'Morceau, beat, sound design' },
-  image: { label: 'Image', icon: '0x02', hint: 'Montage, cover, affiche' },
-  video: { label: 'Vidéo', icon: '0x03', hint: 'Montage, edit, motion' },
-  text:  { label: 'Texte', icon: '0x04', hint: 'Écriture, punchlines, pitch' },
-  file:  { label: 'Libre', icon: '0x05', hint: 'N’importe quel fichier' },
+  audio: { label: 'Audio', icon: '', hint: 'Morceau, beat, sound design' },
+  image: { label: 'Image', icon: '', hint: 'Montage, cover, affiche' },
+  video: { label: 'Vidéo', icon: '', hint: 'Montage, edit, motion' },
+  text:  { label: 'Texte', icon: '', hint: 'Écriture, punchlines, pitch' },
+  file:  { label: 'Libre', icon: '', hint: 'N’importe quel fichier' },
 };
 
 export const PHASE_STEPS: { phase: Phase; label: string }[] = [
