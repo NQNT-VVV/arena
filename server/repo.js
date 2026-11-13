@@ -188,15 +188,26 @@ const renameParticipantStmt = db.prepare('UPDATE participant SET pseudo = ?, ava
 const deleteParticipantStmt = db.prepare('DELETE FROM participant WHERE id = ?');
 const setPodiumPidStmt = db.prepare('UPDATE participant SET podium_pid = ? WHERE id = ? AND podium_pid IS NULL');
 
-const insertChainLineStmt = db.prepare(
-  'INSERT INTO chain_line (session_id, participant_id, pseudo, body, at) VALUES (?, ?, ?, ?, ?)',
-);
+// Une ligne appartient a la manche ou elle est ecrite, comme un rendu : sans
+// cela, la lecture finale de la manche 2 recommencait par l'histoire de la 1.
+const insertChainLineStmt = db.prepare(`
+  INSERT INTO chain_line (session_id, participant_id, pseudo, body, at, round)
+  VALUES (@sessionId, @participantId, @pseudo, @body, @at, (SELECT round FROM session WHERE id = @sessionId))
+`);
 const selectChainLine = db.prepare('SELECT * FROM chain_line WHERE id = ?');
-const selectChainLines = db.prepare('SELECT * FROM chain_line WHERE session_id = ? ORDER BY id');
-
+// Meme filtre que `MANCHE`, plus bas : la manche donnee, sinon la courante.
+const selectChainLines = db.prepare(`
+  SELECT * FROM chain_line
+   WHERE session_id = @sessionId
+     AND round = COALESCE(@round, (SELECT round FROM session WHERE id = @sessionId))
+   ORDER BY id
+`);
 function toChainLine(row) {
   if (!row) return null;
-  return { id: row.id, participantId: row.participant_id, pseudo: row.pseudo, body: row.body, at: row.at };
+  return {
+    id: row.id, participantId: row.participant_id, pseudo: row.pseudo, body: row.body, at: row.at,
+    round: row.round ?? 1,
+  };
 }
 
 Object.assign(repo, {
@@ -405,10 +416,11 @@ Object.assign(repo, {
    * lecture finale meme si sa ligne de participant a disparu.
    */
   addChainLine: (sessionId, participantId, pseudo, body, at) => {
-    const id = insertChainLineStmt.run(sessionId, participantId, pseudo, body, at).lastInsertRowid;
+    const id = insertChainLineStmt.run({ sessionId, participantId, pseudo, body, at }).lastInsertRowid;
     return toChainLine(selectChainLine.get(id));
   },
-  chainLines: (sessionId) => selectChainLines.all(sessionId).map(toChainLine),
+  /** Les lignes d'une manche (la courante par defaut). */
+  chainLines: (sessionId, round = null) => selectChainLines.all({ sessionId, round }).map(toChainLine),
 
   submission: (id) => toSubmission(selectSubmission.get(id)),
   submissionByRendition: (renditionId) => toSubmission(selectSubmissionByRendition.get(renditionId)),

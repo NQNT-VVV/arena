@@ -521,6 +521,8 @@ export interface ChainState {
 /** Ce qu'un spectateur voit de la chaine, et lui seul : la ligne a prolonger. */
 export interface YouChain {
   mine: boolean;
+  /** Tours avant le sien : 0 s'il tient la main, -1 si le serveur ne sait pas. */
+  ahead: number;
   last: string | null;
   lastBy: string | null;
   position: number;

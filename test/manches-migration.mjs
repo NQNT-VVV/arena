@@ -45,6 +45,7 @@ for (const [id, p, r] of [['sub1', 'p1', 'r1'], ['sub2', 'p2', 'r2']]) {
 for (const [sub, voter, v] of [['sub1', 'p2', 4], ['sub1', 'p3', 5], ['sub2', 'p1', 3], ['sub2', 'p3', 2]]) {
   ancienne.prepare('INSERT INTO vote (session_id, submission_id, voter_id, value, at) VALUES (\'s1\', ?, ?, ?, ?)').run(sub, voter, v, now);
 }
+ancienne.prepare('INSERT INTO chain_line (session_id, participant_id, pseudo, body, at) VALUES (\'s1\', \'p3\', \'Ines\', \'Il etait une fois\', ?)').run(now);
 ancienne.prepare('INSERT INTO media_job (id, submission_id, kind, created_at, updated_at) VALUES (\'j1\', \'sub1\', \'audio\', ?, ?)').run(now, now);
 ancienne.close();
 
@@ -80,6 +81,14 @@ test('les rendus existants deviennent ceux de la manche 1, sans changer d\'ident
   assert.equal(rows[0].kind, 'audio');
   assert.equal(rows[0].inline, 1);
   assert.equal(db.prepare('SELECT round FROM session WHERE id = ?').get('s1').round, 1);
+});
+
+test('les lignes de la chaine deja ecrites vont a la manche 1', () => {
+  const lignes = db.prepare('SELECT body, round FROM chain_line').all();
+  assert.deepEqual(lignes, [{ body: 'Il etait une fois', round: 1 }]);
+  const repo = require('../server/repo.js');
+  assert.equal(repo.chainLines('s1').length, 1, 'la manche courante (1) les retrouve');
+  assert.equal(repo.chainLines('s1', 2).length, 0);
 });
 
 test('les cles etrangeres sont rallumees, et la base est integre', () => {

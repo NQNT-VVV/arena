@@ -253,6 +253,8 @@ class BattleServer {
     this.sessions = new Map();
     /** code -> Timeout */
     this.timers = new Map();
+    /** code -> Timeout de fin de tour de la chaine. A part : voir `armChain`. */
+    this.chainTimers = new Map();
     this.boot();
   }
 
@@ -1244,10 +1246,11 @@ class BattleServer {
    * spectateur est venu juger, pas concourir — un jeu d'attente qui compterait
    * ferait de lui un concurrent par la bande.
    *
-   * Aucun minuteur : une session n'en a qu'un, occupe par les phases. Le tour
-   * expire au calcul, quand on regarde. Une echeance qui se lit vaut une
-   * echeance qui sonne, et elle ne peut pas se desynchroniser de ce qu'elle
-   * decrit.
+   * UN MINUTEUR A PART, ET LEGER. Celui de la session est occupe par les
+   * phases et n'a pas a connaitre ce jeu. La fin de tour a donc le sien : il
+   * ne fait que republier, et c'est `chainResolve` — le calcul — qui decide de
+   * ce qui a expire. Sans lui, un tour ecoule ne passait la main que le jour
+   * ou quelqu'un d'autre provoquait une diffusion d'etat.
    */
   static CHAIN_PHASES = new Set(['creation', 'upload']);
   static CHAIN_TURN_MS = 90000;
@@ -1259,6 +1262,22 @@ class BattleServer {
       .filter((p) => p.spectator && !p.disqualified)
       .sort((a, b) => a.joinedAt - b.joinedAt || (a.id < b.id ? -1 : 1))
       .map((p) => p.id);
+  }
+
+  /**
+   * A qui donner la main, en partant de `from` : le premier spectateur EN
+   * LIGNE. Rend le curseur de sa place, ou null si personne n'est la.
+   *
+   * On ne saute les absents qu'au moment de donner la main. Celui qui tient
+   * le tour et recharge sa page ne le perd pas pour deux secondes de coupure ;
+   * mais celui qui est parti pour de bon ne coute plus quatre-vingt-dix
+   * secondes a tous les autres a chaque tour de table.
+   */
+  chainDonner(session, order, from) {
+    for (let i = 0; i < order.length; i++) {
+      if (session.isOnline(order[(from + i) % order.length])) return from + i;
+    }
+    return null;
   }
 
   /**
@@ -1274,23 +1293,43 @@ class BattleServer {
     if (!ouvert) {
       session.chainTurnEndsAt = null;
       session.chainTurn = null;
+      session.chainQueue = [];
+      this.armChain(session);
       return { order, turnId: null, turnEndsAt: null, open: false };
     }
     if (session.chainCursor === undefined) session.chainCursor = repo.chainLines(session.id).length;
-    if (!session.chainTurnEndsAt) session.chainTurnEndsAt = now + BattleServer.CHAIN_TURN_MS;
-    if (now >= session.chainTurnEndsAt) {
+
+    const tient = session.chainTurn && order.includes(session.chainTurn) && session.chainTurnEndsAt;
+    if (!tient) {
+      // Personne ne tient le tour : premier regard, retour d'un spectateur
+      // alors que tous etaient partis, ou tenant ecarte entre-temps.
+      this.chainPoser(session, order, session.chainCursor, now);
+    } else if (now >= session.chainTurnEndsAt) {
+      const enLigne = order.filter((id) => session.isOnline(id)).length;
       const passes = Math.floor((now - session.chainTurnEndsAt) / BattleServer.CHAIN_TURN_MS) + 1;
-      session.chainCursor += passes;
-      session.chainTurnEndsAt += passes * BattleServer.CHAIN_TURN_MS;
+      const echeance = session.chainTurnEndsAt + passes * BattleServer.CHAIN_TURN_MS;
+      // Faire `passes` tours parmi les presents revient a en faire le reste
+      // modulo leur nombre : la boucle est bornee par la taille de la salle.
+      let curseur = session.chainCursor;
+      for (let i = 0; enLigne > 0 && i <= (passes - 1) % enLigne; i++) {
+        curseur = this.chainDonner(session, order, curseur + 1);
+      }
+      this.chainPoser(session, order, enLigne > 0 ? curseur : session.chainCursor + 1, now, echeance);
     }
+
     /*
      * Le tour est pose sur la session, pas seulement rendu.
      *
      * Les vues n'ont pas acces a l'ordre des spectateurs — c'est le serveur
      * qui le tient. En deposant le resultat ici, elles le rapportent au lieu
-     * de tenter de le recalculer avec la moitie des informations.
+     * de tenter de le recalculer avec la moitie des informations. `chainQueue`
+     * est la file telle qu'elle va se derouler : le tenant, puis les presents.
      */
-    session.chainTurn = order[session.chainCursor % order.length];
+    const depart = session.chainTurn ? order.indexOf(session.chainTurn) : -1;
+    session.chainQueue = depart < 0 ? [] : order
+      .map((_, i) => order[(depart + i) % order.length])
+      .filter((id, i) => i === 0 || session.isOnline(id));
+    this.armChain(session);
     return {
       order,
       turnId: session.chainTurn,
@@ -1299,10 +1338,62 @@ class BattleServer {
     };
   }
 
+  /**
+   * Donne la main a partir de `from`, sablier plein — ou met la chaine en
+   * attente si aucun spectateur n'est en ligne : elle repartira au premier
+   * qui revient, sans avoir fait tourner de tours dans le vide.
+   */
+  chainPoser(session, order, from, now, echeance = now + BattleServer.CHAIN_TURN_MS) {
+    const curseur = this.chainDonner(session, order, from);
+    if (curseur === null) {
+      session.chainCursor = from;
+      session.chainTurn = null;
+      session.chainTurnEndsAt = null;
+      return;
+    }
+    session.chainCursor = curseur;
+    session.chainTurn = order[curseur % order.length];
+    session.chainTurnEndsAt = echeance;
+  }
+
   /** Passe la main, et remet le sablier a plein. */
   chainAdvance(session, now) {
-    session.chainCursor = (session.chainCursor ?? 0) + 1;
-    session.chainTurnEndsAt = now + BattleServer.CHAIN_TURN_MS;
+    this.chainPoser(session, this.chainOrder(session), (session.chainCursor ?? 0) + 1, now);
+  }
+
+  /**
+   * Le minuteur de fin de tour : un par session, rearme seulement quand
+   * l'echeance change. Il ne decide de rien — il republie, et le calcul fait
+   * le reste.
+   */
+  armChain(session) {
+    const at = session.chainTurnEndsAt ?? null;
+    if (session.chainArmedFor === at && (at === null || this.chainTimers.has(session.code))) return;
+    this.disarmChain(session.code);
+    session.chainArmedFor = at;
+    if (at === null) return;
+    // Quelques millisecondes de marge : `setTimeout` peut sonner trop tot, et
+    // le calcul trouverait alors un tour pas encore ecoule.
+    const timer = setTimeout(() => this.onChainDeadline(session.code), Math.max(0, at - Date.now()) + 25);
+    if (typeof timer.unref === 'function') timer.unref();
+    this.chainTimers.set(session.code, timer);
+  }
+
+  disarmChain(code) {
+    const timer = this.chainTimers.get(code);
+    if (timer) {
+      clearTimeout(timer);
+      this.chainTimers.delete(code);
+    }
+  }
+
+  onChainDeadline(code) {
+    this.chainTimers.delete(code);
+    const s = this.get(code);
+    if (!s) return;
+    // `publish` resout le tour ; s'il a change, les spectateurs l'apprennent
+    // sur leur canal, et le minuteur du tour suivant est arme.
+    this.publish(s);
   }
 
   chainWrite(session, participant, body, now = Date.now()) {
@@ -1340,10 +1431,7 @@ class BattleServer {
    * la ligne a prolonger. L'etat commun n'en porte que le decompte.
    */
   publishChain(session) {
-    this.publish(session);
-    for (const p of session.participants.values()) {
-      if (p.spectator) this.publishYou(session, p);
-    }
+    this.publish(session, { chaine: true });
   }
 
   /* ------------------------------ manches ------------------------- */
@@ -1388,6 +1476,11 @@ class BattleServer {
       : clamp(Math.round(num(durationMs, s.config.durationMs)), MIN_DURATION_MS, MAX_DURATION_MS);
     const now = Date.now();
     s.patch({ round: round + 1, config: { ...s.config, durationMs: duree } });
+    // La chaine est rattachee a la manche : une manche neuve ouvre une
+    // histoire neuve, qui repart du premier spectateur.
+    s.chainCursor = undefined;
+    s.chainTurn = null;
+    s.chainTurnEndsAt = null;
     repo.logEvent(s.id, 'round:next', { round: round + 1, durationMs: duree });
     this.distribuer(s, now);
 
@@ -1813,14 +1906,27 @@ class BattleServer {
    * general, sinon elle recevrait deux etats contradictoires pour le meme
    * evenement — celui de tout le monde, puis le sien.
    */
-  publish(session) {
+  publish(session, { chaine = false } = {}) {
     if (!session) return;
     // Le tour se resout avant d'etre diffuse : sinon un spectateur absent
     // bloquerait la chaine jusqu'a ce que quelqu'un pense a la regarder.
+    const tenant = session.chainTurn ?? null;
     this.chainResolve(session);
     this.io.to(roomAll(session.code)).emit('state', views.participantView(session));
     this.io.to(roomHost(session.code)).emit('state', views.hostView(session));
     this.io.to(roomScreen(session.code)).emit('state', views.screenView(session));
+    /*
+     * Quand la main change, les spectateurs l'apprennent sur LEUR canal.
+     *
+     * « C'est ton tour » et la ligne a prolonger ne voyagent que la. L'etat
+     * commun seul laissait le nouveau tenant devant « au tour de… » — son
+     * propre pseudo — sans champ pour ecrire.
+     */
+    if (chaine || (session.chainTurn ?? null) !== tenant) {
+      for (const p of session.participants.values()) {
+        if (p.spectator) this.publishYou(session, p);
+      }
+    }
   }
 
   /** Participant attache a une socket, deja authentifie a l'entree. */
@@ -1857,6 +1963,7 @@ class BattleServer {
     const done = [];
     for (const row of expired) {
       this.disarm(row.code);
+      this.disarmChain(row.code);
       this.sessions.delete(row.code);
       done.push(
         Promise.resolve(removeFiles(row))

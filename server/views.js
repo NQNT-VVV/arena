@@ -672,6 +672,12 @@ function youChainView(session, participant) {
   const derniere = lignes.length ? lignes[lignes.length - 1] : null;
   return {
     mine: session.chainTurn === participant.id,
+    /**
+     * Combien de tours avant le sien : 0 s'il tient la main, -1 si on ne sait
+     * pas (personne ne joue). La page annoncait « ton tour vient ensuite » a
+     * tout le monde, ce qui est faux des trois spectateurs.
+     */
+    ahead: (session.chainQueue ?? []).indexOf(participant.id),
     last: derniere ? derniere.body : null,
     lastBy: derniere ? derniere.pseudo : null,
     position: lignes.length + 1,

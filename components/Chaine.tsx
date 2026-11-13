@@ -143,7 +143,14 @@ export function Chaine({
         <div className={styles.attente} role="status" aria-live="polite">
           <span className="meta">Au tour de {chain.turn?.pseudo ?? 'quelqu’un'}</span>
           {reste !== null && <span className="tnum">{reste} s</span>}
-          <p className="muted">Votre tour vient ensuite. Laissez la page ouverte.</p>
+          <p className="muted">
+            {you.ahead === 1
+              ? 'Ton tour vient juste après.'
+              : you.ahead > 1
+                ? `Encore ${you.ahead} tours avant le tien.`
+                : 'Ton tour viendra.'}
+            {' '}Laisse la page ouverte.
+          </p>
         </div>
       )}
     </section>

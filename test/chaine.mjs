@@ -26,6 +26,12 @@ const repo = require('../server/repo.js');
 
 const fakeIo = () => ({ sent: [], to(room) { const s = this; return { emit(ev, p) { s.sent.push({ room, ev, p }); } }; } });
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/** Met quelqu'un en ligne, ou l'en sort : la chaine ne donne la main qu'aux presents. */
+const brancher = (session, g) => session.presence.set(g.participant.id, new Set([`sock-${g.participant.pseudo}`]));
+const debrancher = (session, g) => session.presence.delete(g.participant.id);
+
 let passed = 0;
 const checks = [];
 const test = (name, fn) => checks.push([name, fn]);
@@ -53,6 +59,7 @@ function ouvrir({ createurs = 1, spectateurs = 3 } = {}) {
     g.participant.joinedAt = t += 1000;
     gens[`S${i + 1}`] = g;
   }
+  for (const g of Object.values(gens)) brancher(session, g);
   srv.setPhase(session, 'creation');
   return { srv, session, gens };
 }
@@ -207,6 +214,8 @@ test('les lignes survivent a un redemarrage', () => {
   // Nouvelle instance, meme base : c'est ce que fait un redemarrage.
   const encore = new BattleServer(fakeIo());
   const reprise = encore.require(code);
+  // Les telephones se reconnectent : sans personne en ligne, la chaine attend.
+  for (const p of reprise.participants.values()) reprise.presence.set(p.id, new Set([`sock-${p.pseudo}`]));
   const lignes = repo.chainLines(reprise.id);
   assert.equal(lignes.length, 1);
   assert.equal(lignes[0].body, 'Ecrite avant la coupure');
@@ -226,11 +235,99 @@ test('les lignes survivent a un redemarrage', () => {
   assert.equal(etat.turnId, etat.order[1], 'une ligne ecrite, donc au deuxieme de jouer');
 });
 
+test('la main ne va pas a un spectateur hors ligne', () => {
+  const { srv, session, gens } = ouvrir();
+  debrancher(session, gens.S2);
+  srv.chainWrite(session, gens.S1.participant, 'Premiere');
+  assert.equal(tour(srv, session), gens.S3.participant.id, 'S2 est parti : on ne l’attend pas 90 secondes');
+  srv.chainWrite(session, gens.S3.participant, 'Deuxieme');
+  assert.equal(tour(srv, session), gens.S1.participant.id);
+});
+
+test('celui qui tient la main ne la perd pas pour une page rechargee', () => {
+  const { srv, session, gens } = ouvrir();
+  assert.equal(tour(srv, session), gens.S1.participant.id);
+  debrancher(session, gens.S1);
+  assert.equal(tour(srv, session), gens.S1.participant.id, 'une coupure ne passe pas le tour');
+  brancher(session, gens.S1);
+  srv.chainWrite(session, gens.S1.participant, 'Je suis revenu');
+  assert.equal(tour(srv, session), gens.S2.participant.id);
+});
+
+test('personne en ligne : la chaine attend, et repart au premier qui revient', () => {
+  const { srv, session, gens } = ouvrir();
+  srv.chainPass(session, gens.S1.participant);
+  for (const g of [gens.S1, gens.S2, gens.S3]) debrancher(session, g);
+  const t0 = Date.now();
+  // Le tour de S2 expire sans personne pour le prendre.
+  const vide = srv.chainResolve(session, t0 + BattleServer.CHAIN_TURN_MS * 5);
+  assert.equal(vide.turnId, null);
+  assert.equal(vide.turnEndsAt, null, 'aucun sablier ne tourne dans le vide');
+  brancher(session, gens.S3);
+  const plusTard = t0 + BattleServer.CHAIN_TURN_MS * 9;
+  const repris = srv.chainResolve(session, plusTard);
+  assert.equal(repris.turnId, gens.S3.participant.id);
+  assert.equal(repris.turnEndsAt, plusTard + BattleServer.CHAIN_TURN_MS, 'sablier plein pour celui qui revient');
+});
+
+test('quand le tour expire, le nouveau tenant l’apprend sur son canal', () => {
+  const { srv, session, gens } = ouvrir();
+  srv.publish(session);
+  srv.io.sent.length = 0;
+  // Le sablier de S1 est ecoule ; rien d'autre ne se passe que l'echeance.
+  session.chainTurnEndsAt = Date.now() - 1;
+  srv.onChainDeadline(session.code);
+  const recus = srv.io.sent.filter((m) => m.ev === 'you');
+  const pour = (g) => recus.filter((m) => m.room === `sock-${g.participant.pseudo}`).at(-1)?.p;
+  assert.equal(pour(gens.S2)?.chain.mine, true, 'S2 sait que c’est a lui');
+  assert.equal(pour(gens.S1)?.chain.mine, false, 'S1 sait qu’il a laisse passer');
+  assert.equal(pour(gens.S3)?.chain.ahead, 1, 'S3 passe juste apres');
+  assert.equal(pour(gens.S1)?.chain.ahead, 2, 'S1 attend deux tours, pas un');
+  assert.equal(recus.filter((m) => m.room === `sock-${gens.C1.participant.pseudo}`).length, 0, 'un createur n’est pas derange');
+});
+
+test('la fin de tour sonne toute seule : un minuteur, pas un regard', async () => {
+  const { srv, session, gens } = ouvrir();
+  srv.publish(session);
+  session.chainTurnEndsAt = Date.now() + 40;
+  srv.armChain(session);
+  await sleep(160);
+  assert.equal(session.chainTurn, gens.S2.participant.id, 'personne n’a rien demande, et la main est passee');
+  assert.ok(srv.chainTimers.has(session.code), 'le tour suivant a son echeance');
+  srv.disarmChain(session.code);
+});
+
+test('les lignes appartiennent a leur manche', () => {
+  const srv = new BattleServer(fakeIo());
+  const { session, hostToken } = srv.createSession({ name: 'Deux manches', mediaType: 'text', config: { rounds: 2 } });
+  srv.publishSession(session.code, hostToken);
+  const juge = srv.join(session.code, { pseudo: 'JUGE', spectator: true });
+  const autre = srv.join(session.code, { pseudo: 'JUGE2', spectator: true });
+  autre.participant.joinedAt = juge.participant.joinedAt + 1000;
+  brancher(session, juge);
+  brancher(session, autre);
+  srv.start(session.code, hostToken);
+  srv.chainWrite(session, juge.participant, 'Ligne de la manche 1');
+  srv.forceCloseCreation(session.code, hostToken);
+  srv.startDiffusion(session.code, hostToken);
+  srv.showResults(session.code, hostToken);
+  srv.nextRound(session.code, hostToken);
+
+  assert.equal(repo.chainLines(session.id).length, 0, 'la manche 2 s’ouvre sur une page blanche');
+  assert.equal(repo.chainLines(session.id, 1).length, 1, 'la manche 1 garde la sienne');
+  assert.equal(tour(srv, session), juge.participant.id, 'et le tour repart du premier');
+  assert.equal(views.youView(session, juge.participant).chain.last, null, 'rien a prolonger de la manche passee');
+  srv.chainWrite(session, juge.participant, 'Ligne de la manche 2');
+  srv.forceCloseCreation(session.code, hostToken);
+  srv.startDiffusion(session.code, hostToken);
+  assert.deepEqual(views.participantView(session).chain.revealed.map((l) => l.body), ['Ligne de la manche 2']);
+});
+
 /* ------------------------------------------------------------------ */
 
 for (const [name, fn] of checks) {
   try {
-    fn();
+    await fn();
     passed++;
     console.log(`  ok   ${name}`);
   } catch (err) {

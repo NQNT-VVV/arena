@@ -456,6 +456,24 @@ const MIGRATIONS = [
       );
     `);
   },
+  /**
+   * LA CHAINE, PAR MANCHE.
+   *
+   * Les lignes n'etaient rattachees qu'a la session : en plusieurs manches,
+   * la lecture finale de la deuxieme recommencait par l'histoire de la
+   * premiere, et le tour reprenait la ou il s'etait arrete.
+   *
+   * Un simple ajout de colonne, sans reconstruction. Les lignes deja ecrites
+   * vont a la manche 1 : on ne sait pas dire mieux apres coup, et c'est vrai
+   * pour toutes les sessions a une seule manche.
+   */
+  function chaineParManche(d) {
+    d.exec(`
+      ALTER TABLE chain_line ADD COLUMN round INTEGER NOT NULL DEFAULT 1;
+      DROP INDEX chain_line_session_idx;
+      CREATE INDEX chain_line_session_idx ON chain_line(session_id, round, id);
+    `);
+  },
 ];
 
 /**
