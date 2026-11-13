@@ -176,6 +176,16 @@ test('les regles de la chaine partent du serveur : duree du tour et longueur dâ€
   assert.equal(BattleServer.CHAIN_LINE_MAX, regles.CHAIN_LINE_MAX);
 });
 
+test('un spectateur recoit toujours la chaine pendant la creation et le depot, meme seul', () => {
+  // La page n'a pas d'ecran d'attente de repli : elle compte sur cette garantie.
+  const { srv, session, gens } = ouvrir({ spectateurs: 1 });
+  assert.ok(views.youView(session, gens.S1.participant).chain, 'seul, en creation');
+  srv.setPhase(session, 'upload');
+  assert.ok(views.youView(session, gens.S1.participant).chain, 'seul, au depot');
+  debrancher(session, gens.S1);
+  assert.ok(views.youView(session, gens.S1.participant).chain, 'meme vu hors ligne par le serveur');
+});
+
 test('un createur ne recoit rien de la chaine sur son canal', () => {
   const { srv, session, gens } = ouvrir();
   srv.chainWrite(session, gens.S1.participant, 'Secrete');

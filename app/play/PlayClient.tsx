@@ -4,7 +4,6 @@ import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import type { Socket } from 'socket.io-client';
 
-import { hexOf } from '@/lib/hex';
 import { Icon } from '@/components/Icon';
 import { AssetPack } from '@/components/AssetPack';
 import { Brand } from '@/components/Brand';
@@ -28,7 +27,7 @@ import { humanDuration, humanThreshold, PHASE_LABELS } from '@/lib/format';
 import { sfx } from '@/lib/sfx';
 import { call } from '@/lib/socket';
 import { toast } from '@/lib/toast';
-import { MEDIA_LABELS, type BattleState, type PodiumIdentity, type SavedIdentity, type SessionCard } from '@/lib/types';
+import { MEDIA_LABELS, type PodiumIdentity, type SavedIdentity, type SessionCard } from '@/lib/types';
 import { useBattleSocket } from '@/lib/useBattleSocket';
 import { usePhaseClock } from '@/lib/usePhaseClock';
 import styles from './play.module.css';
@@ -477,8 +476,10 @@ export function PlayClient() {
      * Un spectateur n'a rien a deposer. On lui donne la chaine.
      *
      * Le cadavre exquis remplit l'attente sans la transformer en competition :
-     * il ne rapporte aucun point et n'entre dans aucun classement. Seul, sans
-     * personne a qui passer la main, on retombe sur l'ecran d'attente simple.
+     * il ne rapporte aucun point et n'entre dans aucun classement. Le serveur
+     * envoie `you.chain` a tout spectateur pendant la creation et le depot —
+     * les seules phases ou cette zone est rendue — meme s'il est seul : il n'y
+     * a donc pas d'ecran d'attente de repli a prevoir ici.
      */
     if (you.spectator) {
       return you.chain
@@ -491,7 +492,7 @@ export function PlayClient() {
             rendus={state!.counts.submitted}
           />
         )
-        : <SpectatorWait state={state!} />;
+        : null;
     }
     return (
       <SubmissionBox
@@ -657,31 +658,4 @@ export function PlayClient() {
         );
     }
   }
-}
-
-/**
- * Ce que voit un spectateur pendant que les autres creent.
- *
- * Il n'a rien a deposer et rien a attendre de lui-meme : on lui dit ou en est
- * la session, ce qu'on attend de lui, et quand son tour viendra.
- */
-function SpectatorWait({ state }: { state: BattleState }) {
-  const attendus = state.counts.participants;
-  const rendus = state.counts.submitted;
-  return (
-    <section className="card pad" style={{ display: 'grid', gap: 'var(--sp-4)' }}>
-      <div className="meta" style={{ display: 'flex', gap: 'var(--sp-4)', flexWrap: 'wrap' }}>
-        <span>Rôle · spectateur</span>
-        <span>{hexOf(rendus, attendus)} ont rendu</span>
-      </div>
-      <h2 style={{ font: 'var(--t-h2)', letterSpacing: 'var(--ls-display)' }}>Tu ne crées pas</h2>
-      <p className="muted">
-        Tu suis la session sans y concourir. Quand la diffusion commencera, les rendus défileront en
-        aveugle et tu noteras comme tout le monde : ta voix compte autant que celle des créateurs.
-      </p>
-      <div className="meta" style={{ borderTop: 'var(--border)', paddingTop: 'var(--sp-3)' }}>
-        Rien à faire d’ici là. Laisse la page ouverte.
-      </div>
-    </section>
-  );
 }
