@@ -418,8 +418,9 @@ export function HostClient() {
             </div>
 
             <div className="stats">
-              <div className="stat"><span className="v">{state.counts.participants}</span><span className="k">Inscrits</span></div>
-              <div className="stat"><span className="v">{state.counts.connected}</span><span className="k">En ligne</span></div>
+              <div className="stat"><span className="v">{state.counts.participants}</span><span className="k">Créateurs</span></div>
+              <div className="stat"><span className="v">{state.counts.spectators}</span><span className="k">Spectateurs</span></div>
+              <div className="stat"><span className="v">{state.counts.connected + state.counts.spectatorsConnected}</span><span className="k">En ligne</span></div>
               <div className="stat"><span className="v">{state.counts.submitted}</span><span className="k">Rendus</span></div>
             </div>
           </div>
@@ -537,7 +538,10 @@ export function HostClient() {
         {editable && <section className="card pad col">{renderForm(true)}</section>}
 
         <section className="card pad col">
-          <h2 className="section-title">Participants ({state.counts.participants})</h2>
+          <h2 className="section-title">
+            Créateurs ({state.counts.participants})
+            {state.counts.spectators > 0 && ` · Spectateurs (${state.counts.spectators})`}
+          </h2>
           {state.roster.length === 0
             ? <p className="empty">Personne pour l’instant. Partage le code ou le QR.</p>
             : (
@@ -551,6 +555,7 @@ export function HostClient() {
                     <span className="who grow">
                       <span className="pseudo ellipsis">{p.pseudo}</span>
                       <span className="sub">
+                        {p.spectator && 'spectateur · '}
                         {p.hasSubmitted ? 'a rendu' : (p.connected ? 'en ligne' : 'déconnecté')}
                       </span>
                     </span>

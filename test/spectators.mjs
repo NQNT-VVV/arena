@@ -109,6 +109,20 @@ test('les compteurs n’attendent pas de rendu d’un spectateur', () => {
   assert.equal(vue.counts.spectators, 2, 'deux spectateurs annonces a part');
 });
 
+test('la presence se compte par population, pas en vrac', () => {
+  const { session, gens } = ouvrir({ createurs: 2, spectateurs: 3 });
+  // Un createur et tous les spectateurs sont branches.
+  const brancher = (g) => session.presence.set(g.participant.id, new Set([`sock-${g.participant.pseudo}`]));
+  brancher(gens.find((g) => g.role === 'createur'));
+  for (const g of gens.filter((x) => x.role === 'spectateur')) brancher(g);
+  const c = views.participantView(session).counts;
+  assert.equal(c.participants, 2);
+  assert.equal(c.connected, 1, 'un createur en ligne sur deux — pas quatre');
+  assert.equal(c.spectators, 3);
+  assert.equal(c.spectatorsConnected, 3);
+  assert.ok(c.connected <= c.participants, 'jamais plus de presents que d’inscrits');
+});
+
 test('le roster dit qui juge et qui cree', () => {
   const { session } = ouvrir({ createurs: 1, spectateurs: 1 });
   const roster = views.hostView(session).roster;

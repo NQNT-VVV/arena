@@ -101,10 +101,13 @@ export interface Asset {
 }
 
 export interface Counts {
+  /** Les createurs : ceux de qui on attend un rendu. */
   participants: number;
   /** Ceux qui sont la pour juger, pas pour creer. */
   spectators: number;
+  /** Createurs en ligne. Les spectateurs ont leur propre compte. */
   connected: number;
+  spectatorsConnected: number;
   submitted: number;
   voted: number;
 }

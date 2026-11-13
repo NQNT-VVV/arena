@@ -141,7 +141,7 @@ export function ScreenClient() {
         {/* Le compte des tirages est sur l'ecran de la salle, pas seulement en
             regie : une roue qu'on relance en secret n'a aucune autorite. */}
         {state.roulette.spins > 0 && <span>Tirages {hex(state.roulette.spins)}</span>}
-        <span className="seats" aria-label={`${state.counts.connected} sujets en ligne sur ${state.counts.participants}`}>
+        <span className="seats" aria-label={`${state.counts.connected} créateurs en ligne sur ${state.counts.participants}`}>
           {Array.from({ length: Math.max(state.counts.participants, 1) }, (_, i) => (
             <span key={i} className={i < state.counts.connected ? 'on' : ''} />
           ))}
@@ -157,8 +157,9 @@ export function ScreenClient() {
           <span className={styles.joinCode}>{state.code}</span>
           {inviteUrl && <QrCode text={inviteUrl} className="screen-qr" />}
           <p className={styles.count}>
-            Sujets <b>{hex(state.counts.participants)}</b>
+            Créateurs <b>{hex(state.counts.participants)}</b>
             {state.counts.participants > 0 && ` · ${hex(state.counts.connected)} en ligne`}
+            {state.counts.spectators > 0 && <> — Spectateurs <b>{hex(state.counts.spectators)}</b></>}
           </p>
           <p className="muted">
             {humanDuration(state.config.durationMs).toUpperCase()} de création

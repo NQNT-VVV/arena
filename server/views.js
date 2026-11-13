@@ -161,10 +161,21 @@ function countsView(session, submitted = repo.submittedParticipantIds(session.id
   // « 04/06 ont rendu » ne doit compter que ceux de qui on attend un rendu :
   // un spectateur ne depose rien, l'inclure ferait croire a un retard.
   const creators = roster.filter((p) => !p.spectator);
+  const spectators = roster.filter((p) => p.spectator);
+  const enLigne = (liste) => liste.filter((p) => session.isOnline(p.id)).length;
   return {
+    /** Les createurs — ceux de qui on attend un rendu. */
     participants: creators.length,
-    spectators: roster.length - creators.length,
-    connected: roster.filter((p) => session.isOnline(p.id)).length,
+    spectators: spectators.length,
+    /*
+     * Deux comptes de presence, un par population.
+     *
+     * Il n'y en avait qu'un, tous roles confondus, affiche a cote du seul
+     * nombre de createurs : avec trois spectateurs branches, l'ecran annoncait
+     * « 7 en ligne sur 4 ». Chaque compte se lit maintenant contre le sien.
+     */
+    connected: enLigne(creators),
+    spectatorsConnected: enLigne(spectators),
     submitted: submitted.length,
     // Renseigne par l'increment vote.
     voted: 0,

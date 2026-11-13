@@ -421,7 +421,10 @@ export function PlayClient() {
         )}
 
         <section className="card pad col">
-          <h2 className="section-title">Dans l’arène ({state.counts.participants})</h2>
+          <h2 className="section-title">
+            Dans l’arène · {state.counts.participants} créateur{state.counts.participants > 1 ? 's' : ''}
+            {state.counts.spectators > 0 && `, ${state.counts.spectators} spectateur${state.counts.spectators > 1 ? 's' : ''}`}
+          </h2>
           {state.roster.length === 0
             ? <p className="empty">Tu es le premier.</p>
             : (
@@ -430,8 +433,9 @@ export function PlayClient() {
                   <div key={p.id} className={`roster-row ${p.connected ? '' : 'off'} ${p.disqualified ? 'dq' : ''}`}>
                     <span className="avatar" aria-hidden="true">{p.avatar}</span>
                     <span className="who grow">
-                      <span className="pseudo ellipsis">{p.pseudo}{p.id === you?.id ? ' · vous' : ''}</span>
+                      <span className="pseudo ellipsis">{p.pseudo}{p.id === you?.id ? ' · toi' : ''}</span>
                     </span>
+                    {p.spectator && <span className="pill off"><Icon name="oeil" />Spectateur</span>}
                   </div>
                 ))}
               </div>
