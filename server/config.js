@@ -82,7 +82,7 @@ const config = {
 
   /** Combien de sessions terminees on garde avant purge automatique. */
   retentionHours: int('RETENTION_HOURS', 24 * 14),
-  /** Une session abandonnee en LOBBY ou CONFIGURATION finit par disparaitre. */
+  /** Une session abandonnee avant son classement — reglages, lobby, creation, depot, diffusion — finit par disparaitre. */
   staleHours: int('STALE_HOURS', 12),
 
   limits: {

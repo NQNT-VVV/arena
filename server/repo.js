@@ -115,6 +115,7 @@ const insertSession = db.prepare(`
 const selectSessionByCode = db.prepare('SELECT * FROM session WHERE code = ?');
 const selectSessionById = db.prepare('SELECT * FROM session WHERE id = ?');
 const selectLiveSessions = db.prepare("SELECT * FROM session WHERE phase <> 'archived' ORDER BY created_at");
+const selectAllSessions = db.prepare('SELECT * FROM session ORDER BY created_at');
 const countSessionsStmt = db.prepare("SELECT COUNT(*) AS n FROM session WHERE phase <> 'archived'");
 const deleteSessionStmt = db.prepare('DELETE FROM session WHERE id = ?');
 const touchSessionStmt = db.prepare('UPDATE session SET touched_at = ? WHERE id = ?');
@@ -139,6 +140,8 @@ const repo = {
   sessionByCode: (code) => toSession(selectSessionByCode.get(code)),
   sessionById: (id) => toSession(selectSessionById.get(id)),
   liveSessions: () => selectLiveSessions.all().map(toSession),
+  /** Toutes les sessions que la base garde encore, terminees comprises. */
+  allSessions: () => selectAllSessions.all().map(toSession),
   countSessions: () => countSessionsStmt.get().n,
   deleteSession: (id) => deleteSessionStmt.run(id).changes,
   touchSession: (id, at) => touchSessionStmt.run(at, id),
@@ -588,7 +591,10 @@ Object.assign(repo, {
 const selectExpired = db.prepare(`
   SELECT * FROM session
    WHERE (phase IN ('results', 'archived') AND touched_at < @retention)
-      OR (phase IN ('config', 'lobby')     AND touched_at < @stale)
+      -- Une partie laissee en plan en pleine creation, en depot ou en
+      -- diffusion est aussi abandonnee qu'un lobby vide : elle ne finissait
+      -- jamais par partir, et comptait pour toujours dans la limite.
+      OR (phase NOT IN ('results', 'archived') AND touched_at < @stale)
 `);
 
 Object.assign(repo, {

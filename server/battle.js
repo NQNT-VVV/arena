@@ -261,13 +261,19 @@ class BattleServer {
   /**
    * Reprise apres redemarrage.
    *
-   * Les sessions non archivees reviennent en memoire et leurs echeances sont
-   * rearmees. Une echeance deja depassee pendant l'arret declenche
-   * immediatement : mieux vaut une phase qui rattrape son retard qu'un chrono
-   * fige sur un ecran de participant.
+   * Les sessions reviennent en memoire et leurs echeances sont rearmees. Une
+   * echeance deja depassee pendant l'arret declenche immediatement : mieux
+   * vaut une phase qui rattrape son retard qu'un chrono fige sur un ecran de
+   * participant.
+   *
+   * LES SESSIONS TERMINEES REVIENNENT AUSSI. La base les garde quatorze jours
+   * pour que l'animateur retrouve son classement et ses exports ; ne pas les
+   * recharger les faisait disparaitre pour lui au premier redemarrage, alors
+   * qu'elles etaient encore la. Elles n'ont pas d'echeance et ne comptent pas
+   * dans la limite des sessions ouvertes.
    */
   boot() {
-    for (const row of repo.liveSessions()) {
+    for (const row of repo.allSessions()) {
       const live = new LiveSession(row, repo.participants(row.id));
       this.sessions.set(live.code, live);
       this.arm(live);
@@ -278,6 +284,13 @@ class BattleServer {
   }
 
   /* --------------------------- lecture --------------------------- */
+
+  /** Sessions encore ouvertes : la limite du serveur ne compte pas les terminees. */
+  ouvertes() {
+    let n = 0;
+    for (const s of this.sessions.values()) if (s.phase !== 'archived') n++;
+    return n;
+  }
 
   get(code) {
     if (!code) return null;
@@ -302,7 +315,7 @@ class BattleServer {
   /* --------------------------- creation -------------------------- */
 
   createSession({ name, mediaType, brief, config: rawConfig } = {}) {
-    if (this.sessions.size >= config.limits.maxSessions) {
+    if (this.ouvertes() >= config.limits.maxSessions) {
       throw new BattleError('Le serveur héberge déjà trop de sessions ouvertes.');
     }
 
@@ -989,7 +1002,7 @@ class BattleServer {
    */
   async duplicate(code, token, { name, brief, copyAssets = true, keepParticipants = true } = {}) {
     const src = this.requireHost(code, token);
-    if (this.sessions.size >= config.limits.maxSessions) {
+    if (this.ouvertes() >= config.limits.maxSessions) {
       throw new BattleError('Le serveur héberge déjà trop de sessions ouvertes.');
     }
 
@@ -1967,6 +1980,23 @@ class BattleServer {
     );
     const done = [];
     for (const row of expired) {
+      /*
+       * « Sans activite » se lit a la date de derniere ecriture de la session,
+       * et un depot ou un vote n'y touche pas. Une partie ou quelqu'un est
+       * encore branche, ou dont une echeance est a venir — une creation de
+       * douze heures —, n'est donc pas abandonnee : on repousse sa date au
+       * lieu de la purger sous les pieds de ceux qui y sont.
+       */
+      const live = this.sessions.get(row.code);
+      const terminee = row.phase === 'results' || row.phase === 'archived';
+      if (live && !terminee) {
+        const occupee = live.hostOnline || live.presence.size > 0 || live.screenSockets.size > 0;
+        const echeance = this.nextDeadline(live);
+        if (occupee || (echeance !== null && echeance > now)) {
+          repo.touchSession(row.id, now);
+          continue;
+        }
+      }
       this.disarm(row.code);
       this.disarmChain(row.code);
       this.sessions.delete(row.code);
@@ -1976,7 +2006,7 @@ class BattleServer {
           .then(() => repo.deleteSession(row.id)),
       );
     }
-    return Promise.all(done).then(() => expired.length);
+    return Promise.all(done).then(() => done.length);
   }
 }
 

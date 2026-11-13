@@ -131,6 +131,62 @@ test('delai ecoule : avec les retards refuses, on ne retire plus ce qu’on ne p
   }
 });
 
+test('redemarrage : une session terminee reste accessible a son animateur', () => {
+  const srv = new BattleServer(fakeIo());
+  const { session, hostToken } = srv.createSession({ name: 'Finie', mediaType: 'text' });
+  srv.publishSession(session.code, hostToken);
+  srv.archive(session.code, hostToken);
+  const avant = srv.ouvertes();
+
+  // Nouvelle instance, meme base : c'est ce que fait un redemarrage.
+  const encore = new BattleServer(fakeIo());
+  const reprise = encore.requireHost(session.code, hostToken);
+  assert.equal(reprise.phase, 'archived');
+  assert.ok(views.hostView(reprise).podium, 'le classement se relit');
+  assert.equal(encore.ouvertes(), avant, 'une session terminee ne compte pas dans la limite');
+  assert.ok(encore.sessions.size > encore.ouvertes());
+});
+
+test('purge : une partie abandonnee en cours de route finit par partir, pas une partie occupee', async () => {
+  const srv = new BattleServer(fakeIo());
+  const vieux = Date.now() - 1000 * 3600 * 1000;
+  const lancer = (name) => {
+    const { session, hostToken } = srv.createSession({ name, mediaType: 'text' });
+    srv.publishSession(session.code, hostToken);
+    srv.join(session.code, { pseudo: 'CREA' });
+    srv.start(session.code, hostToken);
+    return { session, hostToken };
+  };
+  const abandonnee = lancer('Abandonnee');
+  const enDepot = lancer('En depot');
+  const occupee = lancer('Occupee');
+  const enCreation = lancer('Creation longue');
+  const lobby = srv.createSession({ name: 'Lobby vide' });
+
+  // Diffusion sans rendu ni echeance, laissee la.
+  srv.forceCloseCreation(abandonnee.session.code, abandonnee.hostToken);
+  srv.startDiffusion(abandonnee.session.code, abandonnee.hostToken);
+  // Depot dont la grace est ecoulee depuis longtemps.
+  srv.forceCloseCreation(enDepot.session.code, enDepot.hostToken);
+  enDepot.session.patch({ graceEndAt: vieux });
+  // Meme etat, mais quelqu'un est encore branche.
+  srv.forceCloseCreation(occupee.session.code, occupee.hostToken);
+  occupee.session.patch({ graceEndAt: vieux });
+  occupee.session.presence.set('quelquun', new Set(['sock']));
+  const toutes = [abandonnee, enDepot, occupee, enCreation, lobby].map((x) => x.session);
+  for (const s of toutes) repo.touchSession(s.id, vieux);
+
+  const purgees = await srv.sweep();
+  assert.equal(srv.get(abandonnee.session.code), null, 'diffusion abandonnee : purgee');
+  assert.equal(srv.get(enDepot.session.code), null, 'depot abandonne : purge');
+  assert.equal(srv.get(lobby.session.code), null, 'lobby vide : purge, comme avant');
+  assert.ok(srv.get(occupee.session.code), 'quelqu’un y est : on n’y touche pas');
+  assert.ok(srv.get(enCreation.session.code), 'son chrono court encore : on n’y touche pas');
+  assert.ok(purgees >= 3);
+  assert.equal(repo.sessionById(abandonnee.session.id), null);
+  assert.ok(repo.sessionById(occupee.session.id).touchedAt > vieux, 'sa date est repoussee');
+});
+
 test('creation : code lisible, jeton rendu une seule fois', () => {
   const srv = new BattleServer(fakeIo());
   const { session, hostToken } = srv.createSession({ name: 'Beat Battle #12', mediaType: 'audio', brief: '5 samples imposes' });
