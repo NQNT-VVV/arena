@@ -540,6 +540,12 @@ export interface YouChain {
   max: number;
 }
 
+/** Un rendu deja passe et pas encore note : sa place dans la diffusion, et sa carte anonyme. */
+export interface MissedRendition {
+  index: number;
+  card: RenditionCard;
+}
+
 export interface You {
   id: string;
   pseudo: string;
@@ -552,6 +558,8 @@ export interface You {
   submission: OwnSubmission | null;
   /** Ses propres notes : { renditionId: { critereId: valeur } }. */
   votes: Record<string, Record<string, number>>;
+  /** Les rendus deja passes qu'il lui reste a noter, pendant la diffusion. */
+  aRattraper: MissedRendition[];
   /** Null pour un createur : la chaine ne le concerne pas. */
   chain: YouChain | null;
   /** Son propre sort, pour que le telephone l'affiche en grand. Null s'il n'en a pas. */

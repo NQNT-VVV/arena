@@ -18,6 +18,7 @@ import { Chaine, ChaineLue } from '@/components/Chaine';
 import { Chrono } from '@/components/Chrono';
 import { JoinForm } from '@/components/JoinForm';
 import { PhaseRail } from '@/components/PhaseRail';
+import { Rattrapage } from '@/components/Rattrapage';
 import { SubmissionBox } from '@/components/SubmissionBox';
 import { audioPref } from '@/lib/audioPref';
 import { identity } from '@/lib/identity';
@@ -196,12 +197,15 @@ export function PlayClient() {
    * « est-ce le mien ? » se fait avec le canal personnel : l'etat partage ne
    * contient aucun lien entre un rendu et son auteur, et c'est bien ainsi.
    */
-  const vote = async (criterionId: string, value: number) => {
-    const current = state?.diffusion?.current;
-    if (!socket || !current) return;
-    const res = await call(socket, 'play:vote', { renditionId: current.renditionId, criterionId, value });
+  const voteFor = async (renditionId: string, criterionId: string, value: number) => {
+    if (!socket) return;
+    const res = await call(socket, 'play:vote', { renditionId, criterionId, value });
     if (!res.ok) { toast(res.error, 'err'); return; }
     sfx.vote();
+  };
+  const vote = async (criterionId: string, value: number) => {
+    const current = state?.diffusion?.current;
+    if (current) await voteFor(current.renditionId, criterionId, value);
   };
 
   const leave = () => {
@@ -591,6 +595,16 @@ export function PlayClient() {
             audio={audioChoice ?? d.playerAudio}
             onToggleAudio={chooseAudio}
           />
+          {/* Une note ratee se rattrape tant que le classement n'est pas
+              affiche : le serveur l'a toujours accepte, la page le propose. */}
+          {you && !you.disqualified && (
+            <Rattrapage
+              manques={you.aRattraper ?? []}
+              config={state!.config}
+              votes={you.votes ?? {}}
+              onVote={voteFor}
+            />
+          )}
           {/* La chaine se lit pendant que les rendus defilent : c'est le
               moment ou le jeu d'attente devient un moment de la soiree. */}
           <ChaineLue chain={state!.chain} />

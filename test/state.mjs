@@ -297,6 +297,44 @@ test('manche suivante : sans consigne fournie, celle d’avant reste', () => {
   assert.equal(session.brief, 'Toujours la meme');
 });
 
+test('diffusion : un rendu passe sans note reste a rattraper, sur le canal de chacun', () => {
+  const srv = new BattleServer(fakeIo());
+  const { session, hostToken } = srv.createSession({ name: 'Rattrapage', mediaType: 'text', config: { scale: 5 } });
+  srv.publishSession(session.code, hostToken);
+  const gens = ['A', 'B', 'C'].map((p) => srv.join(session.code, { pseudo: `CREA${p}` }));
+  const juge = srv.join(session.code, { pseudo: 'JUGE', spectator: true });
+  session.presence.set(juge.participant.id, new Set(['sock-juge']));
+  srv.start(session.code, hostToken);
+  for (const g of gens) {
+    const prep = srv.openSubmissionSlot(session.code, g.participant.id, g.token);
+    srv.saveSubmission(session, g.participant, { textBody: g.participant.pseudo, kind: 'text', inline: 1, late: 0 }, prep.existing);
+  }
+  srv.forceCloseCreation(session.code, hostToken);
+  srv.startDiffusion(session.code, hostToken);
+  const vu = () => views.youView(session, juge.participant).aRattraper;
+  assert.deepEqual(vu(), [], 'le rendu en cours se note sur la scene, pas ici');
+
+  srv.io.sent.length = 0;
+  srv.moveCursor(session.code, hostToken, { delta: 1 });
+  assert.deepEqual(vu().map((m) => m.index), [0], 'le premier est passe sans sa note');
+  const recu = srv.io.sent.filter((m) => m.ev === 'you' && m.room === 'sock-juge').at(-1)?.p;
+  assert.deepEqual(recu?.aRattraper.map((m) => m.index), [0], 'et son telephone l’apprend quand le rendu passe');
+  const carte = vu()[0].card;
+  assert.ok(carte.renditionId && !('participantId' in carte) && !('filename' in carte), 'une carte anonyme, comme en diffusion');
+
+  // Le zero est une note comme une autre : il rattrape.
+  const note = srv.voteAs(session, juge.participant, { renditionId: carte.renditionId, value: 0 });
+  assert.equal(note.value, 0);
+  assert.deepEqual(vu(), []);
+
+  // L'auteur du premier rendu n'a pas a rattraper le sien.
+  srv.moveCursor(session.code, hostToken, { delta: 1 });
+  const auteur = gens.find((g) => g.participant.id === repo.submission(session.order[0]).participantId);
+  assert.ok(!views.youView(session, auteur.participant).aRattraper.some((m) => m.index === 0));
+  srv.showResults(session.code, hostToken);
+  assert.deepEqual(vu(), [], 'classement affiche : plus rien a rattraper');
+});
+
 test('creation : code lisible, jeton rendu une seule fois', () => {
   const srv = new BattleServer(fakeIo());
   const { session, hostToken } = srv.createSession({ name: 'Beat Battle #12', mediaType: 'audio', brief: '5 samples imposes' });

@@ -5,6 +5,10 @@ import styles from './Rating.module.css';
 /**
  * Saisie d'une note.
  *
+ * Les cases vont de 0 au bareme, comme le curseur et comme le serveur : avec
+ * un bareme de 10 ou moins, le zero etait impossible a donner alors que le
+ * serveur l'accepte et que la note par defaut peut le valoir.
+ *
  * Des cases tant que le bareme reste petit, un curseur au-dela. Sur
  * telephone — ou se fera l'essentiel des votes — une rangee de six cibles
  * larges se touche sans viser ; vingt cibles ne se touchent plus du tout.
@@ -33,7 +37,7 @@ export function Rating({
 
       {compact ? (
         <div className={styles.row} role="group" aria-label={label ?? 'Note'}>
-          {Array.from({ length: scale + 1 }, (_, n) => n).slice(1).map((n) => (
+          {Array.from({ length: scale + 1 }, (_, n) => n).map((n) => (
             <button
               key={n}
               type="button"

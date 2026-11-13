@@ -927,12 +927,39 @@ function youView(session, participant) {
      * animateur compris — ne doit pouvoir reconstituer qui a mis quoi.
      */
     votes: votesView(session, participant),
+    /** Les rendus deja passes qu'il lui reste a noter. */
+    aRattraper: aRattraperView(session, participant),
     chain: youChainView(session, participant),
     /** Son propre sort, pour que le telephone l'affiche en grand. */
     fate: youFateView(session, participant),
     /** Rebuild The Track : l'extrait a reconstruire, sur son seul canal. */
     extrait: monExtraitView(session, participant),
   };
+}
+
+/**
+ * Les rendus deja passes qu'il n'a pas notes — ou pas sur tous les criteres.
+ *
+ * Le serveur accepte une note sur tout rendu deja diffuse ; encore faut-il que
+ * la page sache lesquels proposer. Sur le canal personnel, parce que c'est un
+ * fait sur LUI : ce qu'il a note ne regarde personne d'autre. Les cartes sont
+ * celles de la diffusion, anonymes. Le rendu en cours n'y figure pas — il se
+ * note sur la scene — et le sien non plus.
+ */
+function aRattraperView(session, participant) {
+  if (session.phase !== 'diffusion' || participant.isHost || participant.disqualified) return [];
+  const order = session.order ?? [];
+  const donnees = repo.votesOf(session.id, participant.id);
+  const criteres = session.config.criteria.length ? session.config.criteria.map((c) => c.id) : ['_'];
+  const manques = [];
+  for (let index = 0; index < Math.min(session.cursor ?? 0, order.length); index++) {
+    const sub = repo.submission(order[index]);
+    if (!sub || sub.participantId === participant.id) continue;
+    const notes = donnees[sub.id] ?? {};
+    if (criteres.every((c) => notes[c] !== undefined)) continue;
+    manques.push({ index, card: anonymousCard(sub) });
+  }
+  return manques;
 }
 
 function votesView(session, participant) {
@@ -951,7 +978,7 @@ module.exports = {
   configView, clockView, rosterView, countsView, assetsView, ownSubmissionView,
   anonymousCard, diffusionView, podiumView,
   commonView, participantView, hostView, screenView, youView,
-  chainView, youChainView,
+  chainView, youChainView, aRattraperView,
   rouletteView, youFateView,
   mancheView, extraitCarte, extraitsView, attributionsView, monExtraitView, extraitDuRendu,
   exportView, exportCsv,

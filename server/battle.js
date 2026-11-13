@@ -812,6 +812,9 @@ class BattleServer {
     repo.logEvent(session.id, restart ? 'diffusion:replay' : 'diffusion:cursor', { index: next });
     this.arm(session);
     this.publish(session);
+    // Le rendu qu'on quitte entre dans la liste « a rattraper » de ceux qui
+    // ne l'ont pas note : elle voyage sur le canal de chacun.
+    if (!restart) this.publishToutLeMonde(session);
     return session;
   }
 
