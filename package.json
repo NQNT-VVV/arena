@@ -52,6 +52,7 @@
     "pretest:manches-migration": "node scripts/check-node.js",
     "test:manches-migration": "node test/manches-migration.mjs",
     "pretest": "node scripts/check-node.js",
+    "test:relance": "node test/relance.mjs",
     "test": "node test/e2e.mjs"
   },
   "dependencies": {

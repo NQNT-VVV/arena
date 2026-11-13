@@ -934,12 +934,19 @@ class BattleServer {
   /**
    * Nouvelle edition d'une session.
    *
-   * Reglages, type de rendu et consigne sont repris ; les participants, les
-   * rendus et les votes ne le sont pas. Les elements imposes sont copies si on
-   * le demande — c'est souvent le meme pack d'une edition a l'autre, et les
-   * retirer coute un clic chacun la ou les redeposer coute un televersement.
+   * Reglages, type de rendu et consigne sont repris ; les rendus et les votes
+   * ne le sont pas. Les elements imposes sont copies si on le demande — c'est
+   * souvent le meme pack d'une edition a l'autre, et les retirer coute un clic
+   * chacun la ou les redeposer coute un televersement.
+   *
+   * LES PARTICIPANTS SUIVENT. Relancer, c'est rejouer avec les gens qui sont
+   * la : leur redemander un code et un pseudo entre deux editions vidait la
+   * salle. Chacun est reinscrit dans la nouvelle session avec son pseudo, son
+   * avatar, son role et le MEME jeton (seule son empreinte est copiee) ; son
+   * navigateur n'a donc rien a redemander, il lui suffit d'apprendre ou aller
+   * — c'est `annoncerSuite()`.
    */
-  async duplicate(code, token, { name, brief, copyAssets = true } = {}) {
+  async duplicate(code, token, { name, brief, copyAssets = true, keepParticipants = true } = {}) {
     const src = this.requireHost(code, token);
     if (this.sessions.size >= config.limits.maxSessions) {
       throw new BattleError('Le serveur héberge déjà trop de sessions ouvertes.');
@@ -993,8 +1000,48 @@ class BattleServer {
       }
     }
 
-    repo.logEvent(live.id, 'session:duplicated', { from: src.code, assets: copyAssets });
+    const ids = new Map();
+    if (keepParticipants) {
+      for (const p of src.participants.values()) {
+        if (p.isHost) continue;
+        const repris = repo.addParticipant({
+          id: uuid(), sessionId: live.id, pseudo: p.pseudo, avatar: p.avatar, tokenHash: p.tokenHash,
+          isHost: false, joinedAt: now, podiumPid: p.podiumPid || null, spectator: !!p.spectator,
+        });
+        live.participants.set(repris.id, repris);
+        ids.set(p.id, repris.id);
+      }
+    }
+    // Gardee en memoire sur l'ancienne session : quiconque y revient plus tard
+    // (telephone sorti de veille, ecran rallume) est renvoye vers la suite.
+    src.suite = { code: live.code, ids };
+
+    repo.logEvent(live.id, 'session:duplicated', { from: src.code, assets: copyAssets, participants: ids.size });
+    this.annoncerSuite(src);
     return { session: live, hostToken };
+  }
+
+  /**
+   * Dit a ceux qui sont encore sur une session relancee ou se joue la suite.
+   *
+   * Chaque participant recoit le code de la nouvelle session et son nouvel
+   * identifiant ; l'ecran de projection ne recoit que le code. `socketId`
+   * restreint l'annonce a une socket : celle de quelqu'un qui vient de revenir.
+   */
+  annoncerSuite(session, socketId = null) {
+    const suite = session?.suite;
+    if (!suite) return;
+    if (socketId) {
+      const pid = [...session.presence.entries()].find(([, set]) => set.has(socketId))?.[0];
+      const charge = pid ? { code: suite.code, participantId: suite.ids.get(pid) ?? null } : { code: suite.code };
+      this.io.to(socketId).emit('session:moved', charge);
+      return;
+    }
+    for (const [pid, sockets] of session.presence) {
+      const charge = { code: suite.code, participantId: suite.ids.get(pid) ?? null };
+      for (const id of sockets) this.io.to(id).emit('session:moved', charge);
+    }
+    this.io.to(roomScreen(session.code)).emit('session:moved', { code: suite.code });
   }
 
   /** DIFFUSION -> RESULTATS. */
@@ -1663,6 +1710,8 @@ class BattleServer {
      * que l'animateur touche a quoi que ce soit.
      */
     this.publish(session);
+    // Un ecran rallume sur une session relancee part directement vers la suite.
+    this.annoncerSuite(session, socket.id);
   }
 
   attachParticipant(socket, session, participant) {
@@ -1687,6 +1736,8 @@ class BattleServer {
      * pour un createur. On ne fait plus deviner personne.
      */
     this.publishYou(session, participant);
+    // Quelqu'un qui revient sur une session relancee est renvoye vers la suite.
+    this.annoncerSuite(session, socket.id);
   }
 
   detach(socket) {

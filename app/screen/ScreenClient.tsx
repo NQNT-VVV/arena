@@ -49,8 +49,22 @@ export function ScreenClient() {
     setError(res.ok ? null : res.error);
   }, [code]);
 
-  const { state, connected, ratings } = useBattleSocket(attach);
+  const { socket, state, connected, ratings } = useBattleSocket(attach);
   const chrono = usePhaseClock(state);
+
+  // L'animateur a relance : l'ecran suit la nouvelle session, sans que personne
+  // n'ait a retaper un code sur la machine du videoprojecteur.
+  useEffect(() => {
+    if (!socket) return;
+    const suivre = ({ code: suite }: { code?: string }) => {
+      if (!suite || suite === code) return;
+      const adresse = new URL(window.location.href);
+      adresse.searchParams.set('code', suite);
+      window.location.replace(adresse.toString());
+    };
+    socket.on('session:moved', suivre);
+    return () => { socket.off('session:moved', suivre); };
+  }, [socket, code]);
 
   const inviteUrl = useMemo(
     () => (code && typeof window !== 'undefined' ? `${window.location.origin}/j/${code}` : ''),

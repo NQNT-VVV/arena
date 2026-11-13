@@ -782,7 +782,8 @@ export function HostClient() {
           )}
         </div>
         <span className="meta">
-          Réglages et consigne repris ; participants, rendus et votes repartent de zéro.
+          Réglages et consigne repris, et tout le monde suit : participants, spectateurs et écran de projection
+          basculent tout seuls sur la nouvelle session. Rendus et votes repartent de zéro.
         </span>
       </div>
     );

@@ -107,6 +107,26 @@ export function PlayClient() {
    */
   const { socket, state, you, connected, ratings } = useBattleSocket((s) => enter(s, undefined, inviteAsSpectator));
 
+  /*
+   * L'animateur a relance : on suit.
+   *
+   * Le serveur a reinscrit chacun dans la nouvelle session avec le meme jeton ;
+   * il ne manque au navigateur que le nouveau code et le nouvel identifiant.
+   * On les range comme une identite ordinaire, puis on change de page : la
+   * reprise automatique fait le reste, role compris.
+   */
+  useEffect(() => {
+    if (!socket || !code) return;
+    const suivre = ({ code: suite, participantId }: { code?: string; participantId?: string | null }) => {
+      if (!suite || suite === code) return;
+      const actuelle = identity.get(code);
+      if (actuelle && participantId) identity.save(suite, { ...actuelle, participantId });
+      window.location.replace(`/play?code=${encodeURIComponent(suite)}`);
+    };
+    socket.on('session:moved', suivre);
+    return () => { socket.off('session:moved', suivre); };
+  }, [socket, code]);
+
   const chrono = usePhaseClock(state, {
     onAlert: (s) => {
       sfx.alert(s);
